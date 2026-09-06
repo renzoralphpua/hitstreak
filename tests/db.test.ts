@@ -1,17 +1,13 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { rmSync } from "node:fs";
+import { useTmpDb } from "./helpers/tmpdb";
 
-const DB_FILE = ".tmp-db-test.db";
-process.env.TURSO_DATABASE_URL = `file:${DB_FILE}`;
-delete process.env.TURSO_AUTH_TOKEN;
+const tmp = useTmpDb("db");
 
 import { db, closeDb } from "@/lib/db";
 
 afterAll(() => {
   closeDb();
-  for (const f of [DB_FILE, `${DB_FILE}-shm`, `${DB_FILE}-wal`]) {
-    try { rmSync(f); } catch { /* windows may hold the handle; ignore */ }
-  }
+  tmp.clean();
 });
 
 describe("db()", () => {
