@@ -1,5 +1,7 @@
 // Polite HTTP client for tcgcsv.com (identified UA, inter-request delay, retry).
 // All shapes mirror TCGplayer's API as mirrored by tcgcsv: { results: [...] }.
+// No runtime validation is performed - the types below mirror tcgcsv's JSON shapes;
+// a 200 response body without a `results` key yields [].
 
 export interface TcgcsvGroup {
   groupId: number;
@@ -33,8 +35,9 @@ export interface TcgcsvPrice {
 export interface TcgcsvClientOptions {
   fetchImpl?: typeof fetch;
   delayMs?: number; // polite delay before each request (tcgcsv guidance ~250ms)
-  maxRetries?: number; // retries on non-2xx / network error
+  maxRetries?: number; // applies to 429 / 5xx responses and network errors (other non-OK statuses throw immediately)
   baseUrl?: string;
+  timeoutMs?: number; // per-request abort timeout
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -44,23 +47,28 @@ export function createTcgcsvClient(opts: TcgcsvClientOptions = {}) {
   const delayMs = opts.delayMs ?? 250;
   const maxRetries = opts.maxRetries ?? 2;
   const baseUrl = opts.baseUrl ?? "https://tcgcsv.com";
+  const timeoutMs = opts.timeoutMs ?? 30_000;
 
   async function getResults<T>(path: string): Promise<T[]> {
     let lastError: unknown;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      if (delayMs > 0) await sleep(delayMs);
+      const wait = attempt === 0 ? delayMs : delayMs * 2 ** attempt;
+      if (wait > 0) await sleep(wait);
       try {
         const res = await fetchImpl(`${baseUrl}${path}`, {
           headers: { "User-Agent": "hitstreak-ingest/1.0 (github.com/renzoralphpua/hitstreak)" },
+          signal: AbortSignal.timeout(timeoutMs),
         });
-        if (!res.ok) {
-          lastError = new Error(`tcgcsv GET ${path} -> ${res.status}`);
-          continue;
+        if (res.ok) {
+          const body = (await res.json()) as { results?: T[] };
+          return body.results ?? [];
         }
-        const body = (await res.json()) as { results?: T[] };
-        return body.results ?? [];
+        await res.text().catch(() => {}); // release the connection
+        lastError = new Error(`tcgcsv GET ${path} -> ${res.status}`);
+        const retryable = res.status === 429 || res.status >= 500;
+        if (!retryable) break;
       } catch (e) {
-        lastError = e;
+        lastError = e; // network error / timeout: retry
       }
     }
     throw lastError instanceof Error ? lastError : new Error(String(lastError));

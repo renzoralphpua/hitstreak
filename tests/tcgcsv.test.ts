@@ -48,4 +48,34 @@ describe("tcgcsv client", () => {
     await expect(c.fetchGroups(89)).rejects.toThrow(/500/);
     expect(fetchImpl).toHaveBeenCalledTimes(3); // initial + 2 retries
   });
+
+  it("retries a thrown network error then succeeds", async () => {
+    const fetchImpl = vi.fn()
+      .mockRejectedValueOnce(new Error("ECONNRESET"))
+      .mockResolvedValueOnce(jsonResponse({ results: [{ groupId: 1, name: "x" }] }));
+    const c = createTcgcsvClient({ fetchImpl, delayMs: 0 });
+    expect(await c.fetchGroups(3)).toEqual([{ groupId: 1, name: "x" }]);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a 404 and throws immediately", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ error: "nope" }, 404));
+    const c = createTcgcsvClient({ fetchImpl, delayMs: 0, maxRetries: 3 });
+    await expect(c.fetchPrices(3, 999)).rejects.toThrow(/404/);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns [] when a 200 body has no results key", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({}));
+    const c = createTcgcsvClient({ fetchImpl, delayMs: 0 });
+    expect(await c.fetchGroups(3)).toEqual([]);
+  });
+
+  it("passes an abort signal for the per-request timeout", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ results: [] }));
+    const c = createTcgcsvClient({ fetchImpl, delayMs: 0, timeoutMs: 1234 });
+    await c.fetchGroups(3);
+    const init = fetchImpl.mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
 });
