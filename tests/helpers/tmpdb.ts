@@ -5,7 +5,7 @@
 import { rmSync } from "node:fs";
 
 export function useTmpDb(name: string) {
-  const file = `.tmp-${name}-test.db`;
+  const file = `.tmp-${name}-${process.pid}-test.db`;
   const clean = () => {
     for (const f of [file, `${file}-shm`, `${file}-wal`]) {
       try { rmSync(f); } catch { /* not present, or handle still held — ignore */ }

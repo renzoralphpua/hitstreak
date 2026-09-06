@@ -33,3 +33,24 @@ describe("db()", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("db() lifecycle", () => {
+  it("re-initializes after closeDb()", async () => {
+    closeDb();
+    const c = await db();
+    const r = await c.execute("SELECT COUNT(*) AS n FROM printings");
+    // data persisted in the file across close/reopen
+    expect(Number(r.rows[0].n)).toBe(1);
+  });
+
+  it("throws a clear error when TURSO_DATABASE_URL is missing", async () => {
+    closeDb();
+    const saved = process.env.TURSO_DATABASE_URL;
+    delete process.env.TURSO_DATABASE_URL;
+    try {
+      await expect(db()).rejects.toThrow("TURSO_DATABASE_URL is not set");
+    } finally {
+      process.env.TURSO_DATABASE_URL = saved;
+    }
+  });
+});

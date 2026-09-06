@@ -16,6 +16,7 @@ export const SCHEMA_SQL = `
     code TEXT,
     release_date TEXT
   );
+  CREATE INDEX IF NOT EXISTS idx_sets_game ON sets(game_id);
 
   CREATE TABLE IF NOT EXISTS cards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
