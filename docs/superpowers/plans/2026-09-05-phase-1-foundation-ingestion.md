@@ -278,6 +278,58 @@ git add lib/schema.ts lib/db.ts tests/db.test.ts
 git commit -m "feat: self-initializing libSQL schema and async db client"
 ```
 
+- [ ] **Step 7: Shared throwaway-DB test helper** (added after Task 2's review: on Windows the libSQL file handle can outlive `close()`, so a stale `.tmp-*.db` from a previous run makes the next run fail on UNIQUE constraints. Clean **before** and after.)
+
+Create `tests/helpers/tmpdb.ts`:
+
+```ts
+// tests/helpers/tmpdb.ts
+// Points lib/db at a throwaway file: libSQL database for one test file and
+// removes stale copies both before and after the run (Windows can keep the
+// handle open past close(), leaving a file that breaks the next run).
+import { rmSync } from "node:fs";
+
+export function useTmpDb(name: string) {
+  const file = `.tmp-${name}-test.db`;
+  const clean = () => {
+    for (const f of [file, `${file}-shm`, `${file}-wal`]) {
+      try { rmSync(f); } catch { /* not present, or handle still held — ignore */ }
+    }
+  };
+  clean();
+  process.env.TURSO_DATABASE_URL = `file:${file}`;
+  delete process.env.TURSO_AUTH_TOKEN;
+  return { file, clean };
+}
+```
+
+Then rewrite the preamble and teardown of `tests/db.test.ts` to use it (test bodies unchanged):
+
+```ts
+import { describe, it, expect, afterAll } from "vitest";
+import { useTmpDb } from "./helpers/tmpdb";
+
+const tmp = useTmpDb("db");
+
+import { db, closeDb } from "@/lib/db";
+
+afterAll(() => {
+  closeDb();
+  tmp.clean();
+});
+```
+
+(`db()` reads `TURSO_DATABASE_URL` lazily at first call, so it is fine that ESM hoists the `@/lib/db` import above the `useTmpDb` call.)
+
+Run: `npm test` twice in a row → both runs green (the second run proves stale-file cleanup works). `npm run typecheck` → exit 0.
+
+```bash
+git add tests/helpers/tmpdb.ts tests/db.test.ts
+git commit -m "test: shared throwaway-DB helper that cleans stale files before and after"
+```
+
+Every later test file in this plan uses `useTmpDb("<name>")` the same way.
+
 ---
 
 ### Task 3: tcgcsv HTTP client
@@ -461,11 +513,9 @@ Upserts are keyed on TCGplayer IDs so re-running a day is idempotent. `extendedD
 ```ts
 // tests/catalog.test.ts
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { rmSync } from "node:fs";
+import { useTmpDb } from "./helpers/tmpdb";
 
-const DB_FILE = ".tmp-catalog-test.db";
-process.env.TURSO_DATABASE_URL = `file:${DB_FILE}`;
-delete process.env.TURSO_AUTH_TOKEN;
+const tmp = useTmpDb("catalog");
 
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
@@ -476,9 +526,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   closeDb();
-  for (const f of [DB_FILE, `${DB_FILE}-shm`, `${DB_FILE}-wal`]) {
-    try { rmSync(f); } catch { /* ignore */ }
-  }
+  tmp.clean();
 });
 
 const GROUPS = [{ groupId: 604, name: "Scarlet & Violet", abbreviation: "SVI", publishedOn: "2023-03-31T00:00:00" }];
@@ -654,11 +702,9 @@ Core invariant: `price_snapshots` gains a row for a printing on date D **only** 
 ```ts
 // tests/prices.test.ts
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { rmSync } from "node:fs";
+import { useTmpDb } from "./helpers/tmpdb";
 
-const DB_FILE = ".tmp-prices-test.db";
-process.env.TURSO_DATABASE_URL = `file:${DB_FILE}`;
-delete process.env.TURSO_AUTH_TOKEN;
+const tmp = useTmpDb("prices");
 
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
@@ -672,9 +718,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   closeDb();
-  for (const f of [DB_FILE, `${DB_FILE}-shm`, `${DB_FILE}-wal`]) {
-    try { rmSync(f); } catch { /* ignore */ }
-  }
+  tmp.clean();
 });
 
 const P1 = { productId: 450101, subTypeName: "Holofoil", marketPrice: 2.5, lowPrice: 1.0, midPrice: 2.0, highPrice: 9.9 };
@@ -1033,11 +1077,9 @@ Per-game isolation (one game failing must not block the others), archive-before-
 ```ts
 // tests/daily.test.ts
 import { describe, it, expect, afterAll, vi } from "vitest";
-import { rmSync } from "node:fs";
+import { useTmpDb } from "./helpers/tmpdb";
 
-const DB_FILE = ".tmp-daily-test.db";
-process.env.TURSO_DATABASE_URL = `file:${DB_FILE}`;
-delete process.env.TURSO_AUTH_TOKEN;
+const tmp = useTmpDb("daily");
 
 import { db, closeDb } from "@/lib/db";
 import { runDailyIngest } from "@/ingest/daily";
@@ -1046,9 +1088,7 @@ import type { TcgcsvClient } from "@/ingest/tcgcsv";
 
 afterAll(() => {
   closeDb();
-  for (const f of [DB_FILE, `${DB_FILE}-shm`, `${DB_FILE}-wal`]) {
-    try { rmSync(f); } catch { /* ignore */ }
-  }
+  tmp.clean();
 });
 
 function stubClient(overrides: Partial<TcgcsvClient> = {}): TcgcsvClient {
@@ -1338,15 +1378,13 @@ Replays tcgcsv's daily price archives (`https://tcgcsv.com/archive/tcgplayer/pri
 ```ts
 // tests/backfill.test.ts
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { rmSync } from "node:fs";
-
-const DB_FILE = ".tmp-backfill-test.db";
-process.env.TURSO_DATABASE_URL = `file:${DB_FILE}`;
-delete process.env.TURSO_AUTH_TOKEN;
-
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { useTmpDb } from "./helpers/tmpdb";
+
+const tmp = useTmpDb("backfill");
+
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
 import { replayDay, collectGroupPrices } from "@/ingest/backfill";
@@ -1359,9 +1397,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   closeDb();
-  for (const f of [DB_FILE, `${DB_FILE}-shm`, `${DB_FILE}-wal`]) {
-    try { rmSync(f); } catch { /* ignore */ }
-  }
+  tmp.clean();
 });
 
 describe("replayDay", () => {
