@@ -510,6 +510,20 @@ git add ingest/tcgcsv.ts tests/tcgcsv.test.ts
 git commit -m "feat: polite tcgcsv HTTP client with retry and injectable fetch"
 ```
 
+- [ ] **Step 6: Hardening (from Task 3's code review — required before Task 7 uses the client)**
+
+Because the orchestrator calls this client sequentially for ~800 requests inside one 60-minute job, three things matter that the first cut missed:
+1. **Per-request timeout** — add `timeoutMs?: number` (default `30_000`) to `TcgcsvClientOptions` and pass `signal: AbortSignal.timeout(timeoutMs)` to fetch; a hung connection otherwise stalls the whole run past the per-game try/catch.
+2. **Drain non-OK bodies** — `await res.text().catch(() => {})` before retrying/throwing, so undici releases the connection.
+3. **Retry policy** — retry only `429`, `>= 500`, and thrown errors (network/timeout); any other non-OK status (404, 403…) throws immediately after one request. Retries back off: wait `delayMs` before attempt 0, `delayMs * 2 ** N` before attempt N ≥ 1 (so `delayMs: 0` never sleeps in tests).
+
+Add four tests: thrown network error then success (2 calls); 404 throws `/404/` after exactly 1 call even with `maxRetries: 3`; a 200 body without `results` → `[]`; the fetch init carries an `AbortSignal` when `timeoutMs` is set. Full suite + typecheck green, then:
+
+```bash
+git add ingest/tcgcsv.ts tests/tcgcsv.test.ts
+git commit -m "fix: tcgcsv client times out requests, drains bodies, retries only 429/5xx with backoff"
+```
+
 ---
 
 ### Task 4: Catalog upsert
