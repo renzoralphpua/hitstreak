@@ -82,6 +82,10 @@ License-hub patterns carried forward: async `db()` with cached schema-ensure pro
 
 Conventions: integer PKs, ISO-8601 text dates, `user_id` scoping on all user data, TCGplayer IDs preserved as natural keys for idempotent upserts.
 
+Two deliberate decisions (from Task 2's review):
+- **Referential integrity is enforced by application code and tests, not the database.** SQLite/libSQL leaves `REFERENCES` unenforced unless `PRAGMA foreign_keys = ON` is issued per connection, and per-connection pragmas are not dependable over Turso's stateless HTTP transport. The `REFERENCES` clauses in the schema are documentation; ingestion code maps TCGplayer IDs to internal IDs explicitly and tests assert no orphans.
+- **Money is stored as `REAL` (dollars), rounded at display time — not ledger-grade.** This mirrors tcgcsv's decimal JSON prices exactly. All later money columns (`acquired_price`, `total_value`, alert `threshold`) use the same `REAL` dollars convention so values join and subtract without unit conversion; UI formats with 2 decimals. Never introduce integer cents alongside.
+
 **Catalog** (upserted daily from tcgcsv):
 - `games` — id, tcgplayer_category_id, name, slug
 - `sets` — id, game_id, tcgplayer_group_id, name, code, release_date

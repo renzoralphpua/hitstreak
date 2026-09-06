@@ -190,6 +190,7 @@ export const SCHEMA_SQL = `
     code TEXT,
     release_date TEXT
   );
+  CREATE INDEX IF NOT EXISTS idx_sets_game ON sets(game_id);
 
   CREATE TABLE IF NOT EXISTS cards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -287,12 +288,19 @@ Create `tests/helpers/tmpdb.ts`:
 // Points lib/db at a throwaway file: libSQL database for one test file and
 // removes stale copies both before and after the run (Windows can keep the
 // handle open past close(), leaving a file that breaks the next run).
-import { rmSync } from "node:fs";
+import { readdirSync, rmSync } from "node:fs";
 
 export function useTmpDb(name: string) {
-  const file = `.tmp-${name}-test.db`;
+  // pid-scoped so parallel vitest workers can never share a file even if a name is reused
+  const prefix = `.tmp-${name}-`;
+  const file = `${prefix}${process.pid}-test.db`;
   const clean = () => {
-    for (const f of [file, `${file}-shm`, `${file}-wal`]) {
+    // sweep this run's file AND leftovers from earlier runs (different pids) for this name
+    let stale: string[] = [];
+    try {
+      stale = readdirSync(".").filter((f) => f.startsWith(prefix) && f.includes("-test.db"));
+    } catch { /* cwd unreadable — nothing to sweep */ }
+    for (const f of new Set([file, `${file}-shm`, `${file}-wal`, ...stale])) {
       try { rmSync(f); } catch { /* not present, or handle still held — ignore */ }
     }
   };
@@ -329,6 +337,10 @@ git commit -m "test: shared throwaway-DB helper that cleans stale files before a
 ```
 
 Every later test file in this plan uses `useTmpDb("<name>")` the same way.
+
+Also add (same commit or a follow-up `chore:` commit) two lifecycle tests to `tests/db.test.ts` in a second `describe("db() lifecycle")` block: `closeDb()` followed by `db()` re-opens the same file and still sees the previously inserted printing; and with `TURSO_DATABASE_URL` deleted, `db()` rejects with `"TURSO_DATABASE_URL is not set"` (restore the env in `finally`).
+
+**Decisions recorded in the spec (§5) after this task's review:** referential integrity is enforced by ingestion code + tests (SQLite FK pragmas are off by default and unreliable over Turso HTTP — do NOT add `PRAGMA foreign_keys`); money is `REAL` dollars rounded at display, never integer cents.
 
 ---
 
