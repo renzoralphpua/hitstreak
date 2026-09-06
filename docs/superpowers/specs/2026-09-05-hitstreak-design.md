@@ -182,6 +182,11 @@ Pure functions over catalog data (card `attrs`), run live in the builder UI and 
 
 Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art as the hero, DM Serif Display for values and headings, DM Sans body, terracotta accent; light is the default theme with a dark (warm charcoal) toggle. Tokens, conventions (owned vs missing, selected state, nav, icons) and the per-screen mockups live in `docs/design/README.md` and the `docs/design/*.dc.html` artboards; the live canvas is linked from that README. Screens covered: portfolio home, set browser, card detail, meta decks + gap analysis, deck builder + validation, alerts, phone layout, dark-mode reference.
 
+**Implementation approach (binding for Phase 2+):** the mockups are the reference, not the code. The app is built from a small reusable component library so any visual change is made once and lands on every screen:
+- **Tokens** live in one place — `app/globals.css` via Tailwind v4 `@theme` (the scaffold already ships Tailwind 4). Every Binder color/font/radius is a CSS variable exposed as a Tailwind utility (`bg-ground`, `bg-surface`, `text-ink`, `text-muted`, `text-dim`, `text-accent`, `text-gain`, `border-hairline`, `font-display`, `font-body`). Dark mode is a `[data-theme="dark"]` block reassigning the same variables; light is default.
+- **Primitives** in `components/ui/`, one component per file, small typed props: `TopNav`, `Pill` (tab/filter chip; selected = inverted ink), `Panel`, `StatTile`, `PriceDelta`, `ProgressBar`, `CardTile` (owned/missing states + `×N` chip), `CardRow`, `SectionHeading`, `SearchField`, `Button` (primary/secondary), `TierBadge`, `ValidationList`, `BottomTabBar` (phone).
+- **Screens compose primitives only** — no ad-hoc styling in route files. Each primitive gets a Storybook-free "gallery" route (`/dev/ui`, dev-only) so all variants can be reviewed on one page.
+
 ## 13. Open questions / follow-ups
 
 - Riftbound deck-construction rules — verify against official Riot rules (step 10)
