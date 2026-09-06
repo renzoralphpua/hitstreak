@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Manrope:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #0e0d12; color: #f2f0f5; font-family: "Manrope", "Segoe UI", system-ui, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+    a { color: #ff7a1a; } a:hover { color: #ffa057; }
+    .display { font-family: "Syne", "Arial Black", Impact, sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: 0.01em; }
+    .num { font-variant-numeric: tabular-nums; font-weight: 700; }
+    .up { color: #b6ff3b; } .down { color: #ff4d6d; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 820px; display: flex; flex-direction: column; background: #0e0d12; overflow: hidden;">
+
+  <!-- Top bar -->
+  <div style="display: flex; align-items: center; gap: 32px; height: 60px; padding: 0 32px; border-bottom: 2px solid #1f1d26;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="#ff7a1a"><path d="M12 2 C12 8 7 9 7 14 A5 5 0 0 0 17 14 C17 11 15 10 14.5 8.5 C14 10.5 13 11 13 11 C13.5 8 12.5 5 12 2 Z"></path></svg>
+      <span class="display" style="font-size: 18px;">Hitstreak</span>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <span class="display" style="font-size: 12px; padding: 8px 12px; background: #f2f0f5; color: #0e0d12; border-radius: 4px;">Collection</span>
+      <span class="display" style="font-size: 12px; padding: 8px 12px; color: #8b879a;">Sets</span>
+      <span class="display" style="font-size: 12px; padding: 8px 12px; color: #8b879a;">Decks</span>
+      <span class="display" style="font-size: 12px; padding: 8px 12px; color: #8b879a;">Alerts</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 10px; width: 300px; height: 36px; padding: 0 12px; border: 2px solid #26232f; border-radius: 4px; color: #8b879a;">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#8b879a" stroke-width="2" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 L14 14"></path></svg>
+      <span>Search</span>
+    </div>
+    <div style="width: 32px; height: 32px; border-radius: 4px; background: #26232f;"></div>
+  </div>
+
+  <!-- Body -->
+  <div style="display: flex; flex-direction: column; gap: 20px; padding: 24px 32px 0; flex-grow: 1;">
+
+    <!-- Hero stat row -->
+    <div style="display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 14px;">
+      <div style="display: flex; flex-direction: column; justify-content: space-between; padding: 18px 20px; background: #16141c; border: 2px solid #26232f; border-radius: 6px;">
+        <span class="display" style="font-size: 11px; color: #8b879a;">Main Binder · Total value</span>
+        <div style="display: flex; align-items: flex-end; gap: 14px;">
+          <span class="num display" style="font-size: 52px; line-height: 1; letter-spacing: -0.02em;">$4,812</span>
+          <span class="num up" style="font-size: 16px; padding-bottom: 6px;">+2.8% <span style="color: #8b879a; font-weight: 500;">30D</span></span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; justify-content: space-between; padding: 18px 20px; background: #ff7a1a; color: #0e0d12; border-radius: 6px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#0e0d12"><path d="M12 2 C12 8 7 9 7 14 A5 5 0 0 0 17 14 C17 11 15 10 14.5 8.5 C14 10.5 13 11 13 11 C13.5 8 12.5 5 12 2 Z"></path></svg>
+          <span class="display" style="font-size: 11px;">Streak</span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <span class="num display" style="font-size: 40px; line-height: 1;">9 days</span>
+          <span style="font-size: 12px; font-weight: 600;">of portfolio growth</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; justify-content: space-between; padding: 18px 20px; background: #16141c; border: 2px solid #26232f; border-radius: 6px;">
+        <span class="display" style="font-size: 11px; color: #8b879a;">Unrealized gain</span>
+        <div style="display: flex; flex-direction: column;"><span class="num up" style="font-size: 30px; line-height: 1;">+$908</span><span style="font-size: 12px; color: #8b879a;">on $3,904 paid</span></div>
+      </div>
+      <div style="display: flex; flex-direction: column; justify-content: space-between; padding: 18px 20px; background: #16141c; border: 2px solid #26232f; border-radius: 6px;">
+        <span class="display" style="font-size: 11px; color: #8b879a;">Biggest hit · 30D</span>
+        <div style="display: flex; flex-direction: column;"><span class="num" style="font-size: 20px; line-height: 1.1;">Umbreon ex</span><span class="num up" style="font-size: 14px;">+$365 <span style="color: #8b879a; font-weight: 500;">(+33%)</span></span></div>
+      </div>
+    </div>
+
+    <!-- Chart + rail -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; flex-grow: 1;">
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px 20px; background: #16141c; border: 2px solid #26232f; border-radius: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="display" style="font-size: 12px;">Value history</span>
+            <div style="flex-grow: 1;"></div>
+            <span class="display" style="font-size: 11px; color: #8b879a; padding: 4px 8px;">7D</span>
+            <span class="display" style="font-size: 11px; padding: 4px 8px; background: #26232f; border-radius: 3px;">30D</span>
+            <span class="display" style="font-size: 11px; color: #8b879a; padding: 4px 8px;">90D</span>
+            <span class="display" style="font-size: 11px; color: #8b879a; padding: 4px 8px;">All</span>
+          </div>
+          <svg width="100%" height="150" viewBox="0 0 800 150" preserveAspectRatio="none">
+            <g stroke="#26232f" stroke-width="2" stroke-dasharray="2 6"><line x1="0" y1="40" x2="800" y2="40"></line><line x1="0" y1="80" x2="800" y2="80"></line><line x1="0" y1="120" x2="800" y2="120"></line></g>
+            <path d="M0 118 L53 114 L107 122 L160 104 L213 108 L267 92 L320 98 L373 80 L427 86 L480 72 L533 76 L587 58 L640 64 L693 46 L747 50 L800 28" fill="none" stroke="#ff7a1a" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"></path>
+            <circle cx="800" cy="28" r="5" fill="#ff7a1a" stroke="#0e0d12" stroke-width="3"></circle>
+          </svg>
+        </div>
+
+        <!-- Holdings -->
+        <div style="display: flex; flex-direction: column; background: #16141c; border: 2px solid #26232f; border-radius: 6px; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: 2.4fr 0.5fr 1fr 1fr 1fr; gap: 12px; padding: 10px 16px; border-bottom: 2px solid #26232f;">
+            <span class="display" style="font-size: 11px; color: #8b879a;">Card</span><span class="display" style="font-size: 11px; color: #8b879a; text-align: right;">Qty</span><span class="display" style="font-size: 11px; color: #8b879a; text-align: right;">Paid</span><span class="display" style="font-size: 11px; color: #8b879a; text-align: right;">Now</span><span class="display" style="font-size: 11px; color: #8b879a; text-align: right;">Gain</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 2.4fr 0.5fr 1fr 1fr 1fr; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #1f1d26;">
+            <div style="display: flex; align-items: center; gap: 12px;"><div style="width: 28px; height: 39px; border-radius: 3px; background: #3a2a14;"></div><div style="display: flex; flex-direction: column;"><span style="font-weight: 700;">Umbreon ex</span><span style="color: #8b879a; font-size: 12px;">Prismatic Evolutions · SIR</span></div></div>
+            <span class="num" style="text-align: right;">1</span><span class="num" style="text-align: right; color: #8b879a;">$1,100</span><span class="num" style="text-align: right;">$1,465</span><span class="num up" style="text-align: right;">+$365</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 2.4fr 0.5fr 1fr 1fr 1fr; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #1f1d26;">
+            <div style="display: flex; align-items: center; gap: 12px;"><div style="width: 28px; height: 39px; border-radius: 3px; background: #142438;"></div><div style="display: flex; flex-direction: column;"><span style="font-weight: 700;">Monkey.D.Luffy</span><span style="color: #8b879a; font-size: 12px;">OP05-119 · Manga Rare</span></div></div>
+            <span class="num" style="text-align: right;">1</span><span class="num" style="text-align: right; color: #8b879a;">$1,250</span><span class="num" style="text-align: right;">$1,388</span><span class="num up" style="text-align: right;">+$138</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 2.4fr 0.5fr 1fr 1fr 1fr; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #1f1d26;">
+            <div style="display: flex; align-items: center; gap: 12px;"><div style="width: 28px; height: 39px; border-radius: 3px; background: #3a2a14;"></div><div style="display: flex; flex-direction: column;"><span style="font-weight: 700;">Charizard ex</span><span style="color: #8b879a; font-size: 12px;">Obsidian Flames · SIR</span></div></div>
+            <span class="num" style="text-align: right;">1</span><span class="num" style="text-align: right; color: #8b879a;">$168</span><span class="num" style="text-align: right;">$215</span><span class="num up" style="text-align: right;">+$47</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 2.4fr 0.5fr 1fr 1fr 1fr; gap: 12px; align-items: center; padding: 10px 16px;">
+            <div style="display: flex; align-items: center; gap: 12px;"><div style="width: 28px; height: 39px; border-radius: 3px; background: #2a1c40;"></div><div style="display: flex; flex-direction: column;"><span style="font-weight: 700;">Jinx, Loose Cannon</span><span style="color: #8b879a; font-size: 12px;">Origins · Foil</span></div></div>
+            <span class="num" style="text-align: right;">2</span><span class="num" style="text-align: right; color: #8b879a;">$44</span><span class="num" style="text-align: right;">$37</span><span class="num down" style="text-align: right;">−$7</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rail: meta decks -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; background: #16141c; border: 2px solid #26232f; border-radius: 6px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span class="display" style="font-size: 12px;">Meta · make the cut</span>
+            <span style="font-size: 12px; color: #ff7a1a; font-weight: 700;">All decks</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 2px solid #26232f; border-radius: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="display" style="font-size: 10px; padding: 3px 6px; background: #b6ff3b; color: #0e0d12; border-radius: 3px;">Tier 1</span>
+              <span style="font-weight: 700;">Charizard ex / Pidgeot</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; color: #8b879a;"><span>You own 51 / 60</span><span class="num" style="color: #f2f0f5;">$86 to complete</span></div>
+              <div style="height: 6px; background: #26232f; border-radius: 3px; overflow: hidden;"><div style="width: 85%; height: 100%; background: #b6ff3b;"></div></div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 2px solid #26232f; border-radius: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="display" style="font-size: 10px; padding: 3px 6px; background: #b6ff3b; color: #0e0d12; border-radius: 3px;">Tier 1</span>
+              <span style="font-weight: 700;">Red Purple Law</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; color: #8b879a;"><span>You own 38 / 51</span><span class="num" style="color: #f2f0f5;">$212 to complete</span></div>
+              <div style="height: 6px; background: #26232f; border-radius: 3px; overflow: hidden;"><div style="width: 74%; height: 100%; background: #ff7a1a;"></div></div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 2px solid #26232f; border-radius: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="display" style="font-size: 10px; padding: 3px 6px; background: #8b879a; color: #0e0d12; border-radius: 3px;">Tier 2</span>
+              <span style="font-weight: 700;">Jinx Aggro</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; color: #8b879a;"><span>You own 22 / 40</span><span class="num" style="color: #f2f0f5;">$64 to complete</span></div>
+              <div style="height: 6px; background: #26232f; border-radius: 3px; overflow: hidden;"><div style="width: 55%; height: 100%; background: #8b879a;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; background: #16141c; border: 2px solid #26232f; border-radius: 6px;">
+          <span class="display" style="font-size: 12px;">Alerts</span>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; flex-direction: column;"><span style="font-weight: 700;">Umbreon ex</span><span style="color: #8b879a; font-size: 12px;">crossed $1,450 today</span></div><span class="display" style="font-size: 10px; padding: 3px 6px; background: #ff7a1a; color: #0e0d12; border-radius: 3px;">Hit</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

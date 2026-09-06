@@ -14,6 +14,7 @@
 - All tests run against a throwaway `file:` libSQL DB — **never `:memory:`** (schema is not shared across libSQL connections; license-hub lesson).
 - Windows dev machine: `npm test` must pass locally; ingestion runs on ubuntu-latest in CI.
 - Commit after every green test. Conventional-commit style messages.
+- **Every "run tests" step also runs `npm run typecheck`** (added after Task 1's review: vitest does not type-check, `next build` does — catch type errors in the TDD loop, not at build time). Task 1 is complete; the vitest config is `vitest.config.mts`.
 
 ---
 

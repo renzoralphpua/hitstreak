@@ -1,0 +1,145 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; background: #f6f1e8; color: #1f1b16; font-family: "DM Sans", "Segoe UI", system-ui, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+    a { color: #b5573a; } a:hover { color: #8f4128; }
+    .serif { font-family: "DM Serif Display", Georgia, "Times New Roman", serif; }
+    .num { font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 820px; display: flex; flex-direction: column; background: #f6f1e8; overflow: hidden;">
+
+  <!-- Top bar -->
+  <div style="display: flex; align-items: center; gap: 36px; height: 64px; padding: 0 40px; border-bottom: 1px solid #e3dccf;">
+    <span class="serif" style="font-size: 24px; letter-spacing: -0.01em;">Hitstreak</span>
+    <div style="display: flex; gap: 22px; font-size: 15px;">
+      <span style="color: #6f665a;">Binder</span>
+      <span style="color: #6f665a;">Sets</span>
+      <span style="font-weight: 600; border-bottom: 2px solid #1f1b16; padding-bottom: 2px;">Decks</span>
+      <span style="color: #6f665a;">Alerts</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <span style="color: #8a8072; font-size: 13px;">Saved as draft · just now</span>
+    <span style="padding: 9px 16px; border-radius: 999px; background: #1f1b16; color: #f6f1e8; font-weight: 600; font-size: 13px;">Save deck</span>
+    <div style="width: 34px; height: 34px; border-radius: 50%; background: #d9cfbf;"></div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 300px minmax(0, 1fr) 300px; gap: 28px; padding: 22px 40px 0; flex-grow: 1; overflow: hidden;">
+
+    <!-- Catalog search -->
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-radius: 999px; background: #fbf8f2; border: 1px solid #e3dccf;">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#8a8072" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 L14 14"></path></svg>
+        <span>rare candy</span>
+      </div>
+      <div style="display: flex; gap: 4px; font-size: 12px;">
+        <span style="padding: 4px 10px; border-radius: 999px; background: #ece5d8;">Standard legal</span>
+        <span style="padding: 4px 10px; border-radius: 999px; border: 1px solid #e3dccf; color: #6f665a;">Owned only</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #fbf8f2; border: 1px solid #e3dccf;">
+          <div style="width: 30px; height: 42px; border-radius: 4px; background: #e9d9c2; border: 1px solid #d9c6a8;"></div>
+          <div style="display: flex; flex-direction: column; flex-grow: 1;"><span style="font-weight: 500;">Rare Candy</span><span style="color: #8a8072; font-size: 12px;">SVI 191 · own 2 · $1.60</span></div>
+          <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: #1f1b16; color: #f6f1e8;"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#f6f1e8" stroke-width="2" stroke-linecap="round"><path d="M7 2 V12 M2 7 H12"></path></svg></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px;">
+          <div style="width: 30px; height: 42px; border-radius: 4px; background: #e9d9c2; border: 1px solid #d9c6a8;"></div>
+          <div style="display: flex; flex-direction: column; flex-grow: 1;"><span style="font-weight: 500;">Rare Candy</span><span style="color: #8a8072; font-size: 12px;">PAF 089 · own 0 · $1.40</span></div>
+          <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; border: 1px solid #e3dccf;"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#1f1b16" stroke-width="2" stroke-linecap="round"><path d="M7 2 V12 M2 7 H12"></path></svg></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px;">
+          <div style="width: 30px; height: 42px; border-radius: 4px; background: #e9d9c2; border: 1px solid #d9c6a8;"></div>
+          <div style="display: flex; flex-direction: column; flex-grow: 1;"><span style="font-weight: 500;">Rare Candy</span><span style="color: #8a8072; font-size: 12px;">SVI 256 · Hyper Rare · own 0 · $9.80</span></div>
+          <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; border: 1px solid #e3dccf;"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#1f1b16" stroke-width="2" stroke-linecap="round"><path d="M7 2 V12 M2 7 H12"></path></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deck list -->
+    <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+      <div style="display: flex; align-items: baseline; gap: 12px;">
+        <span class="serif" style="font-size: 30px; line-height: 1;">Zard on a budget</span>
+        <span style="color: #6f665a; font-size: 13px;">Pokémon · Standard</span>
+        <div style="flex-grow: 1;"></div>
+        <span class="num" style="font-size: 15px; font-weight: 600;">61 <span style="color: #8a8072; font-weight: 400;">/ 60</span></span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; color: #6f665a; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;"><span>Pokémon</span><span class="num">18</span></div>
+          <div style="display: flex; flex-direction: column; border: 1px solid #e3dccf; border-radius: 12px; background: #fbf8f2; overflow: hidden;">
+            <div style="display: grid; grid-template-columns: 40px 1fr 90px 70px; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #ece5d8; align-items: center;"><span class="num" style="font-weight: 600;">3</span><span>Charizard ex <span style="color: #8a8072; font-size: 12px;">OBF 125</span></span><span class="num" style="text-align: right; color: #2f7a4f; font-size: 12px;">own 3</span><span class="num" style="text-align: right; color: #6f665a; font-size: 12px;">$18.90</span></div>
+            <div style="display: grid; grid-template-columns: 40px 1fr 90px 70px; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #ece5d8; align-items: center;"><span class="num" style="font-weight: 600;">4</span><span>Charmander <span style="color: #8a8072; font-size: 12px;">PAF 007</span></span><span class="num" style="text-align: right; color: #2f7a4f; font-size: 12px;">own 4</span><span class="num" style="text-align: right; color: #6f665a; font-size: 12px;">$0.90</span></div>
+            <div style="display: grid; grid-template-columns: 40px 1fr 90px 70px; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #ece5d8; align-items: center;"><span class="num" style="font-weight: 600;">2</span><span>Pidgeot ex <span style="color: #8a8072; font-size: 12px;">OBF 164</span></span><span class="num" style="text-align: right; color: #b5573a; font-size: 12px;">own 0</span><span class="num" style="text-align: right; color: #6f665a; font-size: 12px;">$23.35</span></div>
+            <div style="display: grid; grid-template-columns: 40px 1fr 90px 70px; gap: 10px; padding: 8px 12px; align-items: center;"><span class="num" style="font-weight: 600;">2</span><span>Pidgey <span style="color: #8a8072; font-size: 12px;">MEW 016</span></span><span class="num" style="text-align: right; color: #2f7a4f; font-size: 12px;">own 2</span><span class="num" style="text-align: right; color: #6f665a; font-size: 12px;">$0.30</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; color: #6f665a; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;"><span>Trainers</span><span class="num">35</span></div>
+          <div style="display: flex; flex-direction: column; border: 1px solid #e3dccf; border-radius: 12px; background: #fbf8f2; overflow: hidden;">
+            <div style="display: grid; grid-template-columns: 40px 1fr 90px 70px; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #ece5d8; align-items: center; background: #f8e9e3;"><span class="num" style="font-weight: 600; color: #b5573a;">5</span><span>Rare Candy <span style="color: #8a8072; font-size: 12px;">SVI 191</span></span><span class="num" style="text-align: right; color: #2f7a4f; font-size: 12px;">own 2</span><span class="num" style="text-align: right; color: #6f665a; font-size: 12px;">$1.60</span></div>
+            <div style="display: grid; grid-template-columns: 40px 1fr 90px 70px; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #ece5d8; align-items: center;"><span class="num" style="font-weight: 600;">4</span><span>Iono <span style="color: #8a8072; font-size: 12px;">PAL 185</span></span><span class="num" style="text-align: right; color: #2f7a4f; font-size: 12px;">own 4</span><span class="num" style="text-align: right; color: #6f665a; font-size: 12px;">$5.40</span></div>
+            <div style="display: grid; grid-template-columns: 40px 1fr 90px 70px; gap: 10px; padding: 8px 12px; align-items: center;"><span class="num" style="font-weight: 600;">1</span><span>Prime Catcher <span style="color: #8a8072; font-size: 12px;">TEF 157 · ACE SPEC</span></span><span class="num" style="text-align: right; color: #b5573a; font-size: 12px;">own 0</span><span class="num" style="text-align: right; color: #6f665a; font-size: 12px;">$4.70</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; color: #6f665a; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;"><span>Energy</span><span class="num">8</span></div>
+          <div style="display: flex; flex-direction: column; border: 1px solid #e3dccf; border-radius: 12px; background: #fbf8f2; overflow: hidden;">
+            <div style="display: grid; grid-template-columns: 40px 1fr 90px 70px; gap: 10px; padding: 8px 12px; align-items: center;"><span class="num" style="font-weight: 600;">8</span><span>Basic Fire Energy</span><span class="num" style="text-align: right; color: #2f7a4f; font-size: 12px;">own 8</span><span class="num" style="text-align: right; color: #6f665a; font-size: 12px;">$0.10</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Validation + cost -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 12px; background: #fbf8f2; border: 1px solid #e3dccf;">
+        <span style="font-weight: 600;">Legality · Standard</span>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+          <div style="display: flex; gap: 8px; align-items: flex-start;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#b5573a" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M8 4 V9"></path><circle cx="8" cy="12" r="0.6" fill="#b5573a"></circle><path d="M8 1.5 L14.5 13.5 H1.5 Z" stroke-linejoin="round"></path></svg>
+            <span><span style="font-weight: 600;">61 cards</span> — a Standard deck must have exactly 60.</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-start;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#b5573a" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M8 4 V9"></path><circle cx="8" cy="12" r="0.6" fill="#b5573a"></circle><path d="M8 1.5 L14.5 13.5 H1.5 Z" stroke-linejoin="round"></path></svg>
+            <span><span style="font-weight: 600;">Rare Candy ×5</span> — max 4 copies of a card with the same name.</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-start; color: #6f665a;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#2f7a4f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M3 8.5 L6.5 12 L13 4.5"></path></svg>
+            <span>1 ACE SPEC (Prime Catcher)</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-start; color: #6f665a;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#2f7a4f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M3 8.5 L6.5 12 L13 4.5"></path></svg>
+            <span>All regulation marks legal (G, H, I)</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 12px; background: #1f1b16; color: #f6f1e8;">
+        <span style="font-weight: 600;">From your binder</span>
+        <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: #cfc5b4;">Cards you already own</span><span class="num" style="font-weight: 600;">52 / 61</span></div>
+        <div style="height: 6px; background: #3a3128; border-radius: 3px; overflow: hidden;"><div style="width: 85%; height: 100%; background: #e9d9c2;"></div></div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: #cfc5b4;">Missing 9 · market cost</span><span class="num" style="font-weight: 600;">$58.10</span></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 12px; background: #fbf8f2; border: 1px solid #e3dccf; font-size: 13px; color: #6f665a;">
+        <span style="font-weight: 600; color: #1f1b16;">Deck value</span>
+        <div style="display: flex; justify-content: space-between;"><span>Full deck at market</span><span class="num" style="color: #1f1b16; font-weight: 600;">$214.60</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

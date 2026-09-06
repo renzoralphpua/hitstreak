@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; background: #f6f1e8; color: #1f1b16; font-family: "DM Sans", "Segoe UI", system-ui, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+    a { color: #b5573a; } a:hover { color: #8f4128; }
+    .serif { font-family: "DM Serif Display", Georgia, "Times New Roman", serif; }
+    .num { font-variant-numeric: tabular-nums; }
+    .up { color: #2f7a4f; } .down { color: #b5573a; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #f6f1e8; overflow: hidden;">
+
+  <!-- Header (leave room for the real status bar above) -->
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 56px 20px 0;">
+    <span class="serif" style="font-size: 22px;">Hitstreak</span>
+    <div style="display: flex; gap: 10px;">
+      <span style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; background: #ece5d8;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#1f1b16" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 L14 14"></path></svg></span>
+      <span style="width: 40px; height: 40px; border-radius: 999px; background: #d9cfbf;"></span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 18px; padding: 22px 20px 0; flex-grow: 1;">
+
+    <!-- Binder switcher -->
+    <div style="display: flex; gap: 6px;">
+      <span style="padding: 7px 12px; border-radius: 999px; background: #1f1b16; color: #f6f1e8; font-size: 13px; font-weight: 500;">Main Binder</span>
+      <span style="padding: 7px 12px; border-radius: 999px; border: 1px solid #e3dccf; color: #6f665a; font-size: 13px;">OP Investments</span>
+      <span style="padding: 7px 12px; border-radius: 999px; border: 1px solid #e3dccf; color: #6f665a; font-size: 13px;">Riftbound</span>
+    </div>
+
+    <!-- Value -->
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <span style="color: #6f665a; font-size: 13px;">312 cards</span>
+      <span class="serif num" style="font-size: 44px; line-height: 1; letter-spacing: -0.02em;">$4,812<span style="color: #8a8072;">.40</span></span>
+      <span class="num up" style="font-size: 14px; font-weight: 500;">▲ $132.10 (2.8%) <span style="color: #8a8072; font-weight: 400;">30 days</span></span>
+    </div>
+
+    <svg width="350" height="90" viewBox="0 0 350 90" preserveAspectRatio="none">
+      <path d="M0 72 L23 69 L46 74 L70 63 L93 66 L116 55 L140 58 L163 48 L186 51 L210 43 L233 46 L256 34 L280 39 L303 28 L326 31 L350 18" fill="none" stroke="#b5573a" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"></path>
+      <circle cx="350" cy="18" r="4" fill="#b5573a"></circle>
+      <line x1="0" y1="88" x2="350" y2="88" stroke="#e3dccf" stroke-width="1"></line>
+    </svg>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+      <div style="display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: #fbf8f2; border: 1px solid #e3dccf; border-radius: 10px;"><span style="color: #8a8072; font-size: 12px;">Paid</span><span class="num" style="font-size: 17px; font-weight: 600;">$3,904.15</span></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: #fbf8f2; border: 1px solid #e3dccf; border-radius: 10px;"><span style="color: #8a8072; font-size: 12px;">Gain</span><span class="num up" style="font-size: 17px; font-weight: 600;">+$908.25</span></div>
+    </div>
+
+    <!-- Top cards list -->
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="serif" style="font-size: 20px;">Top cards</span><span style="color: #b5573a; font-size: 13px; font-weight: 600;">See all</span></div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; background: #fbf8f2; border: 1px solid #e3dccf;">
+          <div style="width: 40px; height: 56px; border-radius: 6px; background: #e9d9c2; border: 1px solid #d9c6a8;"></div>
+          <div style="display: flex; flex-direction: column; flex-grow: 1; min-width: 0;"><span style="font-weight: 600;">Umbreon ex</span><span style="color: #8a8072; font-size: 12px;">Prismatic Evolutions · 161/131</span></div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end;"><span class="num" style="font-weight: 600;">$1,465</span><span class="num up" style="font-size: 12px;">+33%</span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; background: #fbf8f2; border: 1px solid #e3dccf;">
+          <div style="width: 40px; height: 56px; border-radius: 6px; background: #cfd9e6; border: 1px solid #b9c7d8;"></div>
+          <div style="display: flex; flex-direction: column; flex-grow: 1; min-width: 0;"><span style="font-weight: 600;">Monkey.D.Luffy</span><span style="color: #8a8072; font-size: 12px;">OP05-119 · Manga Rare</span></div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end;"><span class="num" style="font-weight: 600;">$1,388</span><span class="num up" style="font-size: 12px;">+11%</span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; background: #fbf8f2; border: 1px solid #e3dccf;">
+          <div style="width: 40px; height: 56px; border-radius: 6px; background: #e9d9c2; border: 1px solid #d9c6a8;"></div>
+          <div style="display: flex; flex-direction: column; flex-grow: 1; min-width: 0;"><span style="font-weight: 600;">Charizard ex</span><span style="color: #8a8072; font-size: 12px;">Obsidian Flames · 199/197</span></div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end;"><span class="num" style="font-weight: 600;">$214.90</span><span class="num up" style="font-size: 12px;">+28%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom tab bar -->
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 10px 12px 26px; border-top: 1px solid #e3dccf; background: #fbf8f2;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1f1b16" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 3 V21"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Binder</span>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; color: #8a8072;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8a8072" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
+      <span style="font-size: 11px;">Sets</span>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; color: #8a8072;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8a8072" stroke-width="1.8" stroke-linejoin="round"><rect x="6" y="2" width="13" height="18" rx="2" transform="rotate(8 12 11)"></rect><rect x="4" y="5" width="13" height="18" rx="2"></rect></svg>
+      <span style="font-size: 11px;">Decks</span>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; color: #8a8072;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8a8072" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8 A6 6 0 0 0 6 8 C6 15 3 17 3 17 H21 C21 17 18 15 18 8 Z"></path><path d="M10 21 A2 2 0 0 0 14 21"></path></svg>
+      <span style="font-size: 11px;">Alerts</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

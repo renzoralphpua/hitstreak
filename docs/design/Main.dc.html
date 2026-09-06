@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; background: #f6f1e8; color: #1f1b16; font-family: "DM Sans", "Segoe UI", system-ui, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+    a { color: #b5573a; } a:hover { color: #8f4128; }
+    .serif { font-family: "DM Serif Display", Georgia, "Times New Roman", serif; }
+    .num { font-variant-numeric: tabular-nums; }
+    .up { color: #2f7a4f; } .down { color: #b5573a; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 820px; display: flex; flex-direction: column; background: #f6f1e8; overflow: hidden;">
+
+  <!-- Top bar -->
+  <div style="display: flex; align-items: center; gap: 36px; height: 64px; padding: 0 40px; border-bottom: 1px solid #e3dccf;">
+    <span class="serif" style="font-size: 24px; letter-spacing: -0.01em;">Hitstreak</span>
+    <div style="display: flex; gap: 22px; font-size: 15px;">
+      <span style="font-weight: 600; border-bottom: 2px solid #1f1b16; padding-bottom: 2px;">Binder</span>
+      <span style="color: #6f665a;">Sets</span>
+      <span style="color: #6f665a;">Decks</span>
+      <span style="color: #6f665a;">Alerts</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 10px; width: 300px; height: 38px; padding: 0 14px; border-radius: 999px; background: #ece5d8; color: #8a8072;">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#8a8072" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 L14 14"></path></svg>
+      <span>Find a card…</span>
+    </div>
+    <div style="width: 34px; height: 34px; border-radius: 50%; background: #d9cfbf;"></div>
+  </div>
+
+  <!-- Body -->
+  <div style="display: flex; gap: 40px; padding: 28px 40px 0; flex-grow: 1;">
+
+    <!-- Left: value + chart + portfolios -->
+    <div style="display: flex; flex-direction: column; gap: 22px; width: 380px; flex-shrink: 0;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="color: #6f665a; font-size: 13px;">Main Binder · 312 cards</span>
+        <span class="serif num" style="font-size: 56px; line-height: 1; letter-spacing: -0.02em;">$4,812<span style="color: #8a8072;">.40</span></span>
+        <span class="num up" style="font-size: 15px; font-weight: 500;">▲ $132.10 (2.8%) <span style="color: #8a8072; font-weight: 400;">past 30 days</span></span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <svg width="380" height="120" viewBox="0 0 380 120" preserveAspectRatio="none">
+          <path d="M0 96 L25 92 L50 98 L76 84 L101 88 L127 74 L152 78 L178 64 L203 68 L228 58 L254 62 L279 46 L304 52 L330 38 L355 42 L380 24" fill="none" stroke="#b5573a" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"></path>
+          <circle cx="380" cy="24" r="4" fill="#b5573a"></circle>
+          <line x1="0" y1="118" x2="380" y2="118" stroke="#e3dccf" stroke-width="1"></line>
+        </svg>
+        <div style="display: flex; justify-content: space-between; color: #8a8072; font-size: 12px;"><span>Aug 6</span><span>Sep 5</span></div>
+        <div style="display: flex; gap: 14px; font-size: 13px; color: #6f665a;"><span>7D</span><span style="color: #1f1b16; font-weight: 600;">30D</span><span>90D</span><span>1Y</span><span>All</span></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: #fbf8f2; border: 1px solid #e3dccf; border-radius: 10px;"><span style="color: #8a8072; font-size: 12px;">Paid</span><span class="num" style="font-size: 18px; font-weight: 600;">$3,904.15</span></div>
+        <div style="display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: #fbf8f2; border: 1px solid #e3dccf; border-radius: 10px;"><span style="color: #8a8072; font-size: 12px;">Gain</span><span class="num up" style="font-size: 18px; font-weight: 600;">+$908.25</span></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="color: #6f665a; font-size: 13px; font-weight: 600;">Your binders</span>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 10px; background: #1f1b16; color: #f6f1e8;"><span style="font-weight: 500;">Main Binder</span><span class="num">$4,812.40</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 10px; border: 1px solid #e3dccf;"><span>OP Investments</span><span class="num" style="color: #6f665a;">$2,190.00</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 10px; border: 1px solid #e3dccf;"><span>Riftbound Playsets</span><span class="num" style="color: #6f665a;">$318.75</span></div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; color: #8a8072;"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#8a8072" stroke-width="1.8" stroke-linecap="round"><path d="M7 2 V12 M2 7 H12"></path></svg><span>New binder</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: binder page grid -->
+    <div style="display: flex; flex-direction: column; gap: 14px; flex-grow: 1;">
+      <div style="display: flex; align-items: baseline; gap: 14px;">
+        <span class="serif" style="font-size: 26px;">Top cards</span>
+        <span style="color: #8a8072; font-size: 13px;">sorted by value</span>
+        <div style="flex-grow: 1;"></div>
+        <span style="color: #6f665a; font-size: 13px;">Grid</span>
+        <span style="color: #b5573a; font-size: 13px; font-weight: 600;">List</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 16px;">
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 10px; background: #e9d9c2; border: 1px solid #d9c6a8; box-shadow: 0 8px 18px rgba(60, 40, 10, 0.12);"></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600;">Umbreon ex</span>
+            <span style="color: #8a8072; font-size: 12px;">Prismatic Evolutions · 161/131</span>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="num" style="font-weight: 600;">$1,465.00</span><span class="num up" style="font-size: 12px;">+33%</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 10px; background: #cfd9e6; border: 1px solid #b9c7d8; box-shadow: 0 8px 18px rgba(60, 40, 10, 0.12);"></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600;">Monkey.D.Luffy</span>
+            <span style="color: #8a8072; font-size: 12px;">Awakening of the New Era · OP05-119</span>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="num" style="font-weight: 600;">$1,388.00</span><span class="num up" style="font-size: 12px;">+11%</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 10px; background: #e9d9c2; border: 1px solid #d9c6a8; box-shadow: 0 8px 18px rgba(60, 40, 10, 0.12);"></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600;">Charizard ex</span>
+            <span style="color: #8a8072; font-size: 12px;">Obsidian Flames · 199/197</span>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="num" style="font-weight: 600;">$214.90</span><span class="num up" style="font-size: 12px;">+28%</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 10px; background: #cfd9e6; border: 1px solid #b9c7d8; box-shadow: 0 8px 18px rgba(60, 40, 10, 0.12);"></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600;">Shanks <span style="color: #8a8072; font-weight: 400;">×3</span></span>
+            <span style="color: #8a8072; font-size: 12px;">Two Legends · OP08-118</span>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="num" style="font-weight: 600;">$204.30</span><span class="num down" style="font-size: 12px;">−3%</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 10px; background: #dcd3e8; border: 1px solid #c8bcd9; box-shadow: 0 8px 18px rgba(60, 40, 10, 0.12);"></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600;">Jinx, Loose Cannon <span style="color: #8a8072; font-weight: 400;">×2</span></span>
+            <span style="color: #8a8072; font-size: 12px;">Origins · 087/298 · Foil</span>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="num" style="font-weight: 600;">$37.20</span><span class="num down" style="font-size: 12px;">−15%</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 10px; background: #e9d9c2; border: 1px solid #d9c6a8; box-shadow: 0 8px 18px rgba(60, 40, 10, 0.12);"></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600;">Pikachu ex</span>
+            <span style="color: #8a8072; font-size: 12px;">Surging Sparks · 238/191</span>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="num" style="font-weight: 600;">$29.80</span><span class="num up" style="font-size: 12px;">+4%</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 10px; background: #cfd9e6; border: 1px solid #b9c7d8; box-shadow: 0 8px 18px rgba(60, 40, 10, 0.12);"></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600;">Nami</span>
+            <span style="color: #8a8072; font-size: 12px;">Romance Dawn · OP01-016 · Alt Art</span>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="num" style="font-weight: 600;">$26.50</span><span class="num up" style="font-size: 12px;">+2%</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 10px; border: 1.5px dashed #cfc5b4; display: flex; align-items: center; justify-content: center; color: #8a8072;">
+            <svg width="22" height="22" viewBox="0 0 14 14" fill="none" stroke="#8a8072" stroke-width="1.6" stroke-linecap="round"><path d="M7 2 V12 M2 7 H12"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600; color: #8a8072;">Add a card</span>
+            <span style="color: #8a8072; font-size: 12px;">Search or browse a set</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

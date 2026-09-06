@@ -178,7 +178,11 @@ Pure functions over catalog data (card `attrs`), run live in the builder UI and 
 11. Admin curation screen
 12. Polish pass: responsive layouts, empty states, seed real collection
 
-## 12. Open questions / follow-ups
+## 12. Visual design
+
+Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art as the hero, DM Serif Display for values and headings, DM Sans body, terracotta accent; light is the default theme with a dark (warm charcoal) toggle. Tokens, conventions (owned vs missing, selected state, nav, icons) and the per-screen mockups live in `docs/design/README.md` and the `docs/design/*.dc.html` artboards; the live canvas is linked from that README. Screens covered: portfolio home, set browser, card detail, meta decks + gap analysis, deck builder + validation, alerts, phone layout, dark-mode reference.
+
+## 13. Open questions / follow-ups
 
 - Riftbound deck-construction rules — verify against official Riot rules (step 10)
 - Exact per-game `extendedData` field shapes — confirm from fixture data during step 2

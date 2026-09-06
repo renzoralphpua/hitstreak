@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #0b0e13; color: #e6e9ef; font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; font-size: 13px; -webkit-font-smoothing: antialiased; }
+    a { color: #7cc4ff; } a:hover { color: #a8d8ff; }
+    .mono { font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .up { color: #3ddc84; } .down { color: #ff5c6c; }
+    .row:hover { background: #111620; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 820px; display: flex; flex-direction: column; background: #0b0e13; overflow: hidden;">
+
+  <!-- Top bar -->
+  <div style="display: flex; align-items: center; gap: 28px; height: 52px; padding: 0 24px; border-bottom: 1px solid #1a2029;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 14 L7 8 L11 12 L18 4"></path><path d="M13 4 H18 V9"></path></svg>
+      <span style="font-weight: 600; font-size: 14px; letter-spacing: 0.02em;">HITSTREAK</span>
+    </div>
+    <div style="display: flex; gap: 4px;">
+      <span style="padding: 6px 10px; border-radius: 4px; background: #151b25; color: #e6e9ef; font-weight: 500;">Portfolio</span>
+      <span style="padding: 6px 10px; border-radius: 4px; color: #8a94a6;">Sets</span>
+      <span style="padding: 6px 10px; border-radius: 4px; color: #8a94a6;">Decks</span>
+      <span style="padding: 6px 10px; border-radius: 4px; color: #8a94a6;">Alerts</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 8px; width: 320px; height: 32px; padding: 0 10px; border: 1px solid #1f2733; border-radius: 6px; background: #0f131a; color: #6b7586;">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#6b7586" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 L14 14"></path></svg>
+      <span style="color: #6b7586;">Search cards, sets, decks…</span>
+      <div style="flex-grow: 1;"></div>
+      <span class="mono" style="font-size: 11px; color: #4b5563; border: 1px solid #263040; border-radius: 3px; padding: 1px 5px;">/</span>
+    </div>
+    <div style="width: 28px; height: 28px; border-radius: 50%; background: #263040;"></div>
+  </div>
+
+  <!-- Body -->
+  <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; padding: 20px 24px; flex-grow: 1;">
+
+    <!-- Main column -->
+    <div style="grid-column: span 9; display: flex; flex-direction: column; gap: 16px;">
+
+      <!-- Header stats -->
+      <div style="display: flex; align-items: flex-end; gap: 32px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; align-items: center; gap: 8px; color: #8a94a6; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;">
+            <span>Main Binder</span>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#6b7586" stroke-width="1.6"><path d="M3 4.5 L6 7.5 L9 4.5"></path></svg>
+          </div>
+          <div class="mono" style="font-size: 40px; font-weight: 500; line-height: 1; letter-spacing: -0.02em;">$4,812.40</div>
+          <div class="mono up" style="font-size: 14px;">+$132.10 <span style="color: #3ddc84; opacity: 0.8;">(+2.82%)</span> <span style="color: #6b7586;">· 30D</span></div>
+        </div>
+        <div style="display: flex; gap: 24px; padding-bottom: 4px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="color: #6b7586; font-size: 11px;">COST BASIS</span><span class="mono" style="font-size: 15px;">$3,904.15</span></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="color: #6b7586; font-size: 11px;">UNREALIZED P/L</span><span class="mono up" style="font-size: 15px;">+$908.25</span></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="color: #6b7586; font-size: 11px;">CARDS</span><span class="mono" style="font-size: 15px;">312</span></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="color: #6b7586; font-size: 11px;">LAST PRICE SYNC</span><span class="mono" style="font-size: 15px;">21:04 UTC</span></div>
+        </div>
+      </div>
+
+      <!-- Chart panel -->
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid #1a2029; border-radius: 8px; background: #0f131a;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="padding: 3px 8px; border-radius: 4px; color: #8a94a6; font-size: 12px;">7D</span>
+          <span style="padding: 3px 8px; border-radius: 4px; background: #1a2230; color: #e6e9ef; font-size: 12px; font-weight: 500;">30D</span>
+          <span style="padding: 3px 8px; border-radius: 4px; color: #8a94a6; font-size: 12px;">90D</span>
+          <span style="padding: 3px 8px; border-radius: 4px; color: #8a94a6; font-size: 12px;">1Y</span>
+          <span style="padding: 3px 8px; border-radius: 4px; color: #8a94a6; font-size: 12px;">ALL</span>
+          <div style="flex-grow: 1;"></div>
+          <span class="mono" style="color: #6b7586; font-size: 11px;">Aug 6 – Sep 5</span>
+        </div>
+        <svg width="100%" height="180" viewBox="0 0 900 180" preserveAspectRatio="none">
+          <defs><linearGradient id="tk-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3ddc84" stop-opacity="0.22"></stop><stop offset="1" stop-color="#3ddc84" stop-opacity="0"></stop></linearGradient></defs>
+          <g stroke="#1a2029" stroke-width="1"><line x1="0" y1="45" x2="900" y2="45"></line><line x1="0" y1="90" x2="900" y2="90"></line><line x1="0" y1="135" x2="900" y2="135"></line></g>
+          <path d="M0 132 L60 128 L120 136 L180 118 L240 122 L300 104 L360 110 L420 92 L480 98 L540 84 L600 88 L660 70 L720 76 L780 58 L840 62 L900 40 L900 180 L0 180 Z" fill="url(#tk-fill)"></path>
+          <path d="M0 132 L60 128 L120 136 L180 118 L240 122 L300 104 L360 110 L420 92 L480 98 L540 84 L600 88 L660 70 L720 76 L780 58 L840 62 L900 40" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round"></path>
+          <circle cx="900" cy="40" r="3.5" fill="#3ddc84"></circle>
+        </svg>
+      </div>
+
+      <!-- Holdings table -->
+      <div style="display: flex; flex-direction: column; border: 1px solid #1a2029; border-radius: 8px; background: #0f131a; overflow: hidden;">
+        <div style="display: grid; grid-template-columns: 2.6fr 1.2fr 0.5fr 0.9fr 0.9fr 1fr 1.1fr; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #1a2029; color: #6b7586; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;">
+          <span>Card</span><span>Printing</span><span style="text-align: right;">Qty</span><span style="text-align: right;">Cost</span><span style="text-align: right;">Market</span><span style="text-align: right;">P/L</span><span style="text-align: right;">30D</span>
+        </div>
+
+        <div class="row" style="display: grid; grid-template-columns: 2.6fr 1.2fr 0.5fr 0.9fr 0.9fr 1fr 1.1fr; gap: 12px; align-items: center; padding: 9px 16px; border-bottom: 1px solid #141a23;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 30px; height: 42px; border-radius: 3px; background: #2a1f14; border: 1px solid #3a2c1c;"></div>
+            <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">Charizard ex</span><span style="color: #6b7586; font-size: 12px;">Obsidian Flames · 199/197 · Pokémon</span></div>
+          </div>
+          <span style="color: #8a94a6;">Special Illustration Rare</span>
+          <span class="mono" style="text-align: right;">1</span>
+          <span class="mono" style="text-align: right; color: #8a94a6;">$168.00</span>
+          <span class="mono" style="text-align: right;">$214.90</span>
+          <span class="mono up" style="text-align: right;">+$46.90</span>
+          <svg width="90" height="24" viewBox="0 0 90 24" style="justify-self: end;"><polyline fill="none" stroke="#3ddc84" stroke-width="1.5" points="0,18 12,16 24,17 36,12 48,13 60,9 72,10 90,4"></polyline></svg>
+        </div>
+
+        <div class="row" style="display: grid; grid-template-columns: 2.6fr 1.2fr 0.5fr 0.9fr 0.9fr 1fr 1.1fr; gap: 12px; align-items: center; padding: 9px 16px; border-bottom: 1px solid #141a23;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 30px; height: 42px; border-radius: 3px; background: #141f2e; border: 1px solid #1f2f45;"></div>
+            <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">Monkey.D.Luffy</span><span style="color: #6b7586; font-size: 12px;">Awakening of the New Era · OP05-119 · One Piece</span></div>
+          </div>
+          <span style="color: #8a94a6;">Manga Rare</span>
+          <span class="mono" style="text-align: right;">1</span>
+          <span class="mono" style="text-align: right; color: #8a94a6;">$1,250.00</span>
+          <span class="mono" style="text-align: right;">$1,388.00</span>
+          <span class="mono up" style="text-align: right;">+$138.00</span>
+          <svg width="90" height="24" viewBox="0 0 90 24" style="justify-self: end;"><polyline fill="none" stroke="#3ddc84" stroke-width="1.5" points="0,14 12,15 24,12 36,13 48,10 60,11 72,7 90,6"></polyline></svg>
+        </div>
+
+        <div class="row" style="display: grid; grid-template-columns: 2.6fr 1.2fr 0.5fr 0.9fr 0.9fr 1fr 1.1fr; gap: 12px; align-items: center; padding: 9px 16px; border-bottom: 1px solid #141a23;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 30px; height: 42px; border-radius: 3px; background: #1d1430; border: 1px solid #2d1f4a;"></div>
+            <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">Jinx, Loose Cannon</span><span style="color: #6b7586; font-size: 12px;">Origins · 087/298 · Riftbound</span></div>
+          </div>
+          <span style="color: #8a94a6;">Foil</span>
+          <span class="mono" style="text-align: right;">2</span>
+          <span class="mono" style="text-align: right; color: #8a94a6;">$44.00</span>
+          <span class="mono" style="text-align: right;">$37.20</span>
+          <span class="mono down" style="text-align: right;">−$6.80</span>
+          <svg width="90" height="24" viewBox="0 0 90 24" style="justify-self: end;"><polyline fill="none" stroke="#ff5c6c" stroke-width="1.5" points="0,6 12,8 24,7 36,11 48,10 60,14 72,15 90,18"></polyline></svg>
+        </div>
+
+        <div class="row" style="display: grid; grid-template-columns: 2.6fr 1.2fr 0.5fr 0.9fr 0.9fr 1fr 1.1fr; gap: 12px; align-items: center; padding: 9px 16px; border-bottom: 1px solid #141a23;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 30px; height: 42px; border-radius: 3px; background: #2a1f14; border: 1px solid #3a2c1c;"></div>
+            <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">Umbreon ex</span><span style="color: #6b7586; font-size: 12px;">Prismatic Evolutions · 161/131 · Pokémon</span></div>
+          </div>
+          <span style="color: #8a94a6;">Special Illustration Rare</span>
+          <span class="mono" style="text-align: right;">1</span>
+          <span class="mono" style="text-align: right; color: #8a94a6;">$1,100.00</span>
+          <span class="mono" style="text-align: right;">$1,465.00</span>
+          <span class="mono up" style="text-align: right;">+$365.00</span>
+          <svg width="90" height="24" viewBox="0 0 90 24" style="justify-self: end;"><polyline fill="none" stroke="#3ddc84" stroke-width="1.5" points="0,20 12,18 24,19 36,14 48,12 60,13 72,8 90,3"></polyline></svg>
+        </div>
+
+        <div class="row" style="display: grid; grid-template-columns: 2.6fr 1.2fr 0.5fr 0.9fr 0.9fr 1fr 1.1fr; gap: 12px; align-items: center; padding: 9px 16px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 30px; height: 42px; border-radius: 3px; background: #141f2e; border: 1px solid #1f2f45;"></div>
+            <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">Shanks</span><span style="color: #6b7586; font-size: 12px;">Two Legends · OP08-118 · One Piece</span></div>
+          </div>
+          <span style="color: #8a94a6;">Alternate Art</span>
+          <span class="mono" style="text-align: right;">3</span>
+          <span class="mono" style="text-align: right; color: #8a94a6;">$210.00</span>
+          <span class="mono" style="text-align: right;">$204.30</span>
+          <span class="mono down" style="text-align: right;">−$5.70</span>
+          <svg width="90" height="24" viewBox="0 0 90 24" style="justify-self: end;"><polyline fill="none" stroke="#8a94a6" stroke-width="1.5" points="0,12 12,11 24,13 36,12 48,12 60,13 72,12 90,13"></polyline></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right rail -->
+    <div style="grid-column: span 3; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid #1a2029; border-radius: 8px; background: #0f131a;">
+        <span style="color: #6b7586; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;">Portfolios</span>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 6px; background: #151b25;"><span style="font-weight: 500;">Main Binder</span><span class="mono">$4,812.40</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 6px;"><span style="color: #8a94a6;">OP Investments</span><span class="mono" style="color: #8a94a6;">$2,190.00</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 6px;"><span style="color: #8a94a6;">Riftbound Playsets</span><span class="mono" style="color: #8a94a6;">$318.75</span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid #1a2029; border-radius: 8px; background: #0f131a;">
+        <span style="color: #6b7586; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;">Alerts</span>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">Umbreon ex <span class="up">≥ $1,450</span></span><span style="color: #6b7586; font-size: 12px;">Triggered today · $1,465.00</span></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500; color: #8a94a6;">Jinx, Loose Cannon <span style="color: #6b7586;">≤ $30</span></span><span style="color: #6b7586; font-size: 12px;">Watching · $37.20</span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid #1a2029; border-radius: 8px; background: #0f131a;">
+        <span style="color: #6b7586; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;">Meta · cost to complete</span>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; flex-direction: column;"><span style="font-weight: 500;">Charizard ex / Pidgeot</span><span style="color: #6b7586; font-size: 12px;">Tier 1 · own 51/60</span></div><span class="mono">$86.40</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; flex-direction: column;"><span style="font-weight: 500;">Red Purple Law</span><span style="color: #6b7586; font-size: 12px;">Tier 1 · own 38/51</span></div><span class="mono">$212.00</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

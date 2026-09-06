@@ -1,0 +1,24 @@
+{
+  "pages": [
+    { "id": "screens", "name": "Screens" },
+    { "id": "explorations", "name": "Explorations" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Binder · Portfolio home", "x": 0, "y": 0, "w": 1280, "h": 820, "page": "screens" },
+    { "file": "Sets.dc.html", "title": "Sets · Set browser & completion", "x": 1400, "y": 0, "w": 1280, "h": 820, "page": "screens" },
+    { "file": "Card.dc.html", "title": "Card detail", "x": 0, "y": 960, "w": 1280, "h": 820, "page": "screens" },
+    { "file": "Decks.dc.html", "title": "Decks · Meta browser & gap analysis", "x": 1400, "y": 960, "w": 1280, "h": 820, "page": "screens" },
+    { "file": "Builder.dc.html", "title": "Decks · Builder with validation", "x": 0, "y": 1920, "w": 1280, "h": 820, "page": "screens" },
+    { "file": "Mobile.dc.html", "title": "Phone · Portfolio home", "x": 1400, "y": 1920, "w": 390, "h": 844, "page": "screens" },
+    { "file": "Alerts.dc.html", "title": "Alerts · Price alerts", "x": 0, "y": 2900, "w": 1280, "h": 820, "page": "screens" },
+    { "file": "BinderDark.dc.html", "title": "Binder · dark mode reference", "x": 1400, "y": 2900, "w": 1280, "h": 820, "page": "screens" },
+    { "file": "Ticker.dc.html", "title": "Direction A · Ticker (not chosen)", "x": 0, "y": 0, "w": 1280, "h": 820, "page": "explorations" },
+    { "file": "Playmat.dc.html", "title": "Direction C · Playmat (not chosen)", "x": 1400, "y": 0, "w": 1280, "h": 820, "page": "explorations" }
+  ],
+  "annotations": [
+    { "id": "system", "x": 2800, "y": 0, "w": 300, "page": "screens", "text": "Binder system\n\nType: DM Serif Display (values, headings) + DM Sans (everything else).\nGround: warm paper #f6f1e8, surfaces #fbf8f2, hairlines #e3dccf.\nInk #1f1b16, muted #6f665a, dim #8a8072.\nAccent terracotta #b5573a (charts, links, missing). Gains #2f7a4f.\nSelected = inverted dark chip. Pills for filters, 10–12px radii, soft card shadows.\n\nLight is default; dark is a toggle (reference artboard below)." },
+    { "id": "missing-note", "x": 2800, "y": 960, "w": 300, "page": "screens", "text": "Owned vs missing convention: owned cards are solid tiles with a ×N count; missing cards are dashed, tinted, and dimmed — same rule in Sets, Decks and Builder." },
+    { "id": "explore-note", "x": 2800, "y": 0, "w": 300, "page": "explorations", "text": "Directions not chosen. Kept for reference — Ticker's per-row sparklines and Playmat's tier badges are candidates to borrow later." }
+  ],
+  "launch": { "view": "canvas", "page": "screens" }
+}
