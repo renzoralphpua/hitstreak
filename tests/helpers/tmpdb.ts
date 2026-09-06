@@ -2,12 +2,19 @@
 // Points lib/db at a throwaway file: libSQL database for one test file and
 // removes stale copies both before and after the run (Windows can keep the
 // handle open past close(), leaving a file that breaks the next run).
-import { rmSync } from "node:fs";
+import { readdirSync, rmSync } from "node:fs";
 
 export function useTmpDb(name: string) {
-  const file = `.tmp-${name}-${process.pid}-test.db`;
+  // pid-scoped so parallel vitest workers can never share a file even if a name is reused
+  const prefix = `.tmp-${name}-`;
+  const file = `${prefix}${process.pid}-test.db`;
   const clean = () => {
-    for (const f of [file, `${file}-shm`, `${file}-wal`]) {
+    // sweep this run's file AND leftovers from earlier runs (different pids) for this name
+    let stale: string[] = [];
+    try {
+      stale = readdirSync(".").filter((f) => f.startsWith(prefix) && f.includes("-test.db"));
+    } catch { /* cwd unreadable — nothing to sweep */ }
+    for (const f of new Set([file, `${file}-shm`, `${file}-wal`, ...stale])) {
       try { rmSync(f); } catch { /* not present, or handle still held — ignore */ }
     }
   };
