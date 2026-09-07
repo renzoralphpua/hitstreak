@@ -58,6 +58,8 @@ export async function deletePortfolio(userId: string, id: number): Promise<boole
   await c.batch(
     [
       { sql: "DELETE FROM collection_items WHERE portfolio_id = ?", args: [id] },
+      { sql: "DELETE FROM portfolio_history WHERE portfolio_id = ?", args: [id] },
+      { sql: "DELETE FROM share_links WHERE portfolio_id = ?", args: [id] },
       { sql: "DELETE FROM portfolios WHERE id = ? AND user_id = ?", args: [id, userId] },
     ],
     "write"
@@ -181,4 +183,20 @@ export async function getPortfolioSummary(userId: string, portfolioId: number): 
     if (x.cost != null) cost += x.cost;
   }
   return { cards, value, cost, gain: value - cost, unpriced };
+}
+
+export interface CardHolder { portfolioId: number; name: string; quantity: number }
+/** The signed-in user's binders that hold any printing of `cardId`, with total copies. */
+export async function getCardHolders(userId: string, cardId: number): Promise<CardHolder[]> {
+  const c = await db();
+  const r = await c.execute({
+    sql: `SELECT po.id, po.name, SUM(ci.quantity) AS quantity
+          FROM collection_items ci
+          JOIN portfolios po ON po.id = ci.portfolio_id AND po.user_id = ?
+          JOIN printings p ON p.id = ci.printing_id
+          WHERE p.card_id = ?
+          GROUP BY po.id ORDER BY quantity DESC, po.name`,
+    args: [userId, cardId],
+  });
+  return r.rows.map((x) => ({ portfolioId: Number(x.id), name: String(x.name), quantity: Number(x.quantity) }));
 }
