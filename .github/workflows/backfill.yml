@@ -1,0 +1,34 @@
+# .github/workflows/backfill.yml
+name: Historical price backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Start date (YYYY-MM-DD, earliest 2024-02-08)"
+        required: true
+        default: "2024-02-08"
+      to:
+        description: "End date (YYYY-MM-DD, inclusive)"
+        required: true
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: 7z --help > /dev/null # p7zip is preinstalled on ubuntu-latest; fail fast if not
+      - run: npx tsx ingest/backfill.ts "${{ inputs.from }}" "${{ inputs.to }}"
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
