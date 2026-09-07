@@ -984,6 +984,21 @@ git add ingest/prices.ts tests/prices.test.ts
 git commit -m "feat: write-on-change price ingestion with on-demand printings"
 ```
 
+- [ ] **Step 6: Rework after code review (required — the first cut had a correctness bug)**
+
+The review found that a same-date re-run with corrected data did nothing when the corrected value equalled the previous day's snapshot (the `unchanged` branch emitted no statement), leaving a wrong row permanently in `price_snapshots` and `latest_prices` disagreeing with it. That defeats "re-run to repair." The reworked module — the version that exists in the repo — has this contract:
+
+- **Semantics (module header):** `price_snapshots` = one row per printing per day the tuple CHANGED vs. the most recent snapshot strictly before that day (readers carry forward); `latest_prices.date` = LAST SEEN (upserted on every appearance), `MAX(price_snapshots.date)` = LAST CHANGED; tuples may be all-null (unpriceable, never zero); invariant `latest_prices` tuple == most recent snapshot tuple; re-runs are idempotent AND canonicalizing.
+- **API:** `ingestPrices(groupId, prices, date, index?: GroupIndex)`, `resolveGroupIndex(groupId): Promise<GroupIndex>` (`cardByProduct`, `printingId` maps — the backfill hoists this per group and passes it; the function mutates the passed index when it creates printings). `IngestPriceResult` gains `skippedWrongGroup` (productId exists in the catalog under a different group = catalog drift; the orchestrator should log it).
+- **Validation:** `date` must be `YYYY-MM-DD` (throws otherwise — every comparison is lexicographic); prices normalized via `norm(unknown)` (strings → numbers, non-finite → null); input deduped by `productId|subtype` (last wins).
+- **Performance:** printings inserted only when missing from the index (not insert-on-conflict per row); the previous tuple comes from `latest_prices` when `latest.date < date` (by the invariant), and the `MAX(date)` history scan runs only for out-of-order printings, restricted by `printing_id IN (...)`.
+- **Correctness:** when the tuple is unchanged and a snapshot already exists AT `date`, it is DELETED (canonicalizing); the `latest_prices` upsert carries `WHERE excluded.date >= latest_prices.date` in SQL (atomic — no read-then-write race between daily and backfill); a printing's statements are kept in the same batch chunk.
+- **Tests:** the original seven plus ten more (corrected re-run repairs history; all-null pair; middle insert equal to the later neighbour reconstructs correctly; stale latest ignored; wrong-group vs no-card; dedupe; invalid date throws; string price normalized; index hoisting; >200 printings).
+
+Commit: `fix: canonicalizing write-on-change prices — corrected re-runs repair history; atomic latest guard; validate dates; normalize numbers`
+
+**Consequences for later tasks:** Task 7 derives `date` with `toISOString().slice(0, 10)` (never a locale date), logs `skippedWrongGroup`, and treats a group returning zero prices as suspicious (warn). Task 9 calls `resolveGroupIndex` once per group and caches it across days, and must NOT record a day as complete if `ingestPrices` throws (earlier chunks may have committed; the re-run repairs).
+
 ---
 
 ### Task 6: R2 raw archiver
@@ -1195,6 +1210,7 @@ export interface GameSummary {
   written: number;
   unchanged: number;
   skippedNoCard: number;
+  skippedWrongGroup: number;
 }
 
 export interface DailySummary {
@@ -1215,7 +1231,7 @@ export async function runDailyIngest(opts: DailyIngestOptions): Promise<DailySum
       await upsertSets(cat, groups);
 
       const g: GameSummary = {
-        slug: game.slug, sets: groups.length, cards: 0, written: 0, unchanged: 0, skippedNoCard: 0,
+        slug: game.slug, sets: groups.length, cards: 0, written: 0, unchanged: 0, skippedNoCard: 0, skippedWrongGroup: 0,
       };
 
       for (const group of groups) {
@@ -1226,14 +1242,19 @@ export async function runDailyIngest(opts: DailyIngestOptions): Promise<DailySum
 
         const prices = await opts.client.fetchPrices(cat, group.groupId);
         await opts.archiver.putRaw(opts.date, cat, `${group.groupId}-prices`, { results: prices });
+        if (prices.length === 0 && products.length > 0) {
+          console.warn(`[${game.slug}] group ${group.groupId} returned 0 prices for ${products.length} products — suspicious`);
+        }
         const r = await ingestPrices(group.groupId, prices, opts.date);
         g.written += r.written;
         g.unchanged += r.unchanged;
         g.skippedNoCard += r.skippedNoCard;
+        g.skippedWrongGroup += r.skippedWrongGroup;
       }
 
       summary.perGame.push(g);
-      console.log(`[${game.slug}] sets=${g.sets} cards=${g.cards} priceWrites=${g.written} unchanged=${g.unchanged} skipped=${g.skippedNoCard}`);
+      console.log(`[${game.slug}] sets=${g.sets} cards=${g.cards} priceWrites=${g.written} unchanged=${g.unchanged} skippedNoCard=${g.skippedNoCard} skippedWrongGroup=${g.skippedWrongGroup}`);
+      if (g.skippedWrongGroup > 0) console.warn(`[${game.slug}] ${g.skippedWrongGroup} prices belong to products catalogued under another group (catalog drift)`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       summary.failures.push({ slug: game.slug, error: msg });
@@ -1397,7 +1418,7 @@ Ask the user to:
 
 Replays tcgcsv's daily price archives (`https://tcgcsv.com/archive/tcgplayer/prices-YYYY-MM-DD.ppmd.7z`, available from 2024-02-08) through the same `ingestPrices` write-on-change path. Catalog must already be populated (Task 8's first live run). Extraction uses the `7z` binary (p7zip, preinstalled on ubuntu-latest). The archive extracts to date-based folders containing per-category/per-group price JSON files; the walker is path-shape-agnostic: it scans for files whose parsed JSON has `results` with `productId`/`subTypeName`, taking the group id from the parent directory name.
 
-**Ordering:** because `ingestPrices` (Task 5) diffs each date against the most recent snapshot *before* it and only advances `latest_prices` for newer dates, the backfill is correct regardless of whether daily runs have already happened, and can be re-run safely. Replay oldest-first anyway: it's the cheapest order (each day's diff finds its predecessor immediately) and produces the fewest redundant rows. Prices for products no longer in the current catalog are counted as `skippedNoCard` — those cards' history is lost, which is acceptable (they no longer exist on TCGplayer to be collected).
+**Ordering:** because `ingestPrices` (Task 5, as reworked in its Step 6) diffs each date against the most recent snapshot *before* it, only advances `latest_prices` for newer dates (guarded in SQL), and canonicalizes on re-run, the backfill is correct regardless of whether daily runs have already happened, and can be re-run safely. Do not mark a day complete when `ingestPrices` throws — re-run it. Replay oldest-first anyway: it's the cheapest order (each day's diff finds its predecessor immediately) and produces the fewest redundant rows. Prices for products no longer in the current catalog are counted as `skippedNoCard` — those cards' history is lost, which is acceptable (they no longer exist on TCGplayer to be collected).
 
 - [ ] **Step 1: Write the failing test (replay core, no network/7z)**
 
@@ -1487,7 +1508,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ingestPrices } from "./prices";
+import { ingestPrices, resolveGroupIndex, type GroupIndex } from "./prices";
 import type { TcgcsvPrice } from "./tcgcsv";
 import { closeDb } from "@/lib/db";
 
@@ -1496,16 +1517,27 @@ export interface GroupPrices {
   prices: TcgcsvPrice[];
 }
 
+/** Per-group catalog lookups are identical across the ~900 replayed days; cache them.
+ *  ingestPrices mutates a passed index when it creates printings, so the cache stays valid. */
+export type GroupIndexCache = Map<number, GroupIndex>;
+
 export async function replayDay(
   date: string,
-  groups: GroupPrices[]
-): Promise<{ written: number; unchanged: number; skippedNoCard: number }> {
-  const total = { written: 0, unchanged: 0, skippedNoCard: 0 };
+  groups: GroupPrices[],
+  cache: GroupIndexCache = new Map()
+): Promise<{ written: number; unchanged: number; skippedNoCard: number; skippedWrongGroup: number }> {
+  const total = { written: 0, unchanged: 0, skippedNoCard: 0, skippedWrongGroup: 0 };
   for (const g of groups) {
-    const r = await ingestPrices(g.groupId, g.prices, date);
+    let index = cache.get(g.groupId);
+    if (!index) {
+      index = await resolveGroupIndex(g.groupId);
+      cache.set(g.groupId, index);
+    }
+    const r = await ingestPrices(g.groupId, g.prices, date, index);
     total.written += r.written;
     total.unchanged += r.unchanged;
     total.skippedNoCard += r.skippedNoCard;
+    total.skippedWrongGroup += r.skippedWrongGroup;
   }
   return total;
 }
@@ -1574,16 +1606,22 @@ if (isMain) {
     process.exit(2);
   }
   (async () => {
+    const cache: GroupIndexCache = new Map();
     for (const date of dateRange(from, to)) {
       const extracted = await downloadAndExtract(date);
       if (!extracted) {
         console.log(`[${date}] no archive, skipped`);
         continue;
       }
-      const groups = collectGroupPrices(extracted);
-      const r = await replayDay(date, groups);
-      console.log(`[${date}] groups=${groups.length} written=${r.written} unchanged=${r.unchanged} skipped=${r.skippedNoCard}`);
-      rmSync(join(extracted, ".."), { recursive: true, force: true });
+      try {
+        const groups = collectGroupPrices(extracted);
+        // A throw here leaves the day PARTIALLY applied (earlier groups committed). It is logged
+        // and the loop stops so the operator re-runs from this date; re-runs repair.
+        const r = await replayDay(date, groups, cache);
+        console.log(`[${date}] groups=${groups.length} written=${r.written} unchanged=${r.unchanged} skippedNoCard=${r.skippedNoCard} skippedWrongGroup=${r.skippedWrongGroup}`);
+      } finally {
+        rmSync(join(extracted, ".."), { recursive: true, force: true });
+      }
     }
     closeDb();
   })().catch((e) => {
