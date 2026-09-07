@@ -44,6 +44,20 @@ describe("Better Auth on libSQL", () => {
     expect((session?.user as { isAdmin?: boolean }).isAdmin).toBe(false);
   });
 
+  it("does not let a client grant itself admin via the sign-up body", async () => {
+    const { auth } = await import("@/lib/auth");
+    const signUp = await auth.api.signUpEmail({
+      body: { email: "sneaky@example.com", password: "correct horse battery", name: "Sneaky", isAdmin: true } as never,
+      asResponse: true,
+    });
+    // `isAdmin` is `input: false` on the user field — Better Auth silently drops unknown/non-input
+    // body fields rather than rejecting the request, so sign-up still succeeds.
+    expect(signUp.status).toBe(200);
+    const cookie = signUp.headers.get("set-cookie") ?? "";
+    const session = await auth.api.getSession({ headers: new Headers({ cookie }) });
+    expect((session?.user as { isAdmin?: boolean }).isAdmin).toBe(false);
+  });
+
   it("rejects a wrong password", async () => {
     const { auth } = await import("@/lib/auth");
     const res = await auth.api.signInEmail({

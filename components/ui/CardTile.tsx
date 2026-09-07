@@ -19,8 +19,7 @@ export default function CardTile({ name, subtitle, price, quantity, imageUrl, de
   return (
     <Wrapper type={onClick ? "button" : undefined} onClick={onClick} className={cn("flex flex-col gap-2.5 text-left", className)}>
       <div
-        role="img"
-        aria-label={name}
+        {...(onClick ? { "aria-hidden": true } : { role: "img", "aria-label": name })}
         className={cn(
           "relative aspect-[5/7] w-full overflow-hidden rounded-tile border",
           owned ? "border-hairline bg-hairline-soft shadow-tile" : "border-dashed border-hairline bg-ground opacity-70"

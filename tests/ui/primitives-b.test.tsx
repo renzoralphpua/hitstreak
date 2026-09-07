@@ -51,8 +51,10 @@ describe("CardTile", () => {
   it("is clickable when onClick is given", () => {
     const onClick = vi.fn();
     render(<CardTile name="A" subtitle="s" price="$1" quantity={1} imageUrl={null} onClick={onClick} />);
-    fireEvent.click(screen.getByRole("button", { name: /A/ }));
+    const button = screen.getByRole("button", { name: /^A/ });
+    fireEvent.click(button);
     expect(onClick).toHaveBeenCalled();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 });
 
