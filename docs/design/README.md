@@ -74,7 +74,8 @@ Mockup element → primitive (`components/ui/`):
 | Mockup element | Primitive |
 |---|---|
 | Filter chips | `Pill` |
-| Primary/secondary actions | `Button` |
+| Primary/secondary actions | `Button` (pass `href` for a navigational one — same skin, renders a link) |
+| Text fields | `Input` (optional `label`) |
 | Panels | `Panel` |
 | Serif section titles | `SectionHeading` |
 | Paid/Gain tiles | `StatTile` |
@@ -88,6 +89,12 @@ Mockup element → primitive (`components/ui/`):
 | Top bar | `TopNav` |
 | Phone tab bar | `BottomTabBar` |
 | Theme toggle | `ThemeToggle` |
+| Nothing-here panels | `EmptyState` |
+| Serif money values | `MoneyDisplay` |
 
 **Zero-change convention:** a 0 delta renders neutral (no arrow, dim text — neither gain nor accent);
 percentages that round to 0.0% are shown unsigned (no leading `+`/`-`).
+
+**Tap targets:** anything tappable is at least 44px high on a phone. `Button` and `Input` are 44px
+everywhere (`min-h-11`); `Pill` is `min-h-11 md:min-h-8` — a thumb target on phones, the compact
+32px chip of the mockups from `md` up.

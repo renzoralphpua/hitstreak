@@ -13,10 +13,13 @@ import {
   TierBadge,
   ValidationList,
   SearchField,
+  Input,
   CardTile,
   CardRow,
   TopNav,
   BottomTabBar,
+  EmptyState,
+  MoneyDisplay,
 } from "@/components/ui";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { formatMoney, formatDelta } from "@/lib/format";
@@ -66,6 +69,10 @@ export default function Gallery() {
             <Button>Primary</Button>
             <Button variant="secondary">Secondary</Button>
             <Button disabled>Disabled</Button>
+            <Button href="/dev/ui">Link</Button>
+            <Button href="/dev/ui" variant="secondary">
+              Secondary link
+            </Button>
           </div>
         </Variants>
       </Section>
@@ -156,6 +163,15 @@ export default function Gallery() {
         </Variants>
       </Section>
 
+      <Section name="Input">
+        <Variants>
+          <div className="flex max-w-sm flex-col gap-3">
+            <Input label="Email" type="email" placeholder="you@example.com" />
+            <Input aria-label="Binder name" placeholder="New binder…" />
+          </div>
+        </Variants>
+      </Section>
+
       <Section name="CardTile">
         <Variants>
           <div className="grid grid-cols-4 gap-3">
@@ -228,6 +244,29 @@ export default function Gallery() {
       <Section name="ThemeToggle">
         <Variants>
           <ThemeToggle />
+        </Variants>
+      </Section>
+
+      <Section name="MoneyDisplay">
+        <Variants>
+          <div className="flex flex-wrap items-end gap-6">
+            <MoneyDisplay amount={4812.4} size="md" />
+            <MoneyDisplay amount={4812.4} size="lg" />
+            <MoneyDisplay amount={null} />
+          </div>
+        </Variants>
+      </Section>
+
+      <Section name="EmptyState">
+        <Variants>
+          <div className="flex flex-col gap-4">
+            <EmptyState
+              title="No cards yet"
+              body="Add your first card to start tracking value."
+              action={<Button>Add a card</Button>}
+            />
+            <EmptyState title="No results" body="Try a different search." />
+          </div>
         </Variants>
       </Section>
     </div>

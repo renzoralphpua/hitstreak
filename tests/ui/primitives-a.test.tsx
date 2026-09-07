@@ -14,6 +14,22 @@ describe("Button", () => {
     render(<Button variant="secondary">Cancel</Button>);
     expect(screen.getByRole("button", { name: "Cancel" }).className).toMatch(/border-hairline/);
   });
+
+  it("with href it is a link wearing the same skin, and disabled only sets aria-disabled", () => {
+    render(
+      <>
+        <Button href="/sign-in">Sign in</Button>
+        <Button href="/sign-up" variant="secondary" disabled>Create account</Button>
+      </>
+    );
+    const primary = screen.getByRole("link", { name: "Sign in" });
+    expect(primary).toHaveAttribute("href", "/sign-in");
+    expect(primary.className).toMatch(/bg-chip/);
+    expect(primary).not.toHaveAttribute("aria-disabled");
+    const secondary = screen.getByRole("link", { name: "Create account" });
+    expect(secondary.className).toMatch(/border-hairline/);
+    expect(secondary).toHaveAttribute("aria-disabled", "true");
+  });
 });
 
 describe("Pill", () => {
@@ -22,8 +38,24 @@ describe("Pill", () => {
     const p = screen.getByRole("button", { name: "30D" });
     expect(p).toHaveAttribute("aria-pressed", "true");
     expect(p.className).toMatch(/bg-chip/);
+    // 44px thumb target on phones, compact chip from md up.
+    expect(p.className).toMatch(/min-h-11 md:min-h-8/);
     render(<Pill>7D</Pill>);
     expect(screen.getByRole("button", { name: "7D" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("with href it is a link, and the selected one is aria-current", () => {
+    render(
+      <>
+        <Pill href="/sets?game=pokemon" selected>Pokémon</Pill>
+        <Pill href="/sets?game=one-piece">One Piece</Pill>
+      </>
+    );
+    const active = screen.getByRole("link", { name: "Pokémon" });
+    expect(active).toHaveAttribute("href", "/sets?game=pokemon");
+    expect(active).toHaveAttribute("aria-current", "page");
+    expect(active.className).toMatch(/bg-chip/);
+    expect(screen.getByRole("link", { name: "One Piece" })).not.toHaveAttribute("aria-current");
   });
 });
 

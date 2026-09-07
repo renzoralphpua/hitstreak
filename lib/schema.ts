@@ -76,3 +76,29 @@ export const AUTH_SCHEMA_SQL = `
 
   CREATE INDEX IF NOT EXISTS "verification_identifier_idx" on "verification" ("identifier");
 `;
+
+// Phase 2b: user collections. user_id is Better Auth's text user.id; ownership is enforced in
+// lib/portfolios.ts by joining through portfolios.user_id (FKs are unenforced in SQLite).
+export const PORTFOLIO_SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS portfolios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_portfolios_user ON portfolios(user_id);
+
+  CREATE TABLE IF NOT EXISTS collection_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    portfolio_id INTEGER NOT NULL REFERENCES portfolios(id),
+    printing_id INTEGER NOT NULL REFERENCES printings(id),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    condition TEXT NOT NULL DEFAULT 'NM',
+    acquired_price REAL,      -- dollars, per copy
+    acquired_date TEXT,       -- YYYY-MM-DD
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    UNIQUE (portfolio_id, printing_id, condition)
+  );
+  CREATE INDEX IF NOT EXISTS idx_items_portfolio ON collection_items(portfolio_id);
+  CREATE INDEX IF NOT EXISTS idx_items_printing ON collection_items(printing_id);
+`;

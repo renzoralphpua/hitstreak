@@ -1,20 +1,49 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
+import Link from "next/link";
 import { cn } from "./cn";
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean };
+type Props = ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean; href?: string };
 
-/** Filter / tab chip. Selected = inverted ink chip (docs/design/README.md "Selected state"). */
-export default function Pill({ selected = false, className, ...rest }: Props) {
+// 44px minimum on phones (thumb target), back to the compact 32px chip from md up.
+const shape = "rounded-full px-3 py-1.5 text-[13px] leading-none min-h-11 md:min-h-8 transition-colors";
+const skin = (selected: boolean) =>
+  selected ? "bg-chip text-chip-ink font-medium" : "border border-hairline text-muted hover:text-ink";
+
+// Attributes only a <button> can take; the Link variant drops them and keeps everything else
+// (aria-*, data-*, handlers, title…).
+const BUTTON_ONLY = new Set([
+  "type",
+  "disabled",
+  "value",
+  "name",
+  "form",
+  "formAction",
+  "formEncType",
+  "formMethod",
+  "formNoValidate",
+  "formTarget",
+  "popoverTarget",
+  "popoverTargetAction",
+]);
+
+/** Filter / tab chip. Selected = inverted ink chip (docs/design/README.md "Selected state").
+ *  With `href` it is a `Link` instead of a button (navigational pills, e.g. the game row on /sets)
+ *  and the selected one carries `aria-current="page"`. */
+export default function Pill({ selected = false, className, href, children, ...rest }: Props) {
+  const classes = cn(shape, skin(selected), className);
+  if (href !== undefined) {
+    const anchorProps = Object.fromEntries(
+      Object.entries(rest).filter(([k]) => !BUTTON_ONLY.has(k))
+    ) as AnchorHTMLAttributes<HTMLAnchorElement>;
+    return (
+      <Link {...anchorProps} href={href} aria-current={selected ? "page" : undefined} className={classes}>
+        {children}
+      </Link>
+    );
+  }
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      className={cn(
-        "rounded-full px-3 py-1.5 text-[13px] leading-none min-h-8 transition-colors",
-        selected ? "bg-chip text-chip-ink font-medium" : "border border-hairline text-muted hover:text-ink",
-        className
-      )}
-      {...rest}
-    />
+    <button type="button" aria-pressed={selected} className={classes} {...rest}>
+      {children}
+    </button>
   );
 }
