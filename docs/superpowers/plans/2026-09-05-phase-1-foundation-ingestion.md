@@ -1331,6 +1331,14 @@ git add ingest/daily.ts tests/daily.test.ts
 git commit -m "feat: daily ingest orchestrator with per-game isolation and CLI entry"
 ```
 
+- [ ] **Step 7: Hardening (from Task 7's code review)** — `fix: orchestrator reports partial progress, isolates group failures with a breaker, soft deadline, date arg, summary line`. What the repo's `ingest/daily.ts` actually does beyond the code above:
+- Each `GameSummary` is pushed into `perGame` BEFORE the game's work and mutated in place, so a game that fails midway still reports what it completed (`groupsOk`, `failedGroups`, `zeroPriceGroups`, `elapsedMs`); `sets` is a floor for a failed game — consumers cross-check `failures`.
+- **Per-group isolation:** each group body has its own try/catch (archive-first ordering unchanged); a failing group is recorded in `failedGroups` and the run continues. A breaker aborts the game after 5 consecutive group failures (Turso/tcgcsv outage). Any failed group still makes the CLI exit 1 (no ratio gate yet — add one if nightly alerts get chatty).
+- **Soft deadline:** `deadlineAt` (CLI: now + 50 min) is checked between groups so a slow night ends with a summary instead of a hard Actions kill.
+- **CLI:** `npx tsx ingest/daily.ts [YYYY-MM-DD]` (or `INGEST_DATE`), validated (usage error → exit 2); default today UTC. `runDailyIngest` re-validates `date`. Exit via `process.exitCode = 1` (streams drain). Final greppable `DAILY_SUMMARY {json}` line, plus a heartbeat every 50 groups.
+- Tests: 9 in `tests/daily.test.ts` (archive-first abort with nothing written; true game isolation; group isolation; breaker; deadline; date validation; plus the original three, made order-independent).
+- The first real local run happened during this review (see Task 8 Step 3 numbers). Real-data observations: 907 of 54,548 printings have a null market price (no listings) — correctly stored as null.
+
 ---
 
 ### Task 8: GitHub Actions daily workflow + env docs
@@ -1348,7 +1356,12 @@ name: Daily price ingest
 on:
   schedule:
     - cron: "0 21 * * *" # ~1h after tcgcsv's 20:00 UTC refresh
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Ingest date to record (YYYY-MM-DD). Leave empty for today (UTC). Use this to re-run a failed night under its own date."
+        required: false
+        default: ""
 
 concurrency:
   group: ingest
@@ -1365,7 +1378,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx tsx ingest/daily.ts
+      - run: npx tsx ingest/daily.ts ${{ inputs.date }}
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
@@ -1399,10 +1412,10 @@ Run a real end-to-end ingest against a local file DB (PowerShell):
 $env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx ingest/daily.ts
 ```
 
-Expected: per-game log lines (`[riftbound] sets=… cards=… priceWrites=…` etc.), Riftbound finishing in seconds, Pokémon taking several minutes, exit code 0. Then verify row counts with a small script — create `scripts/db-counts.ts`:
+Expected: per-game log lines (`[riftbound] sets=… cards=… priceWrites=…` etc.), Riftbound finishing in seconds, Pokémon taking several minutes, exit code 0. (Already done once during Task 7's review: Pokémon 220 sets / 32,675 cards / 45,214 price writes; One Piece 87 / 7,524 / 7,326; Riftbound 13 / 1,560 / 2,008.) Then verify row counts with a small script — create `scripts/db-counts.mts` (`.mts`, because the package is not `"type": "module"` and tsx only allows top-level `await` in ESM files):
 
 ```ts
-// scripts/db-counts.ts — quick sanity check of table sizes. Usage: npx tsx scripts/db-counts.ts
+// scripts/db-counts.mts — quick sanity check of table sizes. Usage: npx tsx scripts/db-counts.mts
 import { db, closeDb } from "../lib/db";
 
 const c = await db();
@@ -1414,15 +1427,15 @@ closeDb();
 ```
 
 ```powershell
-$env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx scripts/db-counts.ts
+$env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx scripts/db-counts.mts
 ```
 
-Expected: `games 3`, non-zero counts for every other table, Pokémon dominating `cards`. Commit `scripts/db-counts.ts` along with the workflow in the next step. Delete `hitstreak.local.db*` afterwards (gitignored anyway).
+Expected: `games 3`, non-zero counts for every other table, Pokémon dominating `cards`. Commit `scripts/db-counts.mts` along with the workflow in the next step. Delete `hitstreak.local.db*` afterwards (gitignored anyway).
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add .github/workflows/daily-ingest.yml .env.example scripts/db-counts.ts
+git add .github/workflows/daily-ingest.yml .env.example scripts/db-counts.mts
 git commit -m "ci: scheduled daily ingest workflow, env template, db-counts script"
 ```
 
