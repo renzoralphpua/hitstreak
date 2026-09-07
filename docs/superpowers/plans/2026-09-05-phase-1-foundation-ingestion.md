@@ -997,6 +997,11 @@ The review found that a same-date re-run with corrected data did nothing when th
 
 Commit: `fix: canonicalizing write-on-change prices — corrected re-runs repair history; atomic latest guard; validate dates; normalize numbers`
 
+Re-review then found two more holes, fixed in a follow-up commit (`fix: keep latest_prices tuple in sync when replaying recent days; refresh hoisted card index; stricter date + bigint normalization`):
+- **Replaying a recent day** (one already followed by later runs) rewrote/deleted the newest snapshot while the SQL guard kept `latest_prices`' old tuple → invariant broken → a fabricated change the next day. Fix: on the out-of-order branch, when `date >= MAX(snapshot date)` for the printing, also `UPDATE latest_prices SET <tuple>` (date untouched) with the post-write newest tuple (`next` if written, else `prev`).
+- **Hoisted `GroupIndex` never refreshed `cardByProduct`**, so a card added to the same group after hoisting was skipped and misreported as drift. Fix: reload `cardByProduct` into the index before classifying skips.
+- Minors: canonicalization is per-replayed-day (the following day's row may become redundant — harmless for carry-forward; movers queries must tolerate 0-delta rows); date validation also round-trips through `Date` (rejects `2026-13-45`); `norm` accepts `bigint`, `tupleOf` normalizes DB values.
+
 **Consequences for later tasks:** Task 7 derives `date` with `toISOString().slice(0, 10)` (never a locale date), logs `skippedWrongGroup`, and treats a group returning zero prices as suspicious (warn). Task 9 calls `resolveGroupIndex` once per group and caches it across days, and must NOT record a day as complete if `ingestPrices` throws (earlier chunks may have committed; the re-run repairs).
 
 ---
