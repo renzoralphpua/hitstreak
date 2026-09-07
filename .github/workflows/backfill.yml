@@ -27,7 +27,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: 7z --help > /dev/null # p7zip is preinstalled on ubuntu-latest; fail fast if not
+      - run: command -v 7z > /dev/null # p7zip is preinstalled on ubuntu-latest; fail fast if not (7z parses its first arg as a command, so --help can exit non-zero even when installed)
       - run: npx tsx ingest/backfill.ts "${{ inputs.from }}" "${{ inputs.to }}"
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
