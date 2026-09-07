@@ -4,7 +4,7 @@ const tmp = tmpDb("portfolios");
 import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import {
-  listPortfolios, createPortfolio, renamePortfolio, deletePortfolio,
+  listPortfolios, createPortfolio, renamePortfolio, deletePortfolio, getPortfolio,
   addItem, updateItem, removeItem, getPortfolioHoldings, getPortfolioSummary,
 } from "@/lib/portfolios";
 
@@ -78,5 +78,58 @@ describe("portfolios", () => {
     await deletePortfolio(U1, p.id);
     const c = await db();
     expect(Number((await c.execute({ sql: "SELECT COUNT(*) AS n FROM collection_items WHERE portfolio_id = ?", args: [p.id] })).rows[0].n)).toBe(0);
+  });
+
+  it("rejects adding an item for a printing that doesn't exist", async () => {
+    const [p] = await listPortfolios(U1);
+    const c = await db();
+    const before = Number((await c.execute({ sql: "SELECT COUNT(*) AS n FROM collection_items WHERE printing_id = ?", args: [999999] })).rows[0].n);
+    await expect(addItem(U1, p.id, { printingId: 999999, quantity: 1, condition: "NM" })).rejects.toThrow(/printing/i);
+    const after = Number((await c.execute({ sql: "SELECT COUNT(*) AS n FROM collection_items WHERE printing_id = ?", args: [999999] })).rows[0].n);
+    expect(after).toBe(before);
+  });
+
+  it("clamps merged quantity at 9999", async () => {
+    const p = await createPortfolio(U1, "Clamp Test");
+    await addItem(U1, p.id, { printingId: seed.printings.shanksNormal, quantity: 9998, condition: "NM" });
+    await addItem(U1, p.id, { printingId: seed.printings.shanksNormal, quantity: 5, condition: "NM" });
+    const h = await getPortfolioHoldings(U1, p.id);
+    expect(h[0].quantity).toBe(9999);
+  });
+
+  it("rejects a malformed acquiredDate", async () => {
+    const [p] = await listPortfolios(U1);
+    await expect(
+      addItem(U1, p.id, { printingId: seed.printings.shanksNormal, quantity: 1, condition: "NM", acquiredDate: "09/07/2026" })
+    ).rejects.toThrow(/date/i);
+  });
+
+  it("getPortfolio returns own portfolio, null for another user's", async () => {
+    const [p] = await listPortfolios(U1);
+    const own = await getPortfolio(U1, p.id);
+    expect(own?.id).toBe(p.id);
+    expect(await getPortfolio(U2, p.id)).toBeNull();
+  });
+
+  it("rejects a blank rename", async () => {
+    const [p] = await listPortfolios(U1);
+    await expect(renamePortfolio(U1, p.id, "   ")).rejects.toThrow(/name/i);
+  });
+
+  it("listPortfolios for an unknown user returns an empty array", async () => {
+    expect(await listPortfolios("nobody")).toEqual([]);
+  });
+
+  it("getPortfolioHoldings scoped to the wrong user returns an empty array", async () => {
+    const [p] = await listPortfolios(U1);
+    expect(await getPortfolioHoldings(U2, p.id)).toEqual([]);
+  });
+
+  it("updateItem for an item not owned by the caller returns false", async () => {
+    const [p] = await listPortfolios(U1);
+    await addItem(U1, p.id, { printingId: seed.printings.shanksNormal, quantity: 1, condition: "HP" });
+    const h = await getPortfolioHoldings(U1, p.id);
+    const item = h.find((x) => x.condition === "HP")!;
+    expect(await updateItem(U2, item.itemId, { quantity: 2 })).toBe(false);
   });
 });

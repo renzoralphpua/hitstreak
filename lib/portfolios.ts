@@ -30,6 +30,14 @@ export async function listPortfolios(userId: string): Promise<Portfolio[]> {
   return r.rows.map((x) => ({ id: Number(x.id), name: String(x.name), createdAt: String(x.created_at) }));
 }
 
+export async function getPortfolio(userId: string, id: number): Promise<Portfolio | null> {
+  const c = await db();
+  const r = await c.execute({ sql: "SELECT id, name, created_at FROM portfolios WHERE id = ? AND user_id = ?", args: [id, userId] });
+  if (r.rows.length === 0) return null;
+  const x = r.rows[0];
+  return { id: Number(x.id), name: String(x.name), createdAt: String(x.created_at) };
+}
+
 export async function createPortfolio(userId: string, name: string): Promise<Portfolio> {
   const c = await db();
   const r = await c.execute({ sql: "INSERT INTO portfolios (user_id, name) VALUES (?, ?) RETURNING id, name, created_at", args: [userId, cleanName(name)] });
@@ -75,6 +83,17 @@ function checkPrice(p: number | null | undefined): number | null {
   if (!Number.isFinite(p) || p < 0) throw new Error("Price must be zero or more");
   return p;
 }
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function checkDate(d: string | null | undefined): string | null {
+  if (d == null) return null;
+  if (!DATE_RE.test(d)) throw new Error("Date must be in YYYY-MM-DD format");
+  return d;
+}
+async function assertPrintingExists(printingId: number) {
+  const c = await db();
+  const r = await c.execute({ sql: "SELECT 1 FROM printings WHERE id = ?", args: [printingId] });
+  if (r.rows.length === 0) throw new Error("Printing not found");
+}
 
 export interface AddItemInput { printingId: number; quantity: number; condition: string; acquiredPrice?: number | null; acquiredDate?: string | null }
 
@@ -85,21 +104,24 @@ export async function addItem(userId: string, portfolioId: number, input: AddIte
   checkQuantity(input.quantity);
   const condition = checkCondition(input.condition);
   const price = checkPrice(input.acquiredPrice);
+  const acquiredDate = checkDate(input.acquiredDate);
+  await assertPrintingExists(input.printingId);
   const c = await db();
   await c.execute({
     sql: `INSERT INTO collection_items (portfolio_id, printing_id, quantity, condition, acquired_price, acquired_date)
           VALUES (?, ?, ?, ?, ?, ?)
           ON CONFLICT(portfolio_id, printing_id, condition) DO UPDATE SET
-            quantity = quantity + excluded.quantity,
+            quantity = MIN(quantity + excluded.quantity, 9999),
             acquired_price = COALESCE(collection_items.acquired_price, excluded.acquired_price),
             acquired_date = COALESCE(collection_items.acquired_date, excluded.acquired_date)`,
-    args: [portfolioId, input.printingId, input.quantity, condition, price, input.acquiredDate ?? null],
+    args: [portfolioId, input.printingId, input.quantity, condition, price, acquiredDate],
   });
 }
 
 export async function updateItem(userId: string, itemId: number, patch: { quantity?: number; acquiredPrice?: number | null; acquiredDate?: string | null }): Promise<boolean> {
   if (patch.quantity !== undefined) checkQuantity(patch.quantity);
   const price = patch.acquiredPrice === undefined ? undefined : checkPrice(patch.acquiredPrice);
+  const date = patch.acquiredDate === undefined ? undefined : checkDate(patch.acquiredDate);
   const c = await db();
   const r = await c.execute({
     sql: `UPDATE collection_items SET
@@ -107,7 +129,7 @@ export async function updateItem(userId: string, itemId: number, patch: { quanti
             acquired_price = CASE WHEN ? THEN ? ELSE acquired_price END,
             acquired_date = CASE WHEN ? THEN ? ELSE acquired_date END
           WHERE id = ? AND portfolio_id IN (SELECT id FROM portfolios WHERE user_id = ?)`,
-    args: [patch.quantity ?? null, price !== undefined ? 1 : 0, price ?? null, patch.acquiredDate !== undefined ? 1 : 0, patch.acquiredDate ?? null, itemId, userId],
+    args: [patch.quantity ?? null, price !== undefined ? 1 : 0, price ?? null, date !== undefined ? 1 : 0, date ?? null, itemId, userId],
   });
   return r.rowsAffected === 1;
 }
