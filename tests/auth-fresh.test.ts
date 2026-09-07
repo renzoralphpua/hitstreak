@@ -16,7 +16,8 @@ afterAll(() => {
 });
 
 describe("Better Auth on a cold database", () => {
-  it("signs up without any prior db() call", async () => {
+  // scrypt password hashing is CPU-bound and can exceed the 5s default under full-suite load
+  it("signs up without any prior db() call", { timeout: 20_000 }, async () => {
     const { auth } = await import("@/lib/auth"); // no db() first — on purpose
     const res = await auth.api.signUpEmail({
       body: { email: "cold@example.com", password: "correct horse battery", name: "Cold" },
