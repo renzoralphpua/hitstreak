@@ -1735,10 +1735,38 @@ User (or engineer with secrets access) dispatches the "Historical price backfill
 
 ---
 
-### Task 10: README + push
+### Task 10: README + CI workflow + push
 
 **Files:**
 - Create/Replace: `README.md` (create-next-app will have generated a boilerplate one)
+- Create: `.github/workflows/ci.yml` (from Task 8's review: nothing else gates broken code before the nightly job runs it)
+
+- [ ] **Step 0: CI workflow**
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+```
 
 - [ ] **Step 1: Write the README**
 
