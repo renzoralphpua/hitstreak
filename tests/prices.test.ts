@@ -393,7 +393,7 @@ describe("ingestPrices (write-on-change)", () => {
     expect(await timeline(p)).toEqual([["2028-01-01", 10], ["2028-01-03", 40]]);
   });
 
-  it("the repair UPDATE's own SQL guard no-ops when a newer snapshot was committed concurrently", async () => {
+  it("a newer snapshot already visible at scan time skips the repair (pre-filter); the SQL guard covers the in-flight race and is not exercisable single-threaded", async () => {
     await upsertProducts(3, 604, [{ productId: 450107, name: "Concurrent Repair" }]);
     const c = await db();
 
@@ -416,8 +416,8 @@ describe("ingestPrices (write-on-change)", () => {
 
     // Replaying 2029-01-05: the upsert guard blocks it (01-05 < latest.date
     // 01-09), and the pre-filter (maxSnapshotDate 01-09 > date 01-05) already
-    // skips the repair entirely — so the SQL guard's effect is not what stops
-    // the write here, but the end state documents the invariant either way.
+    // skips the repair entirely. The NOT EXISTS guard is defensive for a commit
+    // landing between this call's scan and its batch, but is not exercisable here.
     expect(
       await ingestPrices(604, [{ productId: 450107, subTypeName: "Normal", marketPrice: 30 }], "2029-01-05")
     ).toMatchObject({ written: 1 });
