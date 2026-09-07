@@ -8,12 +8,16 @@ describe("safeNext (open-redirect guard)", () => {
     ["//evil.com", "/portfolios"],
     ["/\\evil.com", "/portfolios"],
     ["/\t/evil.com", "/portfolios"],
+    ["/\r\n/evil.com", "/portfolios"],
+    ["/\\\\/evil.com", "/portfolios"],
     ["javascript:alert(1)", "/portfolios"],
     ["https://evil.com", "/portfolios"],
     ["", "/portfolios"],
     [undefined, "/portfolios"],
     ["relative", "/portfolios"],
     ["/" + "a".repeat(3000), "/portfolios"],
+    [123, "/portfolios"],
+    [{}, "/portfolios"],
   ];
 
   it.each(cases)("safeNext(%j) -> %j", (input, expected) => {

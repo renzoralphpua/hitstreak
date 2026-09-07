@@ -30,10 +30,12 @@ Each `*.dc.html` file here is one artboard (static mockup) from that canvas; `ca
 | Ground | `#15120e` (warm charcoal — never neutral black) |
 | Surface | `#1d1913` |
 | Hairline | `#2b251d` |
+| Hairline (soft) | `#241f18` |
 | Ink | `#f1ebe0` |
 | Muted / Dim | `#9a8f7f` / `#8a7f6f` |
 | Accent | `#e07a55` |
 | Gain | `#7fcf98` |
+| Chip / chip ink | `#f1ebe0` / `#15120e` |
 | Card tile shadow | `0 10px 22px rgba(0,0,0,.45)` |
 
 ## Conventions

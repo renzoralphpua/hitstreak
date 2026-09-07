@@ -16,16 +16,21 @@ export default function AuthForm({ mode, next = "/portfolios" }: { mode: "sign-i
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = mode === "sign-in"
-      ? await authClient.signIn.email({ email, password })
-      : await authClient.signUp.email({ email, password, name });
-    setBusy(false);
-    if (res.error) {
-      setError(res.error.message ?? "Something went wrong");
-      return;
+    try {
+      const res = mode === "sign-in"
+        ? await authClient.signIn.email({ email, password })
+        : await authClient.signUp.email({ email, password, name });
+      if (res.error) {
+        setError(res.error.message ?? "Something went wrong");
+        return;
+      }
+      router.refresh();
+      router.push(next);
+    } catch {
+      setError("Could not reach the server. Try again.");
+    } finally {
+      setBusy(false);
     }
-    router.refresh();
-    router.push(next);
   }
 
   const field = "h-11 w-full rounded-tile border border-hairline bg-surface px-3.5 text-ink outline-none focus:border-ink";

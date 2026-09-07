@@ -7,8 +7,13 @@ const PROTECTED = ["/portfolios", "/sets", "/cards", "/decks", "/alerts", "/dev"
  *  getSession() in app/(app)/layout.tsx — never rely on this alone. */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (!PROTECTED.some((p) => pathname === p || pathname.startsWith(p + "/"))) return NextResponse.next();
-  if (getSessionCookie(request)) return NextResponse.next();
+  const passThrough = () => {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname + request.nextUrl.search);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  };
+  if (!PROTECTED.some((p) => pathname === p || pathname.startsWith(p + "/"))) return passThrough();
+  if (getSessionCookie(request)) return passThrough();
   const url = new URL("/sign-in", request.url);
   url.searchParams.set("next", pathname + request.nextUrl.search);
   return NextResponse.redirect(url);

@@ -1,3 +1,4 @@
+"use client";
 import type { ReactNode, ElementType } from "react";
 import { cn } from "./cn";
 

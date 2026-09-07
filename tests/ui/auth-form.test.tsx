@@ -30,4 +30,13 @@ describe("AuthForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("User already exists"));
   });
+  it("shows a network error and re-enables the submit button when the auth call rejects", async () => {
+    signIn.mockRejectedValueOnce(new Error("ECONNRESET"));
+    render(<AuthForm mode="sign-in" />);
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "r@x.com" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "pw12345678" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Could not reach the server. Try again."));
+    expect(screen.getByRole("button", { name: "Sign in" })).not.toBeDisabled();
+  });
 });

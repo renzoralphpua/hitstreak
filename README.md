@@ -25,7 +25,7 @@ npm install
 npm test            # vitest against throwaway file: DBs
 npm run typecheck   # tsc --noEmit (vitest does not type-check)
 npm run lint
-npm run dev         # Next.js dev server (UI arrives in Phase 2)
+npm run dev         # Next.js dev server
 ```
 
 Local ingestion run against a file database (bash):
@@ -64,6 +64,23 @@ re-apply any hand edits noted in `lib/schema.ts`.
 Required env vars: `BETTER_AUTH_SECRET` (generate with `openssl rand -base64 32`) and `BETTER_AUTH_URL`.
 For local dev, `.env.local` needs `TURSO_DATABASE_URL=file:hitstreak.local.db` plus those two — see
 `.env.example`. `.env.local` and `hitstreak.local.db*` are gitignored; never commit them.
+
+On Vercel, set `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL` for
+BOTH the Build step and Runtime, on BOTH the Production and Preview environments. `lib/auth.ts` throws at
+import time if `TURSO_DATABASE_URL` is unset (the auth route is imported during Next's page-data
+collection at build time, not just at runtime), and Better Auth itself throws in production if
+`BETTER_AUTH_SECRET` isn't a real secret — preview deployments run with `NODE_ENV=production`, so this
+applies to previews too, not just the production environment.
+
+### Dependency overrides
+
+`package.json` pins two transitive versions via `overrides`:
+
+- `better-auth`'s `vitest` peer dependency accepts an optional range that predates vitest 5; the override
+  points it at our root `vitest` (`^5.0.0`) so npm doesn't try to install a second, older vitest.
+- `@libsql/kysely-libsql` normally pulls its own `@libsql/client@^0.8`; the override dedupes that to the
+  root `@libsql/client@^0.18.0` since we construct and pass in our own client (see `lib/auth.ts`) rather
+  than letting the dialect create one.
 
 ## Design docs
 

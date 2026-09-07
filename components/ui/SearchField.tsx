@@ -1,3 +1,4 @@
+"use client";
 import { cn } from "./cn";
 
 type Props = { value: string; onChange: (v: string) => void; placeholder?: string; className?: string; autoFocus?: boolean };

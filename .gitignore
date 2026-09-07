@@ -45,3 +45,6 @@ next-env.d.ts
 .tmp-*.db*
 *.local.db*
 .env*.local
+
+# claude code
+.claude/

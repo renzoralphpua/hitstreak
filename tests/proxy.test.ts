@@ -16,6 +16,10 @@ describe("proxy (optimistic auth redirect)", () => {
     const res = await proxy(req("/portfolios", "better-auth.session_token=abc"));
     expect(res.headers.get("location")).toBeNull();
   });
+  it("carries the current path on the request headers for the layout's real gate", async () => {
+    const res = await proxy(req("/portfolios?tab=active", "better-auth.session_token=abc"));
+    expect(res.headers.get("x-middleware-request-x-pathname")).toBe("/portfolios?tab=active");
+  });
   it("does not touch public routes", async () => {
     const res = await proxy(req("/sign-in"));
     expect(res.headers.get("location")).toBeNull();
