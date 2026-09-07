@@ -47,7 +47,7 @@ components/ui/MoneyDisplay.tsx       new primitive: serif whole + dim cents (fro
 
 **Files:** modify `lib/schema.ts`, `lib/db.ts`; create `lib/portfolios.ts`, `tests/helpers/seed.ts`, `tests/portfolios.test.ts`
 
-- [ ] **Step 1: Seed helper** (used by every data-layer test)
+- [x] **Step 1: Seed helper** (used by every data-layer test)
 
 ```ts
 // tests/helpers/seed.ts
@@ -90,7 +90,7 @@ export async function seedMiniCatalog() {
 }
 ```
 
-- [ ] **Step 2: Failing tests**
+- [x] **Step 2: Failing tests**
 
 ```ts
 // tests/portfolios.test.ts
@@ -178,7 +178,7 @@ describe("portfolios", () => {
 });
 ```
 
-- [ ] **Step 3: Schema** — append to `lib/schema.ts`:
+- [x] **Step 3: Schema** — append to `lib/schema.ts`:
 
 ```ts
 // Phase 2b: user collections. user_id is Better Auth's text user.id; ownership is enforced in
@@ -210,7 +210,7 @@ export const PORTFOLIO_SCHEMA_SQL = `
 
 `lib/db.ts`: `executeMultiple(SCHEMA_SQL + AUTH_SCHEMA_SQL + PORTFOLIO_SCHEMA_SQL)`.
 
-- [ ] **Step 4: Data layer**
+- [x] **Step 4: Data layer**
 
 ```ts
 // lib/portfolios.ts
@@ -377,7 +377,7 @@ export async function getPortfolioSummary(userId: string, portfolioId: number): 
 }
 ```
 
-- [ ] **Step 5: Verify + commit** — `npm test`, `npm run typecheck`, `npm run lint`. Commit: `feat(portfolios): schema + data layer (CRUD, holdings valuation)`
+- [x] **Step 5: Verify + commit** — `npm test`, `npm run typecheck`, `npm run lint`. Commit: `feat(portfolios): schema + data layer (CRUD, holdings valuation)`
 
 ---
 
@@ -385,7 +385,7 @@ export async function getPortfolioSummary(userId: string, portfolioId: number): 
 
 **Files:** `lib/catalog.ts`, `tests/catalog-read.test.ts`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```ts
 // tests/catalog-read.test.ts
@@ -453,7 +453,7 @@ describe("card detail", () => {
 });
 ```
 
-- [ ] **Step 2: Implementation**
+- [x] **Step 2: Implementation**
 
 ```ts
 // lib/catalog.ts
@@ -611,7 +611,7 @@ export async function getCardDetail(userId: string, cardId: number, asOf = new D
 
 Note for the test: `getCardDetail` in the test passes no `asOf`, so it uses today; the seed's Umbreon snapshots are `2026-07-01 @1100` and `2026-09-01 @1465` — "30 days before today" must land after 07-01 and before 09-01 for the expected 365 change. **Pass `asOf: "2026-09-07"` explicitly in the test** to make it deterministic (`getCardDetail(U, id, "2026-09-07")`) — update the test accordingly.
 
-- [ ] **Step 3: Verify + commit** — `feat(catalog): read layer — search, set completion, set detail, card detail, 30-day change`
+- [x] **Step 3: Verify + commit** — `feat(catalog): read layer — search, set completion, set detail, card detail, 30-day change`
 
 ---
 
@@ -619,7 +619,7 @@ Note for the test: `getCardDetail` in the test passes no `asOf`, so it uses toda
 
 **Files:** `components/ui/EmptyState.tsx`, `components/ui/MoneyDisplay.tsx`, barrel, `tests/ui/primitives-c.test.tsx`, add both to `app/dev/ui/page.tsx` + gallery test list
 
-- [ ] Tests: `EmptyState` renders title (heading), body, and an optional action node; `MoneyDisplay amount={4812.4}` renders `$4,812` in `font-display` and `.40` in `text-dim`; `amount={null}` renders `—`; `size="lg"` applies the 56px class.
+- [x] Tests: `EmptyState` renders title (heading), body, and an optional action node; `MoneyDisplay amount={4812.4}` renders `$4,812` in `font-display` and `.40` in `text-dim`; `amount={null}` renders `—`; `size="lg"` applies the 56px class.
 
 ```tsx
 // components/ui/EmptyState.tsx
@@ -658,7 +658,7 @@ Commit: `feat(ui): EmptyState, MoneyDisplay`
 
 **Files:** `app/(app)/portfolios/actions.ts`, `app/(app)/portfolios/PortfolioForm.tsx`, `app/(app)/portfolios/page.tsx` (replace placeholder), `tests/actions.test.ts`, `tests/ui/portfolio-form.test.tsx`
 
-- [ ] **Actions** — every action: `const session = await getSession(); if (!session) return { ok: false, error: "Not signed in" }`; call the data layer inside try/catch mapping thrown validation errors to `{ ok: false, error: e.message }`; `revalidatePath("/portfolios")` (and `/portfolios/[id]`, `/sets`, `/sets/[id]`, `/cards/[id]` where relevant) on success; return `{ ok: true, id? }`.
+- [x] **Actions** — every action: `const session = await getSession(); if (!session) return { ok: false, error: "Not signed in" }`; call the data layer inside try/catch mapping thrown validation errors to `{ ok: false, error: e.message }`; `revalidatePath("/portfolios")` (and `/portfolios/[id]`, `/sets`, `/sets/[id]`, `/cards/[id]` where relevant) on success; return `{ ok: true, id? }`.
 
 ```ts
 // app/(app)/portfolios/actions.ts
@@ -709,9 +709,9 @@ export async function removeItemAction(portfolioId: number, itemId: number) {
 ```
 `tests/actions.test.ts` (node): mock `@/lib/session` (`getSession` → `{ user: { id: "user_1" } }` or `null`) and `next/cache` (`revalidatePath: vi.fn()`); with `tmpDb("actions")` + `seedMiniCatalog`, assert: signed-out → `{ ok: false, error: "Not signed in" }`; create → `ok` and the portfolio exists; blank name → `{ ok: false, error: /name/ }`; addItem on someone else's portfolio → `{ ok: false }`; `revalidatePath` called with `/portfolios`.
 
-- [ ] **PortfolioForm** (client): create mode (input + "Create binder" `Button`) and rename mode (inline input, Save/Cancel `Button`s); calls the action, shows `role="alert"` on error, `router.refresh()` on success. Test with mocked actions like `auth-form.test.tsx`.
+- [x] **PortfolioForm** (client): create mode (input + "Create binder" `Button`) and rename mode (inline input, Save/Cancel `Button`s); calls the action, shows `role="alert"` on error, `router.refresh()` on success. Test with mocked actions like `auth-form.test.tsx`.
 
-- [ ] **Page** `app/(app)/portfolios/page.tsx` (server): `getSession()` (layout guarantees it, but read the user id), `listPortfolios(userId)`; for each, `getPortfolioSummary`. Layout per `Main.dc.html`: `SectionHeading title="Your binders" caption="{n} binders"`; list of `Panel`s each with the name (link to `/portfolios/[id]`), `MoneyDisplay amount={value}`, `PriceDelta` for gain (amount = gain, ratio = cost ? gain / cost : null), `StatTile`s Paid / Cards; a rename `PortfolioForm mode="rename"` inline and a delete `Button variant="secondary"` (confirm via `window.confirm` in a tiny client `DeletePortfolioButton`). Empty state: `EmptyState title="No binders yet" body="Create one to start tracking cards." action={<PortfolioForm mode="create" />}`. When ≥1 exists, a compact create form at the bottom.
+- [x] **Page** `app/(app)/portfolios/page.tsx` (server): `getSession()` (layout guarantees it, but read the user id), `listPortfolios(userId)`; for each, `getPortfolioSummary`. Layout per `Main.dc.html`: `SectionHeading title="Your binders" caption="{n} binders"`; list of `Panel`s each with the name (link to `/portfolios/[id]`), `MoneyDisplay amount={value}`, `PriceDelta` for gain (amount = gain, ratio = cost ? gain / cost : null), `StatTile`s Paid / Cards; a rename `PortfolioForm mode="rename"` inline and a delete `Button variant="secondary"` (confirm via `window.confirm` in a tiny client `DeletePortfolioButton`). Empty state: `EmptyState title="No binders yet" body="Create one to start tracking cards." action={<PortfolioForm mode="create" />}`. When ≥1 exists, a compact create form at the bottom.
 
 Commit: `feat(portfolios): server actions, binder list page, create/rename/delete`
 
@@ -721,13 +721,13 @@ Commit: `feat(portfolios): server actions, binder list page, create/rename/delet
 
 **Files:** `app/(app)/portfolios/[id]/page.tsx`, `HoldingsTable.tsx`, `AddItemDialog.tsx`, `app/api/search/route.ts`, `tests/search-route.test.ts`, `tests/ui/holdings-table.test.tsx`, `tests/ui/add-item-dialog.test.tsx`
 
-- [ ] **Search route** `app/api/search/route.ts`: `GET /api/search?q=&game=` → `getSession()` else 401; `searchCards(q, { gameSlug })` → JSON `{ hits }`; `Cache-Control: private, no-store`. Test: mock `@/lib/session`; 401 without session; results with `tmpDb` + seed (construct `new NextRequest("http://x/api/search?q=pika")`).
+- [x] **Search route** `app/api/search/route.ts`: `GET /api/search?q=&game=` → `getSession()` else 401; `searchCards(q, { gameSlug })` → JSON `{ hits }`; `Cache-Control: private, no-store`. Test: mock `@/lib/session`; 401 without session; results with `tmpDb` + seed (construct `new NextRequest("http://x/api/search?q=pika")`).
 
-- [ ] **Page** (server): `params` is a Promise (`const { id } = await params`); `Number(id)`; `getPortfolioSummary` + `getPortfolioHoldings`; 404 via `notFound()` when the portfolio isn't the user's (holdings query returns [] for both empty and not-owned — so also check `listPortfolios` includes the id). Header per `Main.dc.html` left column: `SectionHeading` with the binder name; `MoneyDisplay size="lg"`; `PriceDelta` gain (`caption="vs. paid"`); `StatTile`s Paid / Gain / Cards / Unpriced. Then `<HoldingsTable holdings={…} portfolioId={…} />` and `<AddItemDialog portfolioId={…} />` (button "Add a card").
+- [x] **Page** (server): `params` is a Promise (`const { id } = await params`); `Number(id)`; `getPortfolioSummary` + `getPortfolioHoldings`; 404 via `notFound()` when the portfolio isn't the user's (holdings query returns [] for both empty and not-owned — so also check `listPortfolios` includes the id). Header per `Main.dc.html` left column: `SectionHeading` with the binder name; `MoneyDisplay size="lg"`; `PriceDelta` gain (`caption="vs. paid"`); `StatTile`s Paid / Gain / Cards / Unpriced. Then `<HoldingsTable holdings={…} portfolioId={…} />` and `<AddItemDialog portfolioId={…} />` (button "Add a card").
 
-- [ ] **HoldingsTable** (client): rows via `CardRow` (thumb, name, `setName · number · subtype · condition`), right side `formatMoney(value)` + `PriceDelta amount={value - cost}` when cost known, `×qty`. Row actions: qty stepper (− / +) calling `updateItemAction`, remove (with `confirm`). Test: renders rows with formatted money; clicking + calls the mocked action with quantity+1; unpriced row shows `—` and "no price" caption.
+- [x] **HoldingsTable** (client): rows via `CardRow` (thumb, name, `setName · number · subtype · condition`), right side `formatMoney(value)` + `PriceDelta amount={value - cost}` when cost known, `×qty`. Row actions: qty stepper (− / +) calling `updateItemAction`, remove (with `confirm`). Test: renders rows with formatted money; clicking + calls the mocked action with quantity+1; unpriced row shows `—` and "no price" caption.
 
-- [ ] **AddItemDialog** (client): a `Button` "Add a card" opens a panel (no portal library — a fixed overlay `div` with `role="dialog" aria-modal`): `SearchField` (debounced 250ms fetch to `/api/search?q=`), results as `CardRow`s; selecting a card shows its printings as `Pill`s with price; then quantity (number input, default 1), condition `Pill`s (`CONDITIONS`), acquired price (optional), "Add to binder" → `addItemAction` → close + `router.refresh()`. Escape closes. Test with mocked `fetch` (returns one hit) and mocked action: type → results appear → pick printing → submit → action called with `{ printingId, quantity: 1, condition: "NM" }`.
+- [x] **AddItemDialog** (client): a `Button` "Add a card" opens a panel (no portal library — a fixed overlay `div` with `role="dialog" aria-modal`): `SearchField` (debounced 250ms fetch to `/api/search?q=`), results as `CardRow`s; selecting a card shows its printings as `Pill`s with price; then quantity (number input, default 1), condition `Pill`s (`CONDITIONS`), acquired price (optional), "Add to binder" → `addItemAction` → close + `router.refresh()`. Escape closes. Test with mocked `fetch` (returns one hit) and mocked action: type → results appear → pick printing → submit → action called with `{ printingId, quantity: 1, condition: "NM" }`.
 
 Commit: `feat(portfolios): holdings page with valuation, add-item flow, search API`
 
@@ -737,11 +737,11 @@ Commit: `feat(portfolios): holdings page with valuation, add-item flow, search A
 
 **Files:** `app/(app)/sets/page.tsx`, `app/(app)/sets/[id]/page.tsx`, `app/(app)/sets/[id]/SetGrid.tsx`, `tests/ui/set-grid.test.tsx`
 
-- [ ] **`/sets`** (server; `searchParams.game` default `pokemon`): `Pill` row of games (as `Link`s styled as pills — active = selected), then a list of `Panel`s per set (per `Sets.dc.html`): name, `ownedCards / totalCards`, `ProgressBar value={owned/total} tone={owned===total ? "gain" : owned>0 ? "accent" : "muted"}`, link to `/sets/[id]`. Sets with `totalCards === 0` (sealed-only groups) are listed last with "no singles".
+- [x] **`/sets`** (server; `searchParams.game` default `pokemon`): `Pill` row of games (as `Link`s styled as pills — active = selected), then a list of `Panel`s per set (per `Sets.dc.html`): name, `ownedCards / totalCards`, `ProgressBar value={owned/total} tone={owned===total ? "gain" : owned>0 ? "accent" : "muted"}`, link to `/sets/[id]`. Sets with `totalCards === 0` (sealed-only groups) are listed last with "no singles".
 
-- [ ] **`/sets/[id]`** (server): `getSetDetail` (404 if null). Header: game · release date caption; `SectionHeading title={set.name}`; line "You own **x of n** · set value **$…** · your copies worth **$…**"; right: `ProgressBar` + "Missing cards cost $… to complete". Then `<SetGrid cards={…} portfolios={await listPortfolios(userId)} setId={…} />`.
+- [x] **`/sets/[id]`** (server): `getSetDetail` (404 if null). Header: game · release date caption; `SectionHeading title={set.name}`; line "You own **x of n** · set value **$…** · your copies worth **$…**"; right: `ProgressBar` + "Missing cards cost $… to complete". Then `<SetGrid cards={…} portfolios={await listPortfolios(userId)} setId={…} />`.
 
-- [ ] **SetGrid** (client): filter `Pill`s All / Owned / Missing with counts; a "Add to:" `Pill` selector of the user's portfolios (default first; if none, show a link "Create a binder first"); the grid (`grid-cols-4 md:grid-cols-6 lg:grid-cols-8`) of `CardTile`s (`quantity = ownedQuantity`, `price = formatMoney(lowestMarket)`, subtitle = number) — tapping a tile calls `addItemAction(selectedPortfolio, { printingId: card.printings[0].printingId, quantity: 1, condition: "NM" })` and optimistically bumps the count; a small "Details" link under each tile to `/cards/[id]`. Test: filters change the visible set; tapping calls the action with the first printing and the selected portfolio.
+- [x] **SetGrid** (client): filter `Pill`s All / Owned / Missing with counts; a "Add to:" `Pill` selector of the user's portfolios (default first; if none, show a link "Create a binder first"); the grid (`grid-cols-4 md:grid-cols-6 lg:grid-cols-8`) of `CardTile`s (`quantity = ownedQuantity`, `price = formatMoney(lowestMarket)`, subtitle = number) — tapping a tile calls `addItemAction(selectedPortfolio, { printingId: card.printings[0].printingId, quantity: 1, condition: "NM" })` and optimistically bumps the count; a small "Details" link under each tile to `/cards/[id]`. Test: filters change the visible set; tapping calls the action with the first printing and the selected portfolio.
 
 Commit: `feat(sets): set browser with completion, tap-to-own grid`
 
@@ -751,9 +751,9 @@ Commit: `feat(sets): set browser with completion, tap-to-own grid`
 
 **Files:** `app/(app)/cards/[id]/page.tsx`, `app/(app)/decks/page.tsx`, `app/(app)/alerts/page.tsx`, `tests/ui/card-page.test.tsx` (render with mocked data layer)
 
-- [ ] **`/cards/[id]`** (server), per `Card.dc.html`: left — art (`aspect-[5/7]` tile with `imageUrl`, `shadow-tile`), `AddItemDialog` preselected to this card (add a `preselectedCardId` prop — the dialog then skips search and shows printings directly); right — caption `game · set · number · rarity`, `SectionHeading as="h1"` name, `MoneyDisplay` for the first printing's market with `PriceDelta` 30D, a `Panel` "Printings" table (subtype, market, your copies), and a `Panel` "Price history — Phase 3" placeholder with the 30D change text. Back link to `/sets/[setId]`.
+- [x] **`/cards/[id]`** (server), per `Card.dc.html`: left — art (`aspect-[5/7]` tile with `imageUrl`, `shadow-tile`), `AddItemDialog` preselected to this card (add a `preselectedCardId` prop — the dialog then skips search and shows printings directly); right — caption `game · set · number · rarity`, `SectionHeading as="h1"` name, `MoneyDisplay` for the first printing's market with `PriceDelta` 30D, a `Panel` "Printings" table (subtype, market, your copies), and a `Panel` "Price history — Phase 3" placeholder with the 30D change text. Back link to `/sets/[setId]`.
 
-- [ ] Placeholders: `/decks` and `/alerts` render `SectionHeading` + `EmptyState` ("Coming in Phase 4 / Phase 3").
+- [x] Placeholders: `/decks` and `/alerts` render `SectionHeading` + `EmptyState` ("Coming in Phase 4 / Phase 3").
 
 Commit: `feat(cards): card detail page; decks/alerts placeholders`
 
@@ -761,11 +761,54 @@ Commit: `feat(cards): card detail page; decks/alerts placeholders`
 
 ### Task 8: Docs, plan bookkeeping, merge prep
 
-- [ ] README Status → Phase 2b complete (list screens); spec §7 unchanged; tick this plan's boxes and add a "Deviations" section like Phase 2a's.
-- [ ] Final whole-branch review → merge.
+- [x] README Status → Phase 2b complete (list screens); spec §7 unchanged; tick this plan's boxes and add a "Deviations" section like Phase 2a's.
+- [x] Final whole-branch review → merge.
 
 ## Self-review notes
 
 - Spec §7 coverage: catalog search ✔ (T5 route + dialog), set browser with owned-overlay ✔ (T6), portfolios CRUD + holdings + value/gain ✔ (T1, T4, T5), card detail ✔ (T7; chart deferred per §7/Phase 3). Share links, alerts, history charts deliberately absent (Phase 3).
 - Type consistency: `Holding.value/cost` nullable everywhere; `AddItemInput` shared by data layer, action, dialog; `Condition` from `lib/portfolios`; `PrintingPrice` shared by search/set/card.
 - Ownership: every read/write joins `portfolios.user_id`; actions re-check session; the search route checks session.
+
+---
+
+## Executed 2026-09-07 — deviations
+
+Shipped on `phase-2b/portfolios-catalog-ui` across Tasks 1–8. Where the code differs from the plan
+above:
+
+- **Data layer hardening beyond the plan's Step 4 code.** `addItem` verifies the printing exists and
+  clamps the merged quantity, `acquiredDate` is validated, and a `getPortfolio(userId, id)` helper
+  was added so the detail page can tell "not yours" from "empty".
+- **`SetGrid` props.** Dropped the planned `setId` and `gameSlug` props — the component never used
+  them; it takes `cards` and `portfolios` only.
+- **Optimistic state shape.** The tap-to-own bumps are stored as one `{ base, counts }` object
+  rather than a bare `Record<cardId, number>`, so the local counts can be tied by identity to the
+  `cards` array they were counted on (a lint rule forbids the `useEffect`-resets-state alternative).
+  Comment in `SetGrid.tsx` covers the narrow known race.
+- **Dialog results shape.** Same reason: `AddItemDialog` keeps search results as
+  `{ query, cards }` so a stale page of hits is simply not rendered, instead of clearing state from
+  the debounce effect.
+- **Preselected card.** `AddItemDialog` takes `preselected: DialogCard` (the card, already loaded by
+  the card detail page) rather than the planned `preselectedCardId` — no second query.
+- **Release dates.** `/sets/[id]` renders `set.releaseDate.slice(0, 10)`: ingest stores full ISO
+  timestamps, not `YYYY-MM-DD`. Normalizing at ingest is the real fix and is still open.
+- **`Button` gained `href`.** With it the component renders a `next/link` in the button skin, so
+  navigational actions (landing page, "Create a binder first") stop hand-rolling the classes.
+- **`Input` primitive added.** The field classes were being copied into three forms; they now live in
+  `components/ui/Input.tsx` (optional `label`).
+- **Pills are 44px on phones** (`min-h-11 md:min-h-8`) — the mockups' 32px chip is too small for a
+  thumb; it comes back from `md` up.
+- **Server action id guards.** Every id crossing the action boundary (`id`, `portfolioId`, `itemId`,
+  `input.printingId`) goes through `assertId`, so a bad payload returns
+  `{ ok: false, error: "Invalid id" }` instead of reaching SQL.
+- **Cached detail loaders.** The three detail pages wrap their session + detail fetch in
+  `cache()` from React, so `generateMetadata` and the page share one query per request.
+
+### Known items, deliberately left
+
+- Release dates should be normalized to `YYYY-MM-DD` at ingest; the UI slices them for now.
+- `ORDER BY ca.number` in `getSetDetail` is a text sort, so `10/131` sorts before `9/131` in sets
+  whose numbers aren't zero-padded.
+- `listSetsWithCompletion` runs two correlated subqueries per set and has not been benchmarked
+  against a full Pokémon catalog.

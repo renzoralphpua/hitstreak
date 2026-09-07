@@ -12,7 +12,25 @@ Phase 2a complete: design tokens + `components/ui/` primitives (`BottomTabBar`, 
 `TierBadge`, `TopNav`, `UserMenu`, `ValidationList`); a `/dev/ui` primitives gallery (dev only); Better
 Auth (email + password) with sign-in/sign-up and a protected app shell.
 
-Phase 2b next: portfolios, search, sets, card detail (see `docs/superpowers/plans/`).
+Phase 2b complete: binders with live valuation from `latest_prices`; the add-card flow with type-ahead
+search; the set browser with completion tracking and tap-to-own; card detail with printings and 30-day
+change; `/decks` and `/alerts` placeholders so the nav does not 404.
+
+Phase 3 next: price history charts, portfolio history, share links, alerts (see
+`docs/superpowers/plans/`).
+
+### Screens
+
+- `/` — landing (anonymous); signed-in visitors are redirected to `/portfolios`
+- `/sign-in`, `/sign-up` — email + password
+- `/portfolios` — binder list with value, gain, and create/rename/delete
+- `/portfolios/[id]` — holdings valued from latest prices, add-card dialog, quantity edits
+- `/sets` — game pills and each set's completion bar
+- `/sets/[id]` — the set's cards as owned/missing tiles; tap a tile to add one copy
+- `/cards/[id]` — art, market price, 30-day change, printings table, add to a binder
+- `/decks`, `/alerts` — Phase 4 / Phase 3 placeholders
+- `/dev/ui` — primitives gallery (dev only)
+- `GET /api/search?q=&game=` — type-ahead card search for the add-card dialog (session-checked)
 
 ## Stack
 
@@ -64,6 +82,10 @@ re-apply any hand edits noted in `lib/schema.ts`.
 Required env vars: `BETTER_AUTH_SECRET` (generate with `openssl rand -base64 32`) and `BETTER_AUTH_URL`.
 For local dev, `.env.local` needs `TURSO_DATABASE_URL=file:hitstreak.local.db` plus those two — see
 `.env.example`. `.env.local` and `hitstreak.local.db*` are gitignored; never commit them.
+
+Local test user: sign yourself up once (the convention is `dev@example.com`) and use that account for
+manual checks. It lives only in your own `hitstreak.local.db` — there are no seeded accounts in the
+repo, and nothing in CI or on Vercel knows about it.
 
 On Vercel, set `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL` for
 BOTH the Build step and Runtime, on BOTH the Production and Preview environments. `lib/auth.ts` throws at
