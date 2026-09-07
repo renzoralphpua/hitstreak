@@ -17,6 +17,7 @@ export const GAMES: GameSeed[] = [
 export async function ensureGame(g: GameSeed): Promise<void> {
   const c = await db();
   await c.execute({
+    // slug is deliberately NOT updated: it is URL identity; the first run's slug is authoritative (fix typos with a manual UPDATE).
     sql: `INSERT INTO games (tcgplayer_category_id, name, slug) VALUES (?, ?, ?)
           ON CONFLICT(tcgplayer_category_id) DO UPDATE SET name = excluded.name`,
     args: [g.tcgplayerCategoryId, g.name, g.slug],
