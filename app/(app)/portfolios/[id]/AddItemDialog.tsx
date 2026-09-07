@@ -5,6 +5,7 @@ import type { PrintingPrice } from "@/lib/catalog";
 import { CONDITIONS } from "@/lib/portfolios";
 import { formatMoney } from "@/lib/format";
 import { Button, CardRow, Input, Panel, Pill, SearchField } from "@/components/ui";
+import { useCardSearch } from "@/components/ui/useCardSearch";
 import { addItemAction } from "../actions";
 
 /** A card the dialog can add: either picked from search, or handed in preselected (card detail). */
@@ -16,10 +17,6 @@ export interface DialogCard {
 }
 
 type Props = { portfolioId: number; label?: string; preselected?: DialogCard };
-
-const MIN_QUERY = 2;
-const DEBOUNCE_MS = 250;
-const MAX_RESULTS = 10;
 
 // Everything the browser lets you tab to, in document order, for the focus trap.
 const FOCUSABLE =
@@ -42,9 +39,6 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
 
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  // Results are tagged with the query they answer, so a stale page of hits is simply not rendered
-  // (no clearing setState in the debounce effect).
-  const [results, setResults] = useState<{ query: string; cards: Array<DialogCard & { cardId: number }> } | null>(null);
   const [selected, setSelected] = useState<DialogCard | null>(preselected ?? null);
   const [printingId, setPrintingId] = useState<number | null>(preselected?.printings[0]?.printingId ?? null);
   const [quantity, setQuantity] = useState("1");
@@ -53,13 +47,15 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Debounced type-ahead (components/ui/useCardSearch.ts). Skipped entirely while the dialog is
+  // closed or once a card is chosen (or preselected).
   const query = q.trim();
-  const hits = results && results.query === query ? results.cards : [];
+  const { hits, settled, error: searchError, reset } = useCardSearch(q, open && selected == null);
 
   const close = useCallback(() => {
     setOpen(false);
     setQ("");
-    setResults(null);
+    reset();
     setSelected(preselected ?? null);
     setPrintingId(preselected?.printings[0]?.printingId ?? null);
     setQuantity("1");
@@ -68,7 +64,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
     setError(null);
     // Focus goes back where it came from, so the keyboard doesn't land at the top of the page.
     triggerRef.current?.focus();
-  }, [preselected]);
+  }, [preselected, reset]);
 
   // On open, put focus inside the panel: the search variant's field carries autoFocus, the
   // preselected variant has no field, so take its first focusable control instead.
@@ -102,37 +98,6 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, close]);
-
-  // Debounced type-ahead. Skipped entirely once a card is chosen (or preselected).
-  useEffect(() => {
-    if (!open || selected || query.length < MIN_QUERY) return;
-    let live = true;
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        if (!res.ok) throw new Error("search failed");
-        const body = await res.json();
-        if (!live) return;
-        const cards = (body.hits ?? []).slice(0, MAX_RESULTS).map(
-          (h: { cardId: number; name: string; setName: string; number: string | null; imageUrl: string | null; printings: PrintingPrice[] }) => ({
-            cardId: h.cardId,
-            name: h.name,
-            subtitle: [h.setName, h.number].filter(Boolean).join(" · "),
-            imageUrl: h.imageUrl,
-            printings: h.printings,
-          })
-        );
-        setResults({ query, cards });
-        setError(null);
-      } catch {
-        if (live) setError("Could not search right now. Try again.");
-      }
-    }, DEBOUNCE_MS);
-    return () => {
-      live = false;
-      clearTimeout(timer);
-    };
-  }, [query, open, selected]);
 
   function pick(card: DialogCard) {
     setSelected(card);
@@ -207,7 +172,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
                       ))}
                     </ul>
                   )}
-                  {results?.query === query && hits.length === 0 && (
+                  {settled && hits.length === 0 && (
                     <p className="text-[13px] text-dim">No cards match “{query}”.</p>
                   )}
                 </>
@@ -273,9 +238,9 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
                 </div>
               )}
 
-              {error && (
+              {(searchError ?? error) && (
                 <p role="alert" className="text-[13px] text-accent">
-                  {error}
+                  {searchError ?? error}
                 </p>
               )}
 

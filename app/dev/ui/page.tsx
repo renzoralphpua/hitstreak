@@ -251,6 +251,19 @@ export default function Gallery() {
                 </>
               }
             />
+            <CardRow
+              tone="inverted"
+              name="Umbreon ex"
+              subtitle="Prismatic Evolutions · 161/131 · Holofoil — Rises above $1,450.00 · emailed Sep 7"
+              imageUrl={null}
+              right={
+                <>
+                  <span className="text-sm font-semibold">{formatMoney(1465)}</span>
+                  <span className="text-[11px] opacity-70">re-arms below {formatMoney(1450)}</span>
+                </>
+              }
+            />
+            <span className="text-xs text-dim">tone=&quot;inverted&quot;: a triggered alert row</span>
           </div>
         </Variants>
       </Section>

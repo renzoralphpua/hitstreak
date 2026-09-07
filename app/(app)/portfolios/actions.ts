@@ -1,30 +1,11 @@
 "use server";
 // Mutations for portfolios ("binders") and their items. Every action re-checks the session
 // (a client can call these directly) and never throws to the client: validation and
-// ownership failures come back as { ok: false, error }.
+// ownership failures come back as { ok: false, error } — see lib/action-utils.ts.
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/session";
+import { withUser, assertId } from "@/lib/action-utils";
 import * as P from "@/lib/portfolios";
 import * as S from "@/lib/share";
-
-export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
-
-/** Row ids arrive from the client, so they are only trustworthy as far as this check: anything
- *  that isn't a positive integer (NaN, a string, a float, null) is rejected before it reaches SQL. */
-function assertId(n: unknown): number {
-  if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) throw new Error("Invalid id");
-  return n;
-}
-
-async function withUser<T>(fn: (userId: string) => Promise<T>): Promise<ActionResult<T>> {
-  const session = await getSession();
-  if (!session) return { ok: false, error: "Not signed in" };
-  try {
-    return { ok: true, data: await fn(session.user.id) };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong" };
-  }
-}
 
 export async function createPortfolioAction(name: string) {
   const r = await withUser((u) => P.createPortfolio(u, name));

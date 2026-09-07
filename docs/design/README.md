@@ -86,6 +86,7 @@ Mockup element → primitive (`components/ui/`):
 | Search pill | `SearchField` |
 | Binder-grid cards | `CardTile` |
 | List rows | `CardRow` |
+| Triggered alert row | `CardRow tone="inverted"` (the ink chip; the `right` slot inherits its colour) |
 | Top bar | `TopNav` |
 | Phone tab bar | `BottomTabBar` |
 | Theme toggle | `ThemeToggle` |
