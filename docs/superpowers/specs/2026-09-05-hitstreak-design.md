@@ -195,6 +195,9 @@ Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art 
 
 ## 13. Open questions / follow-ups
 
+- **Gate sign-up before public launch.** Phase 2a ships open email+password registration with no email verification (fine single-user-first). Before the app is reachable at a public domain, add one of: invite codes, an allowlist, or email verification (`emailAndPassword.requireEmailVerification` + a Resend sender). Track as a Phase 3 task alongside Resend setup.
+- **Future `/api/*` routes must call `getSession()` themselves** — `proxy.ts` excludes `/api` from the optimistic redirect so Better Auth's handler stays reachable.
+
 - Riftbound deck-construction rules — verify against official Riot rules (step 10)
 - ~~Exact per-game `extendedData` field shapes~~ — **resolved 2026-09-05 against real data:** all three games expose `Number` and `Rarity` (Pokémon also HP/Stage/Attacks; One Piece: Color/CardType/Life/Power/Attribute; Riftbound: Energy Cost/Power Cost/Might/Card Type/Tag/Domain). Sealed products (~10% of rows) have neither, and correctly land with null number/rarity.
 - Domain registration (`hitstreak.gg` / `hitstreak.app`) — user purchase, not build-blocking

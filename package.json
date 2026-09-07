@@ -13,21 +13,36 @@
     "test": "vitest run",
     "typecheck": "next typegen && tsc --noEmit"
   },
+  "overrides": {
+    "better-auth": {
+      "vitest": "$vitest"
+    },
+    "@libsql/kysely-libsql": {
+      "@libsql/client": "$@libsql/client"
+    }
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
     "@libsql/client": "^0.18.0",
+    "@libsql/kysely-libsql": "^0.4.1",
     "@smithy/node-http-handler": "^4.12.1",
+    "better-auth": "^1.7.3",
+    "kysely": "^0.29.5",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^22.20.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5",

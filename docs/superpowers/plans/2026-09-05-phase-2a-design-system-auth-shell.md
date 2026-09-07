@@ -50,13 +50,13 @@ tests/auth.test.ts            sign-up / sign-in / session via auth.api against a
 - Modify: `vitest.config.mts`, `package.json` (devDeps)
 - Create: `tests/setup.ts`, `tests/ui/smoke.test.tsx`
 
-- [ ] **Step 1: Install**
+- [x] **Step 1: Install**
 
 ```bash
 npm install -D @testing-library/react @testing-library/dom @testing-library/jest-dom jsdom
 ```
 
-- [ ] **Step 2: Failing smoke test**
+- [x] **Step 2: Failing smoke test**
 
 ```tsx
 // tests/ui/smoke.test.tsx
@@ -78,7 +78,7 @@ describe("component test tooling", () => {
 
 Run: `npm test -- tests/ui/smoke.test.tsx` → FAIL (tsx not included / jsx not transformed / matcher missing).
 
-- [ ] **Step 3: Config**
+- [x] **Step 3: Config**
 
 ```ts
 // vitest.config.mts
@@ -103,9 +103,9 @@ import "@testing-library/jest-dom/vitest";
 
 The docblock `// @vitest-environment jsdom` on line 1 of each `.tsx` test switches only that file to jsdom; DB tests stay in `node`.
 
-- [ ] **Step 4: Verify** — `npm test` (61 tests: 60 + smoke), `npm run typecheck` (if `tsconfig.json` complains about `tests/setup.ts` types, add `"types": ["@testing-library/jest-dom"]`? No — the `/vitest` import registers matchers and types; report if typecheck fails), `npm run lint`.
+- [x] **Step 4: Verify** — `npm test` (61 tests: 60 + smoke), `npm run typecheck` (if `tsconfig.json` complains about `tests/setup.ts` types, add `"types": ["@testing-library/jest-dom"]`? No — the `/vitest` import registers matchers and types; report if typecheck fails), `npm run lint`.
 
-- [ ] **Step 5: Commit** — `chore: component test tooling (jsdom, Testing Library, jest-dom)`
+- [x] **Step 5: Commit** — `chore: component test tooling (jsdom, Testing Library, jest-dom)`
 
 ---
 
@@ -115,7 +115,7 @@ The docblock `// @vitest-environment jsdom` on line 1 of each `.tsx` test switch
 - Modify: `app/globals.css`, `app/layout.tsx`
 - Test: `tests/tokens.test.ts`
 
-- [ ] **Step 1: Failing test — required tokens exist in both themes**
+- [x] **Step 1: Failing test — required tokens exist in both themes**
 
 ```ts
 // tests/tokens.test.ts
@@ -146,7 +146,7 @@ describe("design tokens", () => {
 
 Run: `npm test -- tests/tokens.test.ts` → FAIL.
 
-- [ ] **Step 2: globals.css** (replace create-next-app's content)
+- [x] **Step 2: globals.css** (replace create-next-app's content)
 
 ```css
 @import "tailwindcss";
@@ -221,7 +221,7 @@ a { color: var(--accent); }
 
 Utilities this yields: `bg-ground bg-surface border-hairline text-ink text-muted text-dim text-accent text-gain bg-chip text-chip-ink font-display font-body rounded-panel rounded-tile shadow-tile`.
 
-- [ ] **Step 3: layout.tsx**
+- [x] **Step 3: layout.tsx**
 
 ```tsx
 // app/layout.tsx
@@ -255,9 +255,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 `suppressHydrationWarning` is needed because the inline script sets `data-theme` before React hydrates.
 
-- [ ] **Step 4: Verify** — `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Open the dev server (http://localhost:3000) — the starter page should now render in DM Sans on warm paper.
+- [x] **Step 4: Verify** — `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Open the dev server (http://localhost:3000) — the starter page should now render in DM Sans on warm paper.
 
-- [ ] **Step 5: Commit** — `feat(ui): Binder design tokens, fonts, theme-aware root layout`
+- [x] **Step 5: Commit** — `feat(ui): Binder design tokens, fonts, theme-aware root layout`
 
 ---
 
@@ -267,7 +267,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 - Create: `lib/format.ts`
 - Test: `tests/format.test.ts`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```ts
 // tests/format.test.ts
@@ -296,7 +296,7 @@ describe("format", () => {
 });
 ```
 
-- [ ] **Step 2: Implementation**
+- [x] **Step 2: Implementation**
 
 ```ts
 // lib/format.ts
@@ -328,7 +328,7 @@ export function formatDelta(v: number): string {
 }
 ```
 
-- [ ] **Step 3: Verify + commit** — `feat: money/percent/delta formatting`
+- [x] **Step 3: Verify + commit** — `feat: money/percent/delta formatting`
 
 ---
 
@@ -338,7 +338,7 @@ All primitives: `components/ui/<Name>.tsx`, default export named, typed props, T
 
 **Files:** `components/ui/{Button,Pill,Panel,SectionHeading,StatTile,PriceDelta,ProgressBar}.tsx`, `components/ui/index.ts`, `tests/ui/primitives-a.test.tsx`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```tsx
 // tests/ui/primitives-a.test.tsx
@@ -424,7 +424,7 @@ describe("ProgressBar", () => {
 });
 ```
 
-- [ ] **Step 2: Implementations**
+- [x] **Step 2: Implementations**
 
 ```tsx
 // components/ui/cn.ts
@@ -581,7 +581,7 @@ export { default as PriceDelta } from "./PriceDelta";
 export { default as ProgressBar } from "./ProgressBar";
 ```
 
-- [ ] **Step 3: Verify + commit** — `feat(ui): Button, Pill, Panel, SectionHeading, StatTile, PriceDelta, ProgressBar`
+- [x] **Step 3: Verify + commit** — `feat(ui): Button, Pill, Panel, SectionHeading, StatTile, PriceDelta, ProgressBar`
 
 ---
 
@@ -589,7 +589,7 @@ export { default as ProgressBar } from "./ProgressBar";
 
 **Files:** `components/ui/{TierBadge,ValidationList,SearchField,CardTile,CardRow}.tsx`, barrel, `tests/ui/primitives-b.test.tsx`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```tsx
 // tests/ui/primitives-b.test.tsx
@@ -660,7 +660,7 @@ describe("CardRow", () => {
 });
 ```
 
-- [ ] **Step 2: Implementations**
+- [x] **Step 2: Implementations**
 
 ```tsx
 // components/ui/TierBadge.tsx
@@ -818,7 +818,7 @@ export default function CardRow({ name, subtitle, imageUrl, right, onClick, clas
 
 Barrel: add the five exports.
 
-- [ ] **Step 3: Verify + commit** — `feat(ui): TierBadge, ValidationList, SearchField, CardTile, CardRow`
+- [x] **Step 3: Verify + commit** — `feat(ui): TierBadge, ValidationList, SearchField, CardTile, CardRow`
 
 ---
 
@@ -828,7 +828,7 @@ Barrel: add the five exports.
 
 Nav items are fixed by the design: Binder (`/portfolios`), Sets (`/sets`), Decks (`/decks`), Alerts (`/alerts`). TopNav marks the active item from the current pathname (client component using `usePathname`).
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```tsx
 // tests/ui/nav.test.tsx
@@ -875,7 +875,7 @@ describe("ThemeToggle", () => {
 });
 ```
 
-- [ ] **Step 2: Implementations**
+- [x] **Step 2: Implementations**
 
 ```tsx
 // components/ui/nav-items.ts
@@ -998,7 +998,7 @@ export default function ThemeToggle() {
 
 Barrel: export `TopNav`, `BottomTabBar` (not ThemeToggle — it lives under `components/theme`).
 
-- [ ] **Step 3: Verify + commit** — `feat(ui): TopNav, BottomTabBar, ThemeToggle`
+- [x] **Step 3: Verify + commit** — `feat(ui): TopNav, BottomTabBar, ThemeToggle`
 
 ---
 
@@ -1008,7 +1008,7 @@ Barrel: export `TopNav`, `BottomTabBar` (not ThemeToggle — it lives under `com
 
 Renders every primitive in every variant on one page so Renzo can review the system and name the component to change. Returns 404 in production.
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```tsx
 // tests/ui/gallery.test.tsx
@@ -1030,11 +1030,11 @@ describe("/dev/ui gallery", () => {
 });
 ```
 
-- [ ] **Step 2: Page** — a client component (uses `useState` for the SearchField). Structure: for each primitive, `<section><h2>{Name}</h2> …variants… </section>`. Show light and dark side by side by wrapping a copy of the variants in `<div data-theme="dark" className="bg-ground p-4 rounded-panel">` — `[data-theme="dark"]` variables apply to any element, not just `<html>`, so this works without JS. Guard: at the top of the component, `if (process.env.NODE_ENV === "production") notFound();`. Use realistic sample data from the mockups (Umbreon ex $1,465.00 +33%, Charizard ex, Jinx…). Keep it plain — the gallery is a review tool, not a screen.
+- [x] **Step 2: Page** — a client component (uses `useState` for the SearchField). Structure: for each primitive, `<section><h2>{Name}</h2> …variants… </section>`. Show light and dark side by side by wrapping a copy of the variants in `<div data-theme="dark" className="bg-ground p-4 rounded-panel">` — `[data-theme="dark"]` variables apply to any element, not just `<html>`, so this works without JS. Guard: at the top of the component, `if (process.env.NODE_ENV === "production") notFound();`. Use realistic sample data from the mockups (Umbreon ex $1,465.00 +33%, Charizard ex, Jinx…). Keep it plain — the gallery is a review tool, not a screen.
 
-- [ ] **Step 3: Verify** — tests, typecheck, lint, then open http://localhost:3000/dev/ui in the dev server and eyeball light + dark columns. Fix anything visibly off in the PRIMITIVE, not the gallery.
+- [x] **Step 3: Verify** — tests, typecheck, lint, then open http://localhost:3000/dev/ui in the dev server and eyeball light + dark columns. Fix anything visibly off in the PRIMITIVE, not the gallery.
 
-- [ ] **Step 4: Commit** — `feat(ui): /dev/ui primitives gallery`
+- [x] **Step 4: Commit** — `feat(ui): /dev/ui primitives gallery`
 
 ---
 
@@ -1045,13 +1045,13 @@ describe("/dev/ui gallery", () => {
 - Create: `lib/auth.ts`, `lib/auth-client.ts`, `lib/session.ts`, `app/api/auth/[...all]/route.ts`
 - Test: `tests/auth.test.ts`
 
-- [ ] **Step 1: Install**
+- [x] **Step 1: Install**
 
 ```bash
 npm install better-auth @libsql/kysely-libsql kysely
 ```
 
-- [ ] **Step 2: Server instance**
+- [x] **Step 2: Server instance**
 
 ```ts
 // lib/auth.ts
@@ -1082,7 +1082,7 @@ export type Session = typeof auth.$Infer.Session;
 
 Check `node_modules/better-auth` types if `database: { dialect, type }` is typed differently in the installed version — the shape above is the documented Kysely form; do not fall back to `better-sqlite3`.
 
-- [ ] **Step 3: Generate the schema SQL, then own it**
+- [x] **Step 3: Generate the schema SQL, then own it**
 
 ```bash
 npx @better-auth/cli@latest generate --config lib/auth.ts --output tmp-auth-schema.sql
@@ -1090,7 +1090,7 @@ npx @better-auth/cli@latest generate --config lib/auth.ts --output tmp-auth-sche
 
 (The CLI needs `TURSO_DATABASE_URL` set — use `file:hitstreak.local.db`.) Open the generated SQL. Convert each `CREATE TABLE` to `CREATE TABLE IF NOT EXISTS` and append as `export const AUTH_SCHEMA_SQL = \`…\`` in `lib/schema.ts`, keeping Better Auth's exact table/column names (`user`, `session`, `account`, `verification`, camelCase columns, plus `isAdmin` on `user`). Delete `tmp-auth-schema.sql`. In `lib/db.ts`, run `SCHEMA_SQL + AUTH_SCHEMA_SQL` in the single `executeMultiple`. If the CLI cannot run non-interactively, report BLOCKED with the error rather than hand-writing the DDL from memory.
 
-- [ ] **Step 4: Handler, client, session helper**
+- [x] **Step 4: Handler, client, session helper**
 
 ```ts
 // app/api/auth/[...all]/route.ts
@@ -1116,7 +1116,7 @@ export async function getSession() {
 }
 ```
 
-- [ ] **Step 5: Failing test → passing** (server-side API, no HTTP)
+- [x] **Step 5: Failing test → passing** (server-side API, no HTTP)
 
 ```ts
 // tests/auth.test.ts
@@ -1164,7 +1164,7 @@ describe("Better Auth on libSQL", () => {
 
 Notes: `asResponse: true` returns a `Response` so status/cookies can be asserted; the cookie name may be prefixed (`__Secure-`) only under HTTPS — in tests it is plain. If the installed version names things differently, adapt the assertions to what the API actually returns and say so in the report.
 
-- [ ] **Step 6: Verify + commit** — `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Commit: `feat(auth): Better Auth on libSQL with self-initialized schema, handler, session helper`
+- [x] **Step 6: Verify + commit** — `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Commit: `feat(auth): Better Auth on libSQL with self-initialized schema, handler, session helper`
 
 ---
 
@@ -1175,7 +1175,7 @@ Notes: `asResponse: true` returns a `Response` so status/cookies can be asserted
 - Modify: `app/page.tsx`
 - Test: `tests/ui/auth-form.test.tsx`, `tests/proxy.test.ts`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```tsx
 // tests/ui/auth-form.test.tsx
@@ -1239,7 +1239,7 @@ describe("proxy (optimistic auth redirect)", () => {
 });
 ```
 
-- [ ] **Step 2: proxy.ts** (Next 16 name for middleware — confirm in `node_modules/next/dist/docs/`)
+- [x] **Step 2: proxy.ts** (Next 16 name for middleware — confirm in `node_modules/next/dist/docs/`)
 
 ```ts
 // proxy.ts
@@ -1262,7 +1262,7 @@ export async function proxy(request: NextRequest) {
 export const config = { matcher: ["/((?!api|_next|favicon.ico).*)"] };
 ```
 
-- [ ] **Step 3: AuthForm + pages**
+- [x] **Step 3: AuthForm + pages**
 
 ```tsx
 // app/(auth)/AuthForm.tsx
@@ -1310,7 +1310,7 @@ export default function AuthForm({ mode, next = "/portfolios" }: { mode: "sign-i
 
 Pages: `app/(auth)/sign-in/page.tsx` and `sign-up/page.tsx` — server components rendering a centered card on `bg-ground`: the `Hitstreak` wordmark (font-display), a `SectionHeading`-style title ("Welcome back" / "Create your account"), `<AuthForm mode=… next={searchParams.next}/>` (in Next 16 `searchParams` is a Promise — `const { next } = await searchParams`), and a link to the other page. Also `app/page.tsx`: if `await getSession()` → `redirect("/portfolios")`, else a minimal landing with the wordmark, one line of copy from the spec ("Track your collection, prices, and decks — Pokémon, One Piece, Riftbound."), and Sign in / Create account buttons.
 
-- [ ] **Step 4: Protected shell**
+- [x] **Step 4: Protected shell**
 
 ```tsx
 // app/(app)/layout.tsx
@@ -1358,19 +1358,33 @@ export default function UserMenu({ name }: { name: string }) {
 
 `app/(app)/portfolios/page.tsx` — a placeholder using primitives (`SectionHeading title="Binder"` + a `Panel` saying "Your portfolios arrive in Phase 2b") so the shell is navigable end to end. Sets/Decks/Alerts links may 404 for now.
 
-- [ ] **Step 5: Verify** — `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Manual: in the dev server, hit `/portfolios` unauthenticated → redirected to `/sign-in?next=%2Fportfolios`; create an account; you land on the placeholder Binder page inside the shell; toggle theme (persists across reload); sign out returns to `/`. Set `TURSO_DATABASE_URL=file:hitstreak.local.db` in `.env.local` for this (the file DB from Phase 1 gains the auth tables on first request).
+- [x] **Step 5: Verify** — `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Manual: in the dev server, hit `/portfolios` unauthenticated → redirected to `/sign-in?next=%2Fportfolios`; create an account; you land on the placeholder Binder page inside the shell; toggle theme (persists across reload); sign out returns to `/`. Set `TURSO_DATABASE_URL=file:hitstreak.local.db` in `.env.local` for this (the file DB from Phase 1 gains the auth tables on first request).
 
-- [ ] **Step 6: Commit** — `feat(auth): sign-in/sign-up, optimistic proxy redirect, protected app shell`
+- [x] **Step 6: Commit** — `feat(auth): sign-in/sign-up, optimistic proxy redirect, protected app shell`
 
 ---
 
 ### Task 10: Docs + CI + wrap-up
 
-- [ ] Update `README.md` (Status → Phase 2a; how to run the gallery; auth env note; `.env.local` example), and `docs/design/README.md` gets a "Implemented as" line mapping each token to its Tailwind utility and each mockup element to its primitive.
-- [ ] Ensure `.github/workflows/ci.yml` (from Phase 1 Task 10) is green on the branch.
-- [ ] Commit: `docs: Phase 2a — design system, auth, shell` and push.
+- [x] Update `README.md` (Status → Phase 2a; how to run the gallery; auth env note; `.env.local` example), and `docs/design/README.md` gets a "Implemented as" line mapping each token to its Tailwind utility and each mockup element to its primitive.
+- [x] Ensure `.github/workflows/ci.yml` (from Phase 1 Task 10) is green on the branch.
+- [x] Commit: `docs: Phase 2a — design system, auth, shell` and push.
 
 ---
+
+## Executed 2026-09-07 — deviations from the plan as written (all reviewed)
+
+- **Vite 8 / vitest 5:** JSX transform is `oxc: { jsx: { runtime: "automatic" } }` (the `esbuild` key is deprecated and ignored). `tests/setup.ts` also registers Testing Library `cleanup` in `afterEach` (no `test.globals`).
+- **`app/globals.css`:** base rules (`html`, `body`, `a`, `.num`) live in `@layer base` — an unlayered `a { color }` beat Tailwind utilities and turned nav links terracotta.
+- **`ThemeToggle`:** implemented with `useSyncExternalStore` over `<html data-theme>` (server snapshot `"light"`), because Next 16's `react-hooks/set-state-in-effect` rule rejects the plan's `useEffect` + `setState`.
+- **Zero-change convention:** `PriceDelta` renders `amount === 0` neutral (no arrow, dim); `formatPercent` is unsigned when it rounds to 0.0%.
+- **`CardTile` a11y:** the art `div` is `role="img"` only for static tiles; clickable tiles hide it so the button's name isn't duplicated.
+- **Better Auth 1.7.3:** `database: { dialect: new EnsuredLibsqlDialect({ client }), type: "sqlite" }` — the dialect wrapper awaits `db()` in Kysely's `Driver.init` so a brand-new database gets its schema even if the first request is an auth request. The CLI is the `auth` package (`npx auth@1.7.3 generate`), not the deprecated `@better-auth/cli`. Two `package.json` overrides (vitest peer range; `@libsql/client` dedupe) are required and documented in the README. `trustedOrigins` covers `BETTER_AUTH_URL`, `VERCEL_URL`, `VERCEL_BRANCH_URL`.
+- **`safeNext`:** parse-based (`new URL(v, "http://x.invalid")` + origin check, control characters stripped with `\p{Cc}`) — the plan's prefix check was bypassable via `/\evil.com` and `/\t/evil.com`. 15 table-driven tests.
+- **`proxy.ts`:** preserves the query string in `next`; sets `x-pathname` so the real gate in `app/(app)/layout.tsx` also redirects with `next`. `/api` is excluded from the matcher — future `/api/*` routes must call `getSession()` themselves.
+- **CI:** `npm run build` needs `TURSO_DATABASE_URL` (and a `BETTER_AUTH_SECRET`) at build time because the auth route is imported during page-data collection; `ci.yml` sets a throwaway `file:.tmp-ci.db`. Vercel needs all four auth/DB env vars on Production AND Preview.
+- **Dev env:** `.env.local` (gitignored) with `TURSO_DATABASE_URL=file:hitstreak.local.db`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` is required for the dev server; a `dev@example.com` test user exists in the local file DB.
+- **Still open for Phase 2b/3:** nav links to `/sets`, `/decks`, `/alerts` 404 until those screens exist; open registration must be gated before public DNS (spec §13).
 
 ## Out of scope (Phase 2b plan, written after 2a lands)
 

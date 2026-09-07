@@ -30,10 +30,12 @@ Each `*.dc.html` file here is one artboard (static mockup) from that canvas; `ca
 | Ground | `#15120e` (warm charcoal — never neutral black) |
 | Surface | `#1d1913` |
 | Hairline | `#2b251d` |
+| Hairline (soft) | `#241f18` |
 | Ink | `#f1ebe0` |
 | Muted / Dim | `#9a8f7f` / `#8a7f6f` |
 | Accent | `#e07a55` |
 | Gain | `#7fcf98` |
+| Chip / chip ink | `#f1ebe0` / `#15120e` |
 | Card tile shadow | `0 10px 22px rgba(0,0,0,.45)` |
 
 ## Conventions
@@ -45,3 +47,47 @@ Each `*.dc.html` file here is one artboard (static mockup) from that canvas; `ca
 - **Numbers:** `font-variant-numeric: tabular-nums` everywhere a column of figures appears.
 - **Phone:** 390px layout with a 4-tab bottom bar (Binder, Sets, Decks, Alerts); leave the system status bar area alone.
 - Sample data in the mockups is illustrative only.
+
+## Implemented as
+
+Tokens (`app/globals.css`) → Tailwind utility:
+
+| Token | Utility |
+|---|---|
+| `--ground` | `bg-ground` |
+| `--surface` | `bg-surface` |
+| `--hairline` | `border-hairline` |
+| `--hairline-soft` | `bg-hairline-soft` |
+| `--ink` | `text-ink` |
+| `--muted` | `text-muted` |
+| `--dim` | `text-dim` |
+| `--accent` | `text-accent` / `bg-accent` |
+| `--gain` | `text-gain` / `bg-gain` |
+| `--chip` / `--chip-ink` | `bg-chip text-chip-ink` |
+| Display font | `font-display` |
+| Radii | `rounded-panel` / `rounded-tile` |
+| Card tile shadow | `shadow-tile` |
+| Tabular numerals | `.num` |
+
+Mockup element → primitive (`components/ui/`):
+
+| Mockup element | Primitive |
+|---|---|
+| Filter chips | `Pill` |
+| Primary/secondary actions | `Button` |
+| Panels | `Panel` |
+| Serif section titles | `SectionHeading` |
+| Paid/Gain tiles | `StatTile` |
+| ▲/▼ changes | `PriceDelta` |
+| Completion bars | `ProgressBar` |
+| Tier 1/2 badges | `TierBadge` |
+| Legality panel | `ValidationList` |
+| Search pill | `SearchField` |
+| Binder-grid cards | `CardTile` |
+| List rows | `CardRow` |
+| Top bar | `TopNav` |
+| Phone tab bar | `BottomTabBar` |
+| Theme toggle | `ThemeToggle` |
+
+**Zero-change convention:** a 0 delta renders neutral (no arrow, dim text — neither gain nor accent);
+percentages that round to 0.0% are shown unsigned (no leading `+`/`-`).
