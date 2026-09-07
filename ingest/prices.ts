@@ -16,10 +16,27 @@
 //   backfill path read `latest_prices` as the diff base instead of scanning
 //   history; only an out-of-order replay (`latest.date >= date`) pays for a
 //   MAX-date scan.
+//   The guarded `latest_prices` upsert alone does NOT hold that invariant up:
+//   its `excluded.date >= latest_prices.date` guard (which exists so a slow
+//   older write can never clobber a newer one) also refuses the tuple when
+//   `latest.date > date`. Replaying a day inside the unchanged tail — i.e.
+//   `date >= MAX(price_snapshots.date)` — rewrites or deletes the very newest
+//   snapshot, so the refused tuple would be a stale one and the next day's
+//   `prev` would be wrong (a fabricated change row, or a wrong current price).
+//   So the out-of-order path also scans each printing's MAX snapshot date and,
+//   when `date >= MAX`, repairs the tuple with a plain UPDATE that leaves
+//   `latest_prices.date` (LAST SEEN) alone. When `date < MAX` the newest
+//   snapshot is untouched and no repair is needed.
 // - Re-runs are idempotent AND canonicalizing: replaying a day with corrected
 //   data overwrites a wrong row, and DELETES a row that the correction makes
 //   redundant (equal to the preceding snapshot). Without that delete, a bad
 //   feed would leave an orphan spike in history that `latest_prices` denies.
+//   Canonicalization is per-replayed-day only: it compares the replayed day
+//   against the snapshot BEFORE it, never against the one after. So replaying
+//   an older day with a corrected tuple can leave the FOLLOWING snapshot row
+//   redundant (a 0-delta row). That is harmless for carry-forward reads, but
+//   movers/streak queries derived from snapshot rows must tolerate 0-delta
+//   rows rather than assume every row is a real change.
 // - Statement chunks commit independently; a throw leaves earlier chunks
 //   applied. That is safe because re-runs repair — but callers must not mark a
 //   day complete on a throw.
@@ -52,9 +69,15 @@ const IN_CHUNK = 500; // bound parameters per IN (...) list
 // A numeric string from the feed must never defeat === equality silently.
 // A blank/whitespace string means "unpriceable", not zero — Number("") === 0
 // would otherwise turn a missing price into a real (and wrong) price of 0.
+// `bigint` shows up because libsql hands back integer columns as bigint, and a
+// bigint never === a number, which would fake a change on every read-back.
 const norm = (v: unknown): number | null => {
   if (v == null) return null;
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "bigint") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
   if (typeof v === "string") {
     if (v.trim() === "") return null;
     const n = Number(v);
@@ -66,12 +89,23 @@ const norm = (v: unknown): number | null => {
 const sameTuple = (a: Tuple, b: Tuple) =>
   a.market === b.market && a.low === b.low && a.mid === b.mid && a.high === b.high;
 
+// Routed through `norm` so a DB value is normalized exactly like a feed value —
+// otherwise the two sides of `sameTuple` would not be comparable.
 const tupleOf = (r: Record<string, unknown>): Tuple => ({
-  market: r.market as number | null,
-  low: r.low as number | null,
-  mid: r.mid as number | null,
-  high: r.high as number | null,
+  market: norm(r.market),
+  low: norm(r.low),
+  mid: norm(r.mid),
+  high: norm(r.high),
 });
+
+// The regex alone accepts 2026-13-45. The UTC round-trip also rejects any date
+// the calendar does not have, so lexicographic comparison never sorts a
+// nonsense date into the middle of a real timeline.
+const isCalendarDate = (date: string): boolean => {
+  if (!DATE_RE.test(date)) return false;
+  const t = Date.parse(date + "T00:00:00Z");
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === date;
+};
 
 const keyOf = (productId: number, subtype: string) => `${productId}|${subtype}`;
 
@@ -82,6 +116,17 @@ function chunks<T>(items: T[], size: number): T[][] {
 }
 
 const placeholders = (n: number) => new Array(n).fill("?").join(", ");
+
+async function loadCardsInto(c: Client, groupId: number, into: Map<number, number>): Promise<void> {
+  const rows = (await c.execute({
+    sql: `SELECT cards.id AS id, cards.tcgplayer_product_id AS pid
+          FROM cards JOIN sets ON sets.id = cards.set_id
+          WHERE sets.tcgplayer_group_id = ?`,
+    args: [groupId],
+  })).rows;
+  into.clear();
+  for (const r of rows) into.set(Number(r.pid), Number(r.id));
+}
 
 async function loadPrintingsInto(c: Client, groupId: number, into: Map<string, number>): Promise<void> {
   const rows = (await c.execute({
@@ -102,14 +147,8 @@ async function loadPrintingsInto(c: Client, groupId: number, into: Map<string, n
  */
 export async function resolveGroupIndex(groupId: number): Promise<GroupIndex> {
   const c = await db();
-  const cardRows = (await c.execute({
-    sql: `SELECT cards.id AS id, cards.tcgplayer_product_id AS pid
-          FROM cards JOIN sets ON sets.id = cards.set_id
-          WHERE sets.tcgplayer_group_id = ?`,
-    args: [groupId],
-  })).rows;
   const cardByProduct = new Map<number, number>();
-  for (const r of cardRows) cardByProduct.set(Number(r.pid), Number(r.id));
+  await loadCardsInto(c, groupId, cardByProduct);
 
   const printingId = new Map<string, number>();
   await loadPrintingsInto(c, groupId, printingId);
@@ -122,7 +161,7 @@ export async function ingestPrices(
   date: string, // YYYY-MM-DD (UTC)
   index?: GroupIndex
 ): Promise<IngestPriceResult> {
-  if (!DATE_RE.test(date)) throw new Error(`ingestPrices: date must be YYYY-MM-DD, got ${date}`);
+  if (!isCalendarDate(date)) throw new Error(`ingestPrices: date must be YYYY-MM-DD, got ${date}`);
 
   const result: IngestPriceResult = { written: 0, unchanged: 0, skippedNoCard: 0, skippedWrongGroup: 0 };
   if (prices.length === 0) return result;
@@ -139,7 +178,22 @@ export async function ingestPrices(
 
   const wanted: TcgcsvPrice[] = [];
   const skipped: TcgcsvPrice[] = [];
-  for (const p of deduped) (idx.cardByProduct.has(p.productId) ? wanted : skipped).push(p);
+  const partition = () => {
+    wanted.length = 0;
+    skipped.length = 0;
+    for (const p of deduped) (idx.cardByProduct.has(p.productId) ? wanted : skipped).push(p);
+  };
+  partition();
+
+  // A hoisted index caches `cardByProduct` from whenever it was built, so a card
+  // added to THIS group afterwards would look like catalog drift. Before we
+  // conclude anything is skippable, reload the group's cards into the index
+  // (mutating it, like the printings reload) and re-partition. The reload only
+  // happens when something is about to be skipped, so the steady state is free.
+  if (skipped.length > 0) {
+    await loadCardsInto(c, groupId, idx.cardByProduct);
+    partition();
+  }
 
   // Classify skips: a product that exists under a different group is catalog
   // drift (actionable) rather than an unknown product (routine).
@@ -215,7 +269,12 @@ export async function ingestPrices(
     else needScan.push(t.id); // out-of-order replay: latest is at or after `date`
   }
 
-  // Only the replayed printings pay for a history scan.
+  // Only the replayed printings pay for a history scan: the tuple immediately
+  // before `date` (the diff base) and the newest snapshot date over ALL dates
+  // (which says whether this replay lands on the newest snapshot — see the
+  // invariant note in the header).
+  const outOfOrder = new Set(needScan);
+  const maxSnapshotDate = new Map<number, string>();
   for (const ids of chunks(needScan, IN_CHUNK)) {
     const rows = (await c.execute({
       sql: `SELECT ps.printing_id AS printing_id, ps.market, ps.low, ps.mid, ps.high
@@ -229,6 +288,16 @@ export async function ingestPrices(
       args: [...ids, date],
     })).rows;
     for (const r of rows) prevByPrinting.set(Number(r.printing_id), tupleOf(r));
+
+    const maxRows = (await c.execute({
+      sql: `SELECT printing_id, MAX(date) AS d FROM price_snapshots
+            WHERE printing_id IN (${placeholders(ids.length)})
+            GROUP BY printing_id`,
+      args: ids,
+    })).rows;
+    for (const r of maxRows) {
+      if (r.d != null) maxSnapshotDate.set(Number(r.printing_id), String(r.d));
+    }
   }
 
   // Which printings already have a row AT `date` — a re-run must be able to
@@ -253,14 +322,17 @@ export async function ingestPrices(
     const unit: Stmt[] = [];
     const prev = prevByPrinting.get(id);
     const tupleArgs = [id, date, next.market, next.low, next.mid, next.high];
+    let wroteSnapshot: boolean;
 
     if (prev !== undefined && sameTuple(prev, next)) {
+      wroteSnapshot = false;
       result.unchanged++;
       if (existsAtDate.has(id)) {
         // Canonicalize: this day carried a value the correction says never changed.
         unit.push({ sql: "DELETE FROM price_snapshots WHERE printing_id = ? AND date = ?", args: [id, date] });
       }
     } else {
+      wroteSnapshot = true;
       result.written++;
       unit.push({
         sql: `INSERT INTO price_snapshots (printing_id, date, market, low, mid, high)
@@ -282,6 +354,27 @@ export async function ingestPrices(
             WHERE excluded.date >= latest_prices.date`,
       args: tupleArgs,
     });
+
+    // On the out-of-order path the guard above may have refused the tuple
+    // (`latest.date > date`) even though this call just changed the NEWEST
+    // snapshot. Repair the tuple — never the date — so the invariant holds.
+    if (outOfOrder.has(id)) {
+      const maxDate = maxSnapshotDate.get(id);
+      // `date >= maxDate` (or no snapshots at all) means the row we just wrote
+      // or deleted was the newest one; anything older leaves the newest intact.
+      if (maxDate === undefined || date >= maxDate) {
+        // After this unit, the newest snapshot is the one we wrote, or — if we
+        // wrote nothing (and possibly deleted this day's row) — `prev`.
+        // `unchanged` implies `prev` is defined, so this is never undefined.
+        const newest = wroteSnapshot ? next : prev;
+        if (newest !== undefined) {
+          unit.push({
+            sql: "UPDATE latest_prices SET market = ?, low = ?, mid = ?, high = ? WHERE printing_id = ?",
+            args: [newest.market, newest.low, newest.mid, newest.high, id],
+          });
+        }
+      }
+    }
     units.push(unit);
   }
 

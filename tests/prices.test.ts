@@ -66,6 +66,16 @@ async function latestFor(printingId: number) {
   })).rows[0];
 }
 
+// Every snapshot day for a printing, oldest first, as [date, market] pairs.
+async function timeline(printingId: number): Promise<[string, number | null][]> {
+  const c = await db();
+  const rows = (await c.execute({
+    sql: "SELECT date, market FROM price_snapshots WHERE printing_id = ? ORDER BY date",
+    args: [printingId],
+  })).rows;
+  return rows.map((r) => [String(r.date), r.market as number | null]);
+}
+
 describe("ingestPrices (write-on-change)", () => {
   it("creates the printing and writes the first snapshot", async () => {
     const res = await ingestPrices(604, [P1], "2026-09-01");
@@ -264,6 +274,82 @@ describe("ingestPrices (write-on-change)", () => {
 
     // The reused index must still resolve the printing on the next day.
     expect(await ingestPrices(604, [etched], "2026-03-02", idx)).toMatchObject({ unchanged: 1, written: 0 });
+  });
+
+  it("re-running the newest snapshot day repairs the latest tuple (no fabricated movement next day)", async () => {
+    await upsertProducts(3, 604, [{ productId: 450201, name: "Replay Tail A" }]);
+    const key = { productId: 450201, subTypeName: "Normal" };
+
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 10 }], "2026-12-01")).toMatchObject({ written: 1 });
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 10 }], "2026-12-02")).toMatchObject({ written: 0, unchanged: 1 });
+
+    const p = await printingIdFor(450201, "Normal");
+    expect(await latestFor(p)).toMatchObject({ date: "2026-12-02", market: 10 });
+
+    // Corrected re-run of 12-01 rewrites the NEWEST snapshot while latest.date stays 12-02.
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 99 }], "2026-12-01")).toMatchObject({ written: 1 });
+    expect(await snapshotAt(p, "2026-12-01")).toMatchObject({ market: 99 });
+    expect(await latestFor(p)).toMatchObject({ date: "2026-12-02", market: 99 });
+
+    // With the tuple repaired, the next real day at 99 is genuinely unchanged.
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 99 }], "2026-12-03")).toMatchObject({ written: 0, unchanged: 1 });
+    expect(await timeline(p)).toEqual([["2026-12-01", 99]]);
+  });
+
+  it("a canonicalizing delete of the newest snapshot repairs the latest tuple (current price stays right)", async () => {
+    await upsertProducts(3, 604, [{ productId: 450202, name: "Replay Tail B" }]);
+    const key = { productId: 450202, subTypeName: "Normal" };
+
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 5 }], "2027-01-01")).toMatchObject({ written: 1 });
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 7 }], "2027-01-02")).toMatchObject({ written: 1 });
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 7 }], "2027-01-03")).toMatchObject({ written: 0, unchanged: 1 });
+
+    const p = await printingIdFor(450202, "Normal");
+    expect(await timeline(p)).toEqual([["2027-01-01", 5], ["2027-01-02", 7]]);
+    expect(await latestFor(p)).toMatchObject({ date: "2027-01-03", market: 7 });
+
+    // The 01-02 spike was bad: the correction equals 01-01, so that row is deleted.
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 5 }], "2027-01-02")).toMatchObject({ written: 0, unchanged: 1 });
+    expect(await timeline(p)).toEqual([["2027-01-01", 5]]);
+    expect(await latestFor(p)).toMatchObject({ date: "2027-01-03", market: 5 });
+  });
+
+  it("refreshes a hoisted GroupIndex's cards when a product is added to the same group later", async () => {
+    const idx = await resolveGroupIndex(604);
+    await upsertProducts(3, 604, [{ productId: 450301, name: "Late Card" }]);
+    expect(idx.cardByProduct.has(450301)).toBe(false);
+
+    const res = await ingestPrices(
+      604,
+      [{ productId: 450301, subTypeName: "Normal", marketPrice: 1 }],
+      "2026-06-01",
+      idx
+    );
+    expect(res).toMatchObject({ written: 1, skippedWrongGroup: 0, skippedNoCard: 0 });
+    expect(idx.cardByProduct.has(450301)).toBe(true);
+  });
+
+  it("rejects a syntactically well-formed but impossible date", async () => {
+    await expect(ingestPrices(604, [P1], "2026-13-45")).rejects.toThrow(/YYYY-MM-DD/);
+    await expect(ingestPrices(604, [P1], "2026-02-30")).rejects.toThrow(/YYYY-MM-DD/);
+  });
+
+  it("normalizes a bigint price the same as a number", async () => {
+    await upsertProducts(3, 604, [{ productId: 450302, name: "Bigint Price" }]);
+    const key = { productId: 450302, subTypeName: "Normal" };
+
+    // libsql hands integer columns back as bigint; a bigint must not read as a change.
+    expect(
+      await ingestPrices(604, [{ ...key, marketPrice: BigInt(12) as unknown as number }], "2027-02-01")
+    ).toMatchObject({ written: 1 });
+    // 12 (number) must compare equal to the stored bigint-derived value.
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 12 }], "2027-02-02")).toMatchObject({
+      written: 0,
+      unchanged: 1,
+    });
+
+    const p = await printingIdFor(450302, "Normal");
+    expect(await latestFor(p)).toMatchObject({ market: 12 });
   });
 
   it("handles more printings than the statement chunk size in one call", async () => {
