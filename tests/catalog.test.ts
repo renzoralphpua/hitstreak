@@ -34,10 +34,10 @@ const PRODUCTS = [
 describe("catalog upsert", () => {
   it("upserts sets and cards and is idempotent", async () => {
     await upsertSets(3, GROUPS);
-    await upsertProducts(3, 604, PRODUCTS);
+    await upsertProducts(604, PRODUCTS);
     // run again — no dupes
     await upsertSets(3, GROUPS);
-    await upsertProducts(3, 604, PRODUCTS);
+    await upsertProducts(604, PRODUCTS);
 
     const c = await db();
     expect((await c.execute("SELECT COUNT(*) AS n FROM sets")).rows[0].n).toBe(1);
@@ -53,7 +53,7 @@ describe("catalog upsert", () => {
   });
 
   it("updates changed fields on re-upsert", async () => {
-    await upsertProducts(3, 604, [{ ...PRODUCTS[0], name: "Pikachu (Revised)" }]);
+    await upsertProducts(604, [{ ...PRODUCTS[0], name: "Pikachu (Revised)" }]);
     const c = await db();
     const row = (await c.execute({
       sql: "SELECT name FROM cards WHERE tcgplayer_product_id = ?",
@@ -64,13 +64,13 @@ describe("catalog upsert", () => {
 
   it("throws when upserting products for a group whose set has not been upserted", async () => {
     await expect(
-      upsertProducts(3, 999999, [{ productId: 1, name: "Orphan" }])
+      upsertProducts(999999, [{ productId: 1, name: "Orphan" }])
     ).rejects.toThrow("set for group 999999 not upserted yet");
   });
 
   it("chunks large product lists across multiple batches", async () => {
     const many = Array.from({ length: 201 }, (_, i) => ({ productId: 900000 + i, name: `Bulk ${i}` }));
-    await upsertProducts(3, 604, many);
+    await upsertProducts(604, many);
     const c = await db();
     const r = await c.execute("SELECT COUNT(*) AS n FROM cards WHERE tcgplayer_product_id >= 900000");
     expect(Number(r.rows[0].n)).toBe(201);

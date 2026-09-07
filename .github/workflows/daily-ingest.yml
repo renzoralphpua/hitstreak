@@ -26,8 +26,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx tsx ingest/daily.ts ${{ inputs.date }}
+      - run: npx tsx ingest/daily.ts
         env:
+          INGEST_DATE: ${{ inputs.date }}
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}

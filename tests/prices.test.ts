@@ -10,7 +10,7 @@ import { ingestPrices, resolveGroupIndex } from "@/ingest/prices";
 beforeAll(async () => {
   await ensureGame({ tcgplayerCategoryId: 3, name: "Pokémon", slug: "pokemon" });
   await upsertSets(3, [{ groupId: 604, name: "Scarlet & Violet" }]);
-  await upsertProducts(3, 604, [{ productId: 450101, name: "Pikachu" }]);
+  await upsertProducts(604, [{ productId: 450101, name: "Pikachu" }]);
 });
 
 afterAll(() => {
@@ -163,7 +163,7 @@ describe("ingestPrices (write-on-change)", () => {
   });
 
   it("handles an all-null tuple (no listings) as a real, comparable value", async () => {
-    await upsertProducts(3, 604, [{ productId: 450102, name: "Null Card" }]);
+    await upsertProducts(604, [{ productId: 450102, name: "Null Card" }]);
     const noPrices = { productId: 450102, subTypeName: "Normal" };
 
     expect(await ingestPrices(604, [noPrices], "2026-02-01")).toMatchObject({ written: 1 });
@@ -174,7 +174,7 @@ describe("ingestPrices (write-on-change)", () => {
   });
 
   it("a middle insert equal to its LATER neighbour is still written (history stays reconstructible)", async () => {
-    await upsertProducts(3, 604, [{ productId: 450103, name: "Middle Card" }]);
+    await upsertProducts(604, [{ productId: 450103, name: "Middle Card" }]);
     const key = { productId: 450103, subTypeName: "Normal" };
 
     await ingestPrices(604, [{ ...key, marketPrice: 1 }], "2026-01-01");
@@ -203,7 +203,7 @@ describe("ingestPrices (write-on-change)", () => {
 
   it("distinguishes catalog drift (product in another group) from an unknown product", async () => {
     await upsertSets(3, [{ groupId: 605, name: "Other Set" }]);
-    await upsertProducts(3, 605, [{ productId: 777, name: "Elsewhere" }]);
+    await upsertProducts(605, [{ productId: 777, name: "Elsewhere" }]);
 
     const res = await ingestPrices(
       604,
@@ -217,7 +217,7 @@ describe("ingestPrices (write-on-change)", () => {
   });
 
   it("dedupes duplicate keys within one call (last wins)", async () => {
-    await upsertProducts(3, 604, [{ productId: 450104, name: "Dupe Card" }]);
+    await upsertProducts(604, [{ productId: 450104, name: "Dupe Card" }]);
     const res = await ingestPrices(
       604,
       [
@@ -247,7 +247,7 @@ describe("ingestPrices (write-on-change)", () => {
   });
 
   it("normalizes a blank price string to null, not zero", async () => {
-    await upsertProducts(3, 604, [{ productId: 450105, name: "Blank Price" }]);
+    await upsertProducts(604, [{ productId: 450105, name: "Blank Price" }]);
     const res = await ingestPrices(
       604,
       [{ productId: 450105, subTypeName: "Normal", marketPrice: "" as unknown as number }],
@@ -277,7 +277,7 @@ describe("ingestPrices (write-on-change)", () => {
   });
 
   it("re-running the newest snapshot day repairs the latest tuple (no fabricated movement next day)", async () => {
-    await upsertProducts(3, 604, [{ productId: 450201, name: "Replay Tail A" }]);
+    await upsertProducts(604, [{ productId: 450201, name: "Replay Tail A" }]);
     const key = { productId: 450201, subTypeName: "Normal" };
 
     expect(await ingestPrices(604, [{ ...key, marketPrice: 10 }], "2026-12-01")).toMatchObject({ written: 1 });
@@ -297,7 +297,7 @@ describe("ingestPrices (write-on-change)", () => {
   });
 
   it("a canonicalizing delete of the newest snapshot repairs the latest tuple (current price stays right)", async () => {
-    await upsertProducts(3, 604, [{ productId: 450202, name: "Replay Tail B" }]);
+    await upsertProducts(604, [{ productId: 450202, name: "Replay Tail B" }]);
     const key = { productId: 450202, subTypeName: "Normal" };
 
     expect(await ingestPrices(604, [{ ...key, marketPrice: 5 }], "2027-01-01")).toMatchObject({ written: 1 });
@@ -316,7 +316,7 @@ describe("ingestPrices (write-on-change)", () => {
 
   it("refreshes a hoisted GroupIndex's cards when a product is added to the same group later", async () => {
     const idx = await resolveGroupIndex(604);
-    await upsertProducts(3, 604, [{ productId: 450301, name: "Late Card" }]);
+    await upsertProducts(604, [{ productId: 450301, name: "Late Card" }]);
     expect(idx.cardByProduct.has(450301)).toBe(false);
 
     const res = await ingestPrices(
@@ -335,7 +335,7 @@ describe("ingestPrices (write-on-change)", () => {
   });
 
   it("normalizes a bigint price the same as a number", async () => {
-    await upsertProducts(3, 604, [{ productId: 450302, name: "Bigint Price" }]);
+    await upsertProducts(604, [{ productId: 450302, name: "Bigint Price" }]);
     const key = { productId: 450302, subTypeName: "Normal" };
 
     // libsql hands integer columns back as bigint; a bigint must not read as a change.
@@ -354,7 +354,7 @@ describe("ingestPrices (write-on-change)", () => {
 
   it("handles more printings than the statement chunk size in one call", async () => {
     const products = Array.from({ length: 201 }, (_, i) => ({ productId: 900000 + i, name: `Bulk ${i}` }));
-    await upsertProducts(3, 604, products);
+    await upsertProducts(604, products);
 
     const res = await ingestPrices(
       604,
@@ -372,7 +372,7 @@ describe("ingestPrices (write-on-change)", () => {
   });
 
   it("a replay strictly between maxDate and latest.date is blocked by the upsert guard, so the repair is the only writer of the tuple", async () => {
-    await upsertProducts(3, 604, [{ productId: 450106, name: "Tail Replay" }]);
+    await upsertProducts(604, [{ productId: 450106, name: "Tail Replay" }]);
     const key = { productId: 450106, subTypeName: "Normal" };
 
     expect(await ingestPrices(604, [{ ...key, marketPrice: 10 }], "2028-01-01")).toMatchObject({ written: 1 });
@@ -394,7 +394,7 @@ describe("ingestPrices (write-on-change)", () => {
   });
 
   it("a newer snapshot already visible at scan time skips the repair (pre-filter); the SQL guard covers the in-flight race and is not exercisable single-threaded", async () => {
-    await upsertProducts(3, 604, [{ productId: 450107, name: "Concurrent Repair" }]);
+    await upsertProducts(604, [{ productId: 450107, name: "Concurrent Repair" }]);
     const c = await db();
 
     // Establish snapshots {2029-01-01=10}, latest {2029-01-01, 10}.

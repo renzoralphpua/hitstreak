@@ -6,11 +6,10 @@
 // game that dies midway still reports what it completed.
 import { createTcgcsvClient, type TcgcsvClient } from "./tcgcsv";
 import { ensureGame, upsertSets, upsertProducts, GAMES, type GameSeed } from "./catalog";
-import { ingestPrices } from "./prices";
+import { ingestPrices, isCalendarDate } from "./prices";
 import { rawArchiverFromEnv, type RawArchiver } from "./r2";
 import { closeDb } from "@/lib/db";
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_CONSECUTIVE_GROUP_FAILURES = 5; // a run of failures this long is an outage, not bad data
 const HEARTBEAT_GROUPS = 50; // progress line cadence, so a stalled run is visible in CI logs
 const ZERO_PRICE_IDS_LOGGED = 20; // the summary line names the first N; the rest live in the JSON summary
@@ -47,7 +46,7 @@ export interface DailySummary {
 
 export async function runDailyIngest(opts: DailyIngestOptions): Promise<DailySummary> {
   // Validated here, not just at the CLI, so a bad date can never reach an R2 key or a snapshot row.
-  if (!DATE_RE.test(opts.date)) {
+  if (!isCalendarDate(opts.date)) {
     throw new Error(`runDailyIngest: date must be YYYY-MM-DD, got ${opts.date}`);
   }
 
@@ -100,7 +99,7 @@ export async function runDailyIngest(opts: DailyIngestOptions): Promise<DailySum
         try {
           const products = await opts.client.fetchProducts(cat, group.groupId);
           await opts.archiver.putRaw(opts.date, cat, `${group.groupId}-products`, { results: products });
-          await upsertProducts(cat, group.groupId, products);
+          await upsertProducts(group.groupId, products);
           g.cards += products.length;
 
           const prices = await opts.client.fetchPrices(cat, group.groupId);
@@ -158,8 +157,9 @@ function formatIds(ids: number[]): string {
 // CLI entry: npx tsx ingest/daily.ts [YYYY-MM-DD]
 const isMain = process.argv[1]?.replace(/\\/g, "/").endsWith("ingest/daily.ts");
 if (isMain) {
-  const argDate = process.argv[2] ?? process.env.INGEST_DATE;
-  if (argDate !== undefined && !DATE_RE.test(argDate)) {
+  const raw = process.argv[2] ?? process.env.INGEST_DATE;
+  const argDate = raw && raw.trim() ? raw.trim() : undefined;
+  if (argDate !== undefined && !isCalendarDate(argDate)) {
     console.error("usage: tsx ingest/daily.ts [YYYY-MM-DD]");
     process.exit(2);
   }

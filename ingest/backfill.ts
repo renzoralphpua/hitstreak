@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ingestPrices, resolveGroupIndex, type GroupIndex } from "./prices";
+import { ingestPrices, isCalendarDate, resolveGroupIndex, type GroupIndex } from "./prices";
 import type { TcgcsvPrice } from "./tcgcsv";
 import { GAMES } from "./catalog";
 import { closeDb, db } from "@/lib/db";
@@ -90,7 +90,10 @@ export async function loadKnownGroupIds(): Promise<Set<number>> {
  * comes from the parent directory name.
  */
 export function collectGroupPrices(root: string, categoryIds?: ReadonlySet<number>): GroupPrices[] {
-  const out: GroupPrices[] = [];
+  // Keyed by groupId (Map preserves first-seen insertion order) so that two
+  // files under the same group directory — which does happen in the archive —
+  // merge into one entry instead of the second silently shadowing the first.
+  const byGroup = new Map<number, GroupPrices>();
   const walk = (dir: string, depth: number) => {
     for (const entry of readdirSync(dir)) {
       const p = join(dir, entry);
@@ -115,11 +118,13 @@ export function collectGroupPrices(root: string, categoryIds?: ReadonlySet<numbe
       const parent = dir.split(/[\\/]/).pop() ?? "";
       const groupId = Number(parent);
       if (!Number.isInteger(groupId)) continue;
-      out.push({ groupId, prices: results });
+      const existing = byGroup.get(groupId);
+      if (existing) existing.prices = existing.prices.concat(results);
+      else byGroup.set(groupId, { groupId, prices: results });
     }
   };
   walk(root, 0);
-  return out;
+  return [...byGroup.values()];
 }
 
 function* dateRange(from: string, to: string): Generator<string> {
@@ -146,15 +151,19 @@ export async function downloadAndExtract(date: string, fetchImpl: typeof fetch =
   const dir = mkdtempSync(join(tmpdir(), `hitstreak-bf-${date}-`));
   const archivePath = join(dir, "prices.7z");
   writeFileSync(archivePath, buf);
-  execFileSync("7z", ["x", archivePath, `-o${dir}/x`, "-y"], { stdio: "ignore" });
+  try {
+    execFileSync("7z", ["x", archivePath, `-o${dir}/x`, "-y"], { stdio: "ignore" });
+  } catch (e) {
+    rmSync(dir, { recursive: true, force: true });
+    throw new Error(`archive ${date}: 7z extraction failed: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+  }
   return join(dir, "x");
 }
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const isMain = process.argv[1]?.replace(/\\/g, "/").endsWith("ingest/backfill.ts");
 if (isMain) {
   const [from, to] = process.argv.slice(2);
-  if (!from || !to || !DATE_RE.test(from) || !DATE_RE.test(to) || from > to) {
+  if (!from || !to || !isCalendarDate(from) || !isCalendarDate(to) || from > to) {
     console.error("usage: tsx ingest/backfill.ts <from YYYY-MM-DD> <to YYYY-MM-DD>");
     process.exit(2);
   }

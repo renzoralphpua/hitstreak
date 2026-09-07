@@ -102,7 +102,7 @@ const tupleOf = (r: Record<string, unknown>): Tuple => ({
 // The regex alone accepts 2026-13-45. The UTC round-trip also rejects any date
 // the calendar does not have, so lexicographic comparison never sorts a
 // nonsense date into the middle of a real timeline.
-const isCalendarDate = (date: string): boolean => {
+export const isCalendarDate = (date: string): boolean => {
   if (!DATE_RE.test(date)) return false;
   const t = Date.parse(date + "T00:00:00Z");
   return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === date;

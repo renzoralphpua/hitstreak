@@ -46,7 +46,6 @@ export async function upsertSets(categoryId: number, groups: TcgcsvGroup[]): Pro
 }
 
 export async function upsertProducts(
-  _categoryId: number,
   groupId: number,
   products: TcgcsvProduct[]
 ): Promise<void> {

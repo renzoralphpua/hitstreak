@@ -9,12 +9,12 @@ const tmp = tmpDb("backfill");
 
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
-import { replayDay, collectGroupPrices, downloadAndExtract } from "@/ingest/backfill";
+import { replayDay, collectGroupPrices, downloadAndExtract, loadKnownGroupIds } from "@/ingest/backfill";
 
 beforeAll(async () => {
   await ensureGame({ tcgplayerCategoryId: 3, name: "Pokémon", slug: "pokemon" });
   await upsertSets(3, [{ groupId: 604, name: "Scarlet & Violet" }]);
-  await upsertProducts(3, 604, [{ productId: 450101, name: "Pikachu" }]);
+  await upsertProducts(604, [{ productId: 450101, name: "Pikachu" }]);
 });
 
 afterAll(() => {
@@ -76,6 +76,12 @@ describe("replayDay", () => {
   });
 });
 
+describe("loadKnownGroupIds", () => {
+  it("returns the catalog's set of tcgplayer group ids", async () => {
+    expect(await loadKnownGroupIds()).toEqual(new Set([604]));
+  });
+});
+
 describe("collectGroupPrices", () => {
   it("finds price files by shape and takes the group id from the parent directory", () => {
     const root = mkdtempSync(join(tmpdir(), "hitstreak-bf-fixture-"));
@@ -113,6 +119,31 @@ describe("collectGroupPrices", () => {
     const groups = collectGroupPrices(root, new Set([3]));
     const groupIds = groups.map((g) => g.groupId).sort((a, b) => a - b);
     expect(groupIds).toEqual([604, 777]);
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("merges two price files under the same group directory into one entry", () => {
+    const root = mkdtempSync(join(tmpdir(), "hitstreak-bf-fixture3-"));
+    mkdirSync(join(root, "2024-02-08", "3", "604"), { recursive: true });
+    writeFileSync(
+      join(root, "2024-02-08", "3", "604", "prices"),
+      JSON.stringify({ results: [{ productId: 450101, subTypeName: "Holofoil", marketPrice: 1.0 }] })
+    );
+    writeFileSync(
+      join(root, "2024-02-08", "3", "604", "prices2"),
+      JSON.stringify({ results: [{ productId: 450102, subTypeName: "Normal", marketPrice: 2.0 }] })
+    );
+
+    const groups = collectGroupPrices(root);
+    expect(groups).toEqual([
+      {
+        groupId: 604,
+        prices: [
+          { productId: 450101, subTypeName: "Holofoil", marketPrice: 1.0 },
+          { productId: 450102, subTypeName: "Normal", marketPrice: 2.0 },
+        ],
+      },
+    ]);
     rmSync(root, { recursive: true, force: true });
   });
 });
