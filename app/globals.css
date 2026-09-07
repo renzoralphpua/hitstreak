@@ -51,18 +51,22 @@
   --shadow-tile: var(--tile-shadow);
 }
 
-html { color-scheme: light; }
-html[data-theme="dark"] { color-scheme: dark; }
+/* Base styles live in @layer base so Tailwind utilities (a later layer) can override
+   them — an unlayered `a { color }` would otherwise beat `text-ink` on nav links. */
+@layer base {
+  html { color-scheme: light; }
+  html[data-theme="dark"] { color-scheme: dark; }
 
-body {
-  background: var(--ground);
-  color: var(--ink);
-  font-family: var(--font-body);
-  font-size: 14px;
-  -webkit-font-smoothing: antialiased;
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); }
+
+  /* tabular figures everywhere a column of numbers appears */
+  .num { font-variant-numeric: tabular-nums; }
 }
-
-a { color: var(--accent); }
-
-/* tabular figures everywhere a column of numbers appears */
-.num { font-variant-numeric: tabular-nums; }
