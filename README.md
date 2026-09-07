@@ -8,9 +8,10 @@ Phase 1 complete: data pipeline — catalog + daily write-on-change price ingest
 raw archives to R2, historical backfill from 2024-02-08.
 
 Phase 2a complete: design tokens + `components/ui/` primitives (`BottomTabBar`, `Button`, `CardRow`,
-`CardTile`, `Panel`, `Pill`, `PriceDelta`, `ProgressBar`, `SearchField`, `SectionHeading`, `StatTile`,
-`TierBadge`, `TopNav`, `UserMenu`, `ValidationList`); a `/dev/ui` primitives gallery (dev only); Better
-Auth (email + password) with sign-in/sign-up and a protected app shell.
+`CardTile`, `EmptyState`, `Input`, `MoneyDisplay`, `Panel`, `Pill`, `PriceDelta`, `ProgressBar`,
+`SearchField`, `SectionHeading`, `StatTile`, `TierBadge`, `TopNav`, `UserMenu`, `ValidationList`); a
+`/dev/ui` primitives gallery (dev only); Better Auth (email + password) with sign-in/sign-up and a
+protected app shell.
 
 Phase 2b complete: binders with live valuation from `latest_prices`; the add-card flow with type-ahead
 search; the set browser with completion tracking and tap-to-own; card detail with printings and 30-day
@@ -30,6 +31,7 @@ Phase 3 next: price history charts, portfolio history, share links, alerts (see
 - `/cards/[id]` — art, market price, 30-day change, printings table, add to a binder
 - `/decks`, `/alerts` — Phase 4 / Phase 3 placeholders
 - `/dev/ui` — primitives gallery (dev only)
+- `/api/auth/[...all]` — Better Auth route handler (sign-in, sign-up, sign-out, session)
 - `GET /api/search?q=&game=` — type-ahead card search for the add-card dialog (session-checked)
 
 ## Stack
@@ -70,7 +72,9 @@ Design tokens live in `app/globals.css` (`@theme inline`; light values on `:root
 `[data-theme="dark"]`). Primitives live in `components/ui/` — when a screen needs a visual tweak, change
 a primitive or a token, not the page. The gallery at `/dev/ui` shows every primitive and its variants
 (requires sign-in in dev, like the rest of the app shell). Component tests are `tests/ui/*.test.tsx`,
-each starting with `// @vitest-environment jsdom`.
+each starting with `// @vitest-environment jsdom`. `components/ui/cn.ts` resolves conflicting
+Tailwind classes with `tailwind-merge` (last one wins) rather than just concatenating strings, so a
+primitive's own classes and a caller's overrides can safely target the same utility group.
 
 ## Auth
 

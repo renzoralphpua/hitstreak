@@ -804,6 +804,20 @@ above:
   `{ ok: false, error: "Invalid id" }` instead of reaching SQL.
 - **Cached detail loaders.** The three detail pages wrap their session + detail fetch in
   `cache()` from React, so `generateMetadata` and the page share one query per request.
+- **Card-page headline price is the most valuable printing, not the first.** `/cards/[id]` picks
+  the printing with the highest `market` (falling back to the first) as "the card" people mean, so
+  a rarer high-value alt art doesn't get outranked by whichever printing happens to sort first.
+- **`AddToBinder` component added.** A binder-picker was pulled out of the card detail page so
+  adding a card to a portfolio from `/cards/[id]` doesn't hand-roll its own dialog logic.
+- **`Pill` gained `href` too**, same reasoning as `Button` — navigational pills (the game filter row)
+  render a `next/link` in the pill skin instead of copying classes onto an anchor.
+- **`tests/ui/card-page.test.tsx` was replaced by `tests/ui/add-to-binder.test.tsx`** once the
+  binder-picker moved into its own component — the coverage now lives with the component it tests.
+- **Dialog focus trap added.** `AddItemDialog` (and the binder picker) trap Tab within the open
+  panel and restore focus to the trigger on close, rather than leaking focus to the page behind it.
+- **Pre-merge commit** (this one): `tailwind-merge` wired into `cn` so conflicting Tailwind classes
+  resolve instead of concatenating, a shared `parseRouteId` for the three `[id]` routes, and
+  `getCardDetail`'s 30-day lookups parallelized with `Promise.all`.
 
 ### Known items, deliberately left
 

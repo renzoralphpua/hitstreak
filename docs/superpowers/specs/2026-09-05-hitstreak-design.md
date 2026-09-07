@@ -197,8 +197,14 @@ Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art 
 
 - **Gate sign-up before public launch.** Phase 2a ships open email+password registration with no email verification (fine single-user-first). Before the app is reachable at a public domain, add one of: invite codes, an allowlist, or email verification (`emailAndPassword.requireEmailVerification` + a Resend sender). Track as a Phase 3 task alongside Resend setup.
 - **Future `/api/*` routes must call `getSession()` themselves** — `proxy.ts` excludes `/api` from the optimistic redirect so Better Auth's handler stays reachable.
-
 - Riftbound deck-construction rules — verify against official Riot rules (step 10)
 - ~~Exact per-game `extendedData` field shapes~~ — **resolved 2026-09-05 against real data:** all three games expose `Number` and `Rarity` (Pokémon also HP/Stage/Attacks; One Piece: Color/CardType/Life/Power/Attribute; Riftbound: Energy Cost/Power Cost/Might/Card Type/Tag/Domain). Sealed products (~10% of rows) have neither, and correctly land with null number/rarity.
 - Domain registration (`hitstreak.gg` / `hitstreak.app`) — user purchase, not build-blocking
 - Whether Pokémon catalog volume (largest of the three) needs ingestion batching/chunked upserts — measure in step 2
+- Release-date normalization at ingest — tcgcsv's `publishedOn` is a full timestamp, not a date; the UI currently slices to the date at render time instead of normalizing on write
+- `cards.number` `ORDER BY` is a plain text sort — fine for zero-padded numbers, wrong for unpadded ones (`9` sorts after `10`)
+- `listSetsWithCompletion` is unbenchmarked at scale — correlated subqueries per set/user, untested against a large catalog
+- Primitive candidates surfaced by repeated page patterns: `BackLink` (the recurring `← X` link), `DetailLayout` (the shared detail-page shell), `CardImage` (wraps the `url(...)`-quoted background-image treatment), and a `--text-caption` token to replace the ~25 ad-hoc `text-[13px]` uses
+- `ConfirmDialog` primitive to replace the raw `window.confirm` currently used for destructive actions (e.g. removing a holding)
+- `getPortfolioSummary` re-reads holdings independently rather than sharing a query with `getPortfolioHoldings` — fine for now, worth collapsing if it becomes a hot path
+- No automated check that every `/api/*` route actually calls `getSession()` — today it's a convention documented above, not enforced by a test or lint rule
