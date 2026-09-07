@@ -137,7 +137,7 @@ const tmp = tmpDb("history");
 import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import { createPortfolio, addItem, deletePortfolio, getCardHolders } from "@/lib/portfolios";
-import { RANGES, parseRange, rangeStart, getPrintingHistory, getPortfolioHistory, seriesStats, HISTORY_EPOCH } from "@/lib/history";
+import { RANGES, RANGE_CAPTION, parseRange, rangeStart, chartFrom, withLivePoint, getPrintingHistory, getPortfolioHistory, seriesStats, HISTORY_EPOCH } from "@/lib/history";
 
 let seed: Awaited<ReturnType<typeof seedMiniCatalog>>;
 beforeAll(async () => { seed = await seedMiniCatalog(); });
@@ -157,6 +157,25 @@ describe("ranges", () => {
     expect(rangeStart("1y", "2026-09-07")).toBe("2025-09-07");
     expect(rangeStart("all", "2026-09-07")).toBe(HISTORY_EPOCH);
     expect(rangeStart("7d", "2026-03-03")).toBe("2026-02-24"); // crosses a month boundary
+  });
+  it("anchors the All chart to the first point and has prose captions", () => {
+    const pts = [{ date: "2026-08-17", value: 1 }, { date: "2026-09-07", value: 2 }];
+    expect(chartFrom("all", HISTORY_EPOCH, pts, "2026-09-07")).toBe("2026-08-17");
+    expect(chartFrom("all", HISTORY_EPOCH, [], "2026-09-07")).toBe("2026-09-07");
+    expect(chartFrom("30d", "2026-08-08", pts, "2026-09-07")).toBe("2026-08-08");
+    expect(RANGE_CAPTION.all).toBe("all time");
+    expect(RANGE_CAPTION["30d"]).toBe("past 30 days");
+  });
+});
+
+describe("withLivePoint", () => {
+  it("appends today's value to an empty or stale series, never duplicates today's row", () => {
+    expect(withLivePoint([], "2026-09-07", 42)).toEqual([{ date: "2026-09-07", value: 42 }]);
+    expect(withLivePoint([{ date: "2026-09-06", value: 40 }], "2026-09-07", 42)).toEqual([
+      { date: "2026-09-06", value: 40 }, { date: "2026-09-07", value: 42 },
+    ]);
+    const done = [{ date: "2026-09-07", value: 40 }];
+    expect(withLivePoint(done, "2026-09-07", 42)).toEqual(done);
   });
 });
 
@@ -248,6 +267,8 @@ import { db } from "@/lib/db";
 export const RANGES = ["7d", "30d", "90d", "1y", "all"] as const;
 export type Range = (typeof RANGES)[number];
 export const RANGE_LABEL: Record<Range, string> = { "7d": "7D", "30d": "30D", "90d": "90D", "1y": "1Y", all: "All" };
+/** Prose form for PriceDelta captions and chart labels ("past All" is not a phrase). */
+export const RANGE_CAPTION: Record<Range, string> = { "7d": "past 7 days", "30d": "past 30 days", "90d": "past 90 days", "1y": "past year", all: "all time" };
 export const DEFAULT_RANGE: Range = "30d";
 /** First day of the tcgcsv archive — nothing older can exist. */
 export const HISTORY_EPOCH = "2024-02-08";
@@ -268,6 +289,21 @@ export function rangeStart(range: Range, to: string): string {
 }
 
 export interface Point { date: string; value: number | null }
+
+/** Where the chart's x-axis starts. Fixed ranges use the range start; "All" starts at the first
+ *  point — portfolio_history begins the first night the nightly runs and a printing's snapshots
+ *  begin at its release — so the data fills the width instead of huddling at the right edge of a
+ *  2024→today axis. `today` covers an empty series. */
+export function chartFrom(range: Range, from: string, points: Point[], today: string): string {
+  return range === "all" ? (points[0]?.date ?? today) : from;
+}
+
+/** `points` plus tonight's live value as a final `today` point, unless the nightly has already
+ *  written today's row (a brand-new binder has no materialized rows yet but should still chart). */
+export function withLivePoint(points: Point[], today: string, value: number): Point[] {
+  const last = points[points.length - 1];
+  return last && last.date >= today ? points : [...points, { date: today, value }];
+}
 
 const num = (v: unknown): number | null => (v == null ? null : Number(v));
 
@@ -314,9 +350,9 @@ export function seriesStats(points: Point[]): SeriesStats | null {
 
 ---
 
-### Task 2: `LineChart` + `RangePills` primitives, `Pill scroll`
+### Task 2: `LineChart` + `RangePills` primitives, `Pill scroll`, `Button size`
 
-**Files:** create `components/ui/LineChart.tsx`, `components/ui/RangePills.tsx`, `tests/ui/line-chart.test.tsx`, `tests/ui/range-pills.test.tsx`; modify `components/ui/Pill.tsx`, `components/ui/index.ts`, `app/dev/ui/page.tsx`, `docs/design/README.md`
+**Files:** create `components/ui/LineChart.tsx`, `components/ui/RangePills.tsx`, `tests/ui/line-chart.test.tsx`, `tests/ui/range-pills.test.tsx`; modify `components/ui/Pill.tsx`, `components/ui/Button.tsx`, `app/(app)/portfolios/[id]/HoldingsTable.tsx`, `tests/ui/primitives-a.test.tsx`, `components/ui/index.ts`, `app/dev/ui/page.tsx`, `docs/design/README.md`
 
 - [ ] **Step 1: Failing tests.** `tests/ui/line-chart.test.tsx`:
 
@@ -388,6 +424,8 @@ describe("RangePills", () => {
 ```
 
 - [ ] **Step 2: `Pill` scroll prop.** In `components/ui/Pill.tsx`: `type Props = ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean; href?: string; scroll?: boolean }`; destructure `scroll` alongside `href` (so it never reaches the `<button>`), and pass `scroll={scroll}` to `Link`. Doc: "`scroll={false}` keeps the page where it is — chart range pills sit mid-page."
+
+- [ ] **Step 2b: `Button` size prop** (the 44px rule in `docs/design/README.md` — callers have been overriding `min-h-11` with `min-h-8`, which `twMerge` honours at every breakpoint, giving 32px targets on phones). Add `size?: "md" | "sm"` to both arms of `Props` in `components/ui/Button.tsx`; compute `cn(base, size === "sm" && "min-h-11 px-3 py-1 text-[13px] md:min-h-8", skin(variant), className)` (the `md:` variant has a different modifier so it survives beside `min-h-11`, exactly like `Pill`'s shape string); add `"size"` to the keys `domProps` strips. Sweep the three existing offenders in `app/(app)/portfolios/[id]/HoldingsTable.tsx` (the `−`/`+` steppers and Remove: drop `min-h-8 … py-1` from their `className`, add `size="sm"`, keep `px-2.5` on the steppers). Test in `tests/ui/primitives-a.test.tsx`: `render(<Button size="sm">x</Button>)` → `className` matches `/min-h-11/` and `/md:min-h-8/`; default has no `md:min-h-8`. README "Tap targets" paragraph becomes: "`Button` and `Input` are 44px everywhere (`min-h-11`); `Button size="sm"` and `Pill` are `min-h-11 md:min-h-8` — a thumb target on phones, the compact 32px control of the mockups from `md` up." Gallery: one `size="sm"` row. **Every Button in Tasks 3–7 below uses `size="sm"` instead of a `min-h-8` class override.**
 
 - [ ] **Step 3: `LineChart`:**
 
@@ -494,7 +532,7 @@ export default function RangePills({ current, hrefFor, className }: { current: R
 (Use `cn` rather than the template string if you prefer — either way, no ad-hoc colours.)
 
 - [ ] **Step 5:** export both from `components/ui/index.ts`; add gallery sections "LineChart" (sample points over a 30-day window, plus an empty one) and "RangePills" (`hrefFor={(r) => `#${r}`}`) to `app/dev/ui/page.tsx`; add rows to the "Implemented as" table in `docs/design/README.md`: `Value / price chart → LineChart`, `7D · 30D · 90D · 1Y · All row → RangePills`. Run `tests/ui/gallery.test.tsx` — extend it if it enumerates sections.
-- [ ] **Step 6:** `npm test`, typecheck, lint → green. **Commit** — `feat(ui): LineChart and RangePills primitives; Pill scroll prop`
+- [ ] **Step 6:** `npm test`, typecheck, lint → green. **Commit** — `feat(ui): LineChart and RangePills primitives; Pill scroll prop; Button size`
 
 ---
 
@@ -502,7 +540,27 @@ export default function RangePills({ current, hrefFor, className }: { current: R
 
 **Files:** modify `app/(app)/cards/[id]/page.tsx`, `app/(app)/portfolios/[id]/page.tsx`
 
-- [ ] **Step 1: Card detail.** Switch the page's props to `PageProps<"/cards/[id]">` (keep `type Params` for `generateMetadata`). Read `const { range: rawRange, p: rawP } = await searchParams;` → `const range = parseRange(rawRange)`, `const today = new Date().toISOString().slice(0, 10)`, `const from = rangeStart(range, today)`. The charted printing is `?p=` when it names one of this card's printings (`parseRouteId`), else `primary`. Load `getPrintingHistory(chartPrinting.printingId, from, today)` and `getCardHolders(userId, card.id)` alongside `listPortfolios`. Replace the "Charts arrive in Phase 3" panel with:
+- [ ] **Step 1: Card detail.** Switch the page's props to `PageProps<"/cards/[id]">` (keep `type Params` for `generateMetadata`). Move the existing `primary` computation above the data loads. `primary` is `PrintingPrice | null` — ~4% of catalog cards (sealed products, promo sets) have **no printings yet** because printings are created by the price ingest — so the charted printing is nullable too. `searchParams` values are `string | string[] | undefined`, and `parseRouteId` takes a `string`, hence the `typeof` narrowing:
+
+```ts
+  const { range: rawRange, p: rawP } = await searchParams;
+  const range = parseRange(rawRange);
+  const today = new Date().toISOString().slice(0, 10);
+  const from = rangeStart(range, today);
+  const requested = typeof rawP === "string" ? parseRouteId(rawP) : null;
+  // PrintingPrice | null: `?p=` when it names one of this card's printings, else the headline one.
+  const chartPrinting = printings.find((x) => x.printingId === requested) ?? primary;
+  const [portfolios, history, holders] = await Promise.all([
+    listPortfolios(userId),
+    chartPrinting ? getPrintingHistory(chartPrinting.printingId, from, today) : Promise.resolve<Point[]>([]),
+    getCardHolders(userId, card.id),
+  ]);
+  const stats = seriesStats(history);
+  const hrefFor = (r: Range, printingId: number) =>
+    `/cards/${card.id}?range=${r}${printingId === primary?.printingId ? "" : `&p=${printingId}`}`;
+```
+
+(imports: `parseRange, rangeStart, chartFrom, seriesStats, RANGE_CAPTION, type Range, type Point` from `@/lib/history`; `getPrintingHistory` too; `getCardHolders` from `@/lib/portfolios`; `LineChart, RangePills, Pill, Button` from `@/components/ui`.) Replace the "Charts arrive in Phase 3" panel with:
 
 ```tsx
         <Panel className="flex flex-col gap-3">
@@ -514,26 +572,32 @@ export default function RangePills({ current, hrefFor, className }: { current: R
               </span>
             )}
           </div>
-          {printings.length > 1 && (
-            <div className="flex flex-wrap gap-1.5">
-              {printings.map((p) => (
-                <Pill key={p.printingId} href={hrefFor(range, p.printingId)} selected={p.printingId === chartPrinting.printingId} scroll={false}>
-                  {p.subtype}
-                </Pill>
-              ))}
-            </div>
+          {chartPrinting ? (
+            <>
+              {printings.length > 1 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {printings.map((p) => (
+                    <Pill key={p.printingId} href={hrefFor(range, p.printingId)} selected={p.printingId === chartPrinting.printingId} scroll={false}>
+                      {p.subtype}
+                    </Pill>
+                  ))}
+                </div>
+              )}
+              <LineChart
+                points={history}
+                from={chartFrom(range, from, history, today)}
+                to={today}
+                label={`${card.name} (${chartPrinting.subtype}) market price, ${RANGE_CAPTION[range]}`}
+              />
+              <RangePills current={range} hrefFor={(r) => hrefFor(r, chartPrinting.printingId)} />
+            </>
+          ) : (
+            <EmptyState title="No price history yet" body="This card has no priced printings." />
           )}
-          <LineChart points={history} from={from} to={today} label={`${card.name} (${chartPrinting.subtype}) market price, ${RANGE_LABEL[range]}`} />
-          <RangePills current={range} hrefFor={(r) => hrefFor(r, chartPrinting.printingId)} />
         </Panel>
 ```
 
-with `const stats = seriesStats(history)` and
-
-```tsx
-  const hrefFor = (r: Range, printingId: number) =>
-    `/cards/${card.id}?range=${r}${printingId === primary?.printingId ? "" : `&p=${printingId}`}`;
-```
+(`chartPrinting` is a `const`, so the narrowing survives into the arrow callbacks.)
 
 Under the printings panel add the "In your binders" block and the alert shortcut:
 
@@ -554,7 +618,7 @@ Under the printings panel add the "In your binders" block and the alert shortcut
             </span>
           )}
           {primary && (
-            <Button href={`/alerts?printing=${primary.printingId}`} variant="secondary" className="ml-auto min-h-8 px-3 py-1 text-[13px]">
+            <Button href={`/alerts?printing=${primary.printingId}`} variant="secondary" size="sm" className="ml-auto">
               Set a price alert
             </Button>
           )}
@@ -563,19 +627,32 @@ Under the printings panel add the "In your binders" block and the alert shortcut
 
 The alerts page (Task 7) reads `?printing=`; until then the link lands on the placeholder — fine.
 
-- [ ] **Step 2: Binder detail.** Same `searchParams` treatment (`PageProps<"/portfolios/[id]">`). Load `getPortfolioHistory(userId, portfolioId, from, today)`; if the last point's date is before `today`, append `{ date: today, value: summary.value }` so a brand-new binder still shows tonight's value as a point (the nightly will replace it with the materialized row). Under the `PriceDelta` add:
+- [ ] **Step 2: Binder detail.** Same `searchParams` treatment (`PageProps<"/portfolios/[id]">`). Nothing populates `portfolio_history` until Task 6, so today every binder has an empty history — `withLivePoint` adds tonight's live value as the single point (and, once the nightly runs, only when today's row isn't there yet):
+
+```ts
+  const history = withLivePoint(await getPortfolioHistory(userId, portfolioId, from, today), today, summary.value);
+  const stats = seriesStats(history);
+```
+
+Under the `PriceDelta` add:
 
 ```tsx
         {stats?.change && (
-          <PriceDelta amount={stats.change.amount} ratio={stats.change.ratio} caption={`past ${RANGE_LABEL[range]}`} />
+          <PriceDelta amount={stats.change.amount} ratio={stats.change.ratio} caption={RANGE_CAPTION[range]} />
         )}
         <div className="flex flex-col gap-2">
-          <LineChart points={history} from={from} to={today} height={120} label={`${portfolio.name} value, ${RANGE_LABEL[range]}`} />
+          <LineChart
+            points={history}
+            from={chartFrom(range, from, history, today)}
+            to={today}
+            height={120}
+            label={`${portfolio.name} value, ${RANGE_CAPTION[range]}`}
+          />
           <RangePills current={range} hrefFor={(r) => `/portfolios/${portfolioId}?range=${r}`} />
         </div>
 ```
 
-- [ ] **Step 3:** typecheck (`next typegen` runs first, so `PageProps` resolves), lint, test. Manually: `npm run dev`, sign in, open `/cards/22189?range=1y`, `/portfolios/2?range=all` — the local DB has real snapshots for card 22189. **Commit** — `feat(charts): price history on card detail (range + printing), binder value chart, card holders, alert shortcut`
+- [ ] **Step 3:** typecheck (`next typegen` runs first, so `PageProps` resolves), lint, test. Manually: `npm run dev`, sign in, open `/cards/22189?range=1y` (real snapshots), `/cards/31532` or any card with no printings (empty panel, no crash), `/portfolios/2?range=all` — must show a single flat line at today's value (one `M` in the path, end dot present), not "Not enough history yet." **Commit** — `feat(charts): price history on card detail (range + printing), binder value chart, card holders, alert shortcut`
 
 ---
 
@@ -780,7 +857,9 @@ import type { ShareLink } from "@/lib/share";
 import { Button, Panel } from "@/components/ui";
 import { enableShareAction, regenerateShareAction, disableShareAction } from "../actions";
 
-type Result = { ok: true; data?: ShareLink } | { ok: false; error: string };
+// Local alias (not imported from the actions module): the three actions return ActionResult<ShareLink>
+// for enable/regenerate and ActionResult<void> for disable, so `run` must be generic over the payload.
+type Result<T> = { ok: true; data?: T } | { ok: false; error: string };
 
 /** Share on/off for one binder. The link is shown as a path; "Copy" resolves it against the
  *  current origin at click time so preview deploys and localhost copy the right host. */
@@ -791,12 +870,12 @@ export default function SharePanel({ portfolioId, link }: { portfolioId: number;
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function run(call: () => Promise<Result>, after?: (r: Extract<Result, { ok: true }>) => void) {
+  async function run<T>(call: () => Promise<Result<T>>, after?: (data: T | undefined) => void) {
     setBusy(true); setError(null); setNotice(null);
     try {
       const res = await call();
       if (!res.ok) { setError(res.error); return; }
-      after?.(res);
+      after?.(res.data);
       router.refresh();
     } catch {
       setError("Could not reach the server. Try again.");
@@ -828,19 +907,19 @@ export default function SharePanel({ portfolioId, link }: { portfolioId: number;
           <code className="num truncate rounded-tile border border-hairline bg-ground px-3 py-2 text-[13px] text-ink" aria-label="Share link">{path}</code>
           <p className="text-xs text-dim">Viewers see the cards and their market value — never what you paid.</p>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" className="min-h-8 px-3 py-1 text-[13px]" onClick={copy} disabled={busy}>Copy link</Button>
-            <Button variant="secondary" className="min-h-8 px-3 py-1 text-[13px]" disabled={busy}
-              onClick={() => { if (window.confirm("Replace the link? The old one will stop working.")) void run(() => regenerateShareAction(portfolioId), (r) => setCurrent(r.data ?? null)); }}>
+            <Button variant="secondary" size="sm" onClick={copy} disabled={busy}>Copy link</Button>
+            <Button variant="secondary" size="sm" disabled={busy}
+              onClick={() => { if (window.confirm("Replace the link? The old one will stop working.")) void run(() => regenerateShareAction(portfolioId), (d) => setCurrent(d ?? null)); }}>
               New link
             </Button>
-            <Button variant="secondary" className="min-h-8 px-3 py-1 text-[13px]" disabled={busy}
+            <Button variant="secondary" size="sm" disabled={busy}
               onClick={() => run(() => disableShareAction(portfolioId), () => setCurrent((c) => (c ? { ...c, enabled: false } : c)))}>
               Turn off
             </Button>
           </div>
         </>
       ) : (
-        <Button variant="secondary" className="self-start" disabled={busy} onClick={() => run(() => enableShareAction(portfolioId), (r) => setCurrent(r.data ?? null))}>
+        <Button variant="secondary" className="self-start" disabled={busy} onClick={() => run(() => enableShareAction(portfolioId), (d) => setCurrent(d ?? null))}>
           Share this binder
         </Button>
       )}
@@ -856,32 +935,36 @@ Test `tests/ui/share-panel.test.tsx` (mock the three actions and `next/navigatio
 - [ ] **Step 5: Public page** — `app/s/[token]/page.tsx` (outside `(app)`: no shell, no session):
 
 ```tsx
+import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSharedPortfolio } from "@/lib/share";
-import { getPortfolioHistory, parseRange, rangeStart, seriesStats, RANGE_LABEL } from "@/lib/history";
+import { getPortfolioHistory, parseRange, rangeStart, chartFrom, withLivePoint, seriesStats, RANGE_CAPTION } from "@/lib/history";
 import { formatMoney } from "@/lib/format";
 import { SectionHeading, MoneyDisplay, PriceDelta, CardRow, LineChart, RangePills, EmptyState } from "@/components/ui";
 
 // The token is the credential: no caching across requests, and never indexed.
 export const dynamic = "force-dynamic";
 
+/** One lookup per request even though generateMetadata and the page both ask (same pattern as the
+ *  other detail pages). */
+const load = cache((token: string) => getSharedPortfolio(token));
+
 export async function generateMetadata({ params }: PageProps<"/s/[token]">) {
   const { token } = await params;
-  const shared = await getSharedPortfolio(token);
+  const shared = await load(token);
   return { title: shared ? `${shared.name} — Hitstreak` : "Hitstreak", robots: { index: false, follow: false } };
 }
 
 export default async function SharedPortfolioPage({ params, searchParams }: PageProps<"/s/[token]">) {
   const { token } = await params;
   const { range: rawRange } = await searchParams;
-  const shared = await getSharedPortfolio(token);
+  const shared = await load(token);
   if (!shared) notFound();
   const range = parseRange(rawRange);
   const today = new Date().toISOString().slice(0, 10);
   const from = rangeStart(range, today);
-  const history = await getPortfolioHistory(shared.ownerId, shared.portfolioId, from, today);
-  if (history.length === 0 || history[history.length - 1].date < today) history.push({ date: today, value: shared.value });
+  const history = withLivePoint(await getPortfolioHistory(shared.ownerId, shared.portfolioId, from, today), today, shared.value);
   const stats = seriesStats(history);
 
   return (
@@ -894,9 +977,15 @@ export default async function SharedPortfolioPage({ params, searchParams }: Page
         <div className="flex flex-col gap-4">
           <SectionHeading as="h1" title={shared.name} caption={`${shared.cards} card${shared.cards === 1 ? "" : "s"}`} />
           <MoneyDisplay size="lg" amount={shared.value} />
-          {stats?.change && <PriceDelta amount={stats.change.amount} ratio={stats.change.ratio} caption={`past ${RANGE_LABEL[range]}`} />}
+          {stats?.change && <PriceDelta amount={stats.change.amount} ratio={stats.change.ratio} caption={RANGE_CAPTION[range]} />}
           <div className="flex flex-col gap-2">
-            <LineChart points={history} from={from} to={today} height={120} label={`${shared.name} value, ${RANGE_LABEL[range]}`} />
+            <LineChart
+              points={history}
+              from={chartFrom(range, from, history, today)}
+              to={today}
+              height={120}
+              label={`${shared.name} value, ${RANGE_CAPTION[range]}`}
+            />
             <RangePills current={range} hrefFor={(r) => `/s/${token}?range=${r}`} />
           </div>
           {shared.unpriced > 0 && <p className="text-[13px] text-dim">{shared.unpriced} {shared.unpriced === 1 ? "copy has" : "copies have"} no market price yet.</p>}
@@ -983,7 +1072,9 @@ describe("evaluateAlert", () => {
 describe("alerts data layer", () => {
   it("creates, lists (with card, price and 30-day change) and deletes the user's alerts", async () => {
     const id = await createAlert("u1", { printingId: seed.printings.umbreonHolo, direction: "above", threshold: 1450 });
-    const list = await listAlerts("u1");
+    // asOf pinned (like tests/catalog-read.test.ts): the seed's snapshots are 2026-07-01 / 2026-09-01,
+    // so a real-clock 30-day window would change the expected change30d after 2026-09-30.
+    const list = await listAlerts("u1", "2026-09-07");
     expect(list).toHaveLength(1);
     expect(list[0]).toMatchObject({
       id, printingId: seed.printings.umbreonHolo, cardName: "Umbreon ex", setName: "Prismatic Evolutions", subtype: "Holofoil",
@@ -1617,7 +1708,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
       ) : (
         <>
           <CardRow name={card.name} subtitle={card.subtitle} imageUrl={card.imageUrl}
-            right={<Button variant="secondary" className="min-h-8 px-2.5 py-1 text-xs" onClick={() => { setCard(null); setPrintingId(null); }}>Change</Button>} />
+            right={<Button variant="secondary" size="sm" onClick={() => { setCard(null); setPrintingId(null); }}>Change</Button>} />
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs text-dim">Printing</span>
@@ -1665,6 +1756,7 @@ import { useRouter } from "next/navigation";
 import type { Alert } from "@/lib/alerts";
 import { formatMoney, formatPercent } from "@/lib/format";
 import { Button, CardRow } from "@/components/ui";
+import { cn } from "@/components/ui/cn";
 import { deleteAlertAction } from "./actions";
 
 const day = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -1691,12 +1783,17 @@ function Group({ title, alerts, onDelete, busyId }: { title: string; alerts: Ale
                 right={
                   <>
                     <span className="text-sm font-semibold">{formatMoney(a.market)}</span>
-                    <span className="text-[11px] opacity-70">
-                      {triggered
-                        ? `re-arms ${a.direction === "above" ? "below" : "above"} ${formatMoney(a.threshold)}`
-                        : a.change30d ? `${formatPercent(a.change30d.ratio)} · 30D` : "no 30D history"}
-                    </span>
-                    <Button variant="secondary" className="mt-1 min-h-8 px-2.5 py-1 text-xs" disabled={busyId === a.id}
+                    {triggered ? (
+                      <span className="text-[11px] opacity-70">re-arms {a.direction === "above" ? "below" : "above"} {formatMoney(a.threshold)}</span>
+                    ) : a.change30d ? (
+                      // Same up/down tone as the mockup's watching rows; a 0 change stays dim.
+                      <span className={cn("text-[11px]", a.change30d.amount > 0 && "text-gain", a.change30d.amount < 0 && "text-accent", a.change30d.amount === 0 && "text-dim")}>
+                        {formatPercent(a.change30d.ratio)} · 30D
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-dim">no 30D history</span>
+                    )}
+                    <Button variant="secondary" size="sm" className="mt-1" disabled={busyId === a.id}
                       aria-label={`Delete alert for ${a.cardName}`} onClick={() => onDelete(a)}>
                       Delete
                     </Button>
@@ -1740,7 +1837,7 @@ export default function AlertList({ alerts }: { alerts: Alert[] }) {
 }
 ```
 
-`tests/ui/alert-list.test.tsx`: a triggered and a watching alert render under "Triggered" / "Watching"; the triggered row shows `emailed Sep 7` and `re-arms below $1,450.00`; the watching row shows `+33.2% · 30D`; Delete confirms then calls `deleteAlertAction(id)` and refreshes; dismissing the confirm does nothing; an action error renders an alert.
+`tests/ui/alert-list.test.tsx`: a triggered and a watching alert render under "Triggered" / "Watching"; the triggered row shows `emailed Sep 7` and `re-arms below $1,450.00`; the watching row shows `+33.2% · 30D` with the `text-gain` class (and a negative change gets `text-accent`); Delete confirms then calls `deleteAlertAction(id)` and refreshes; dismissing the confirm does nothing; an action error renders an alert.
 
 - [ ] **Step 7: The page** — `app/(app)/alerts/page.tsx`:
 
@@ -1770,7 +1867,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
       <div className="flex flex-col gap-4">
         <SectionHeading as="h1" title="Price alerts" caption={`${watching} watching · checked nightly after the 21:00 UTC price sync`} />
         {alerts.length === 0 ? (
-          <EmptyState title="No alerts yet" body="Pick a card on the right and set a price line — you get one email when it crosses." />
+          <EmptyState title="No alerts yet" body="Use New alert to pick a card and set a price line — you get one email when it crosses." />
         ) : (
           <AlertList alerts={alerts} />
         )}
@@ -1828,14 +1925,31 @@ describe("allowlist parsing", () => {
 });
 
 describe("Better Auth sign-up hook", () => {
-  it("lets an allowlisted email register and refuses everyone else with 403", async () => {
+  it("lets an allowlisted email register and refuses everyone else", async () => {
     await db();
     const { auth } = await import("@/lib/auth");
     const ok = await auth.api.signUpEmail({ body: { email: "renzo@example.com", password: "correct horse battery", name: "Renzo" }, asResponse: true });
     expect(ok.status).toBe(200);
-    const no = await auth.api.signUpEmail({ body: { email: "stranger@example.com", password: "correct horse battery", name: "S" }, asResponse: true });
-    expect(no.status).toBe(403);
-    expect((await no.json()).message).toMatch(/invite/i);
+
+    // A hooks.before APIError is NOT converted to a Response on direct auth.api.* calls (only the
+    // endpoint handler is wrapped — better-auth/dist/api/dispatch.mjs `runBeforeHooks` re-throws),
+    // even with asResponse: true: the call rejects with the APIError.
+    await expect(
+      auth.api.signUpEmail({ body: { email: "stranger@example.com", password: "correct horse battery", name: "S" } })
+    ).rejects.toMatchObject({ statusCode: 403, body: { message: expect.stringMatching(/invite/i) } });
+
+    // The HTTP surface the app really uses (AuthForm → authClient → POST /api/auth/sign-up/email)
+    // turns it into a 403 JSON response. `origin` must match BETTER_AUTH_URL for the origin check.
+    const http = await auth.handler(
+      new Request("http://localhost:3000/api/auth/sign-up/email", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+        body: JSON.stringify({ email: "stranger@example.com", password: "correct horse battery", name: "S" }),
+      })
+    );
+    expect(http.status).toBe(403);
+    expect((await http.json()).message).toMatch(/invite/i);
+
     const rows = await (await db()).execute("SELECT email FROM user ORDER BY email");
     expect(rows.rows.map((r) => r.email)).toEqual(["renzo@example.com"]);
   });
@@ -1883,7 +1997,7 @@ const allowlist = parseAllowlist(process.env.SIGNUP_ALLOWLIST);
   },
 ```
 
-(Check `node_modules/@better-auth/core/dist/types/init-options.d.mts` `hooks` and `better-auth/api` exports if the import path differs; `ctx.body` is the raw request body.)
+(Check `node_modules/@better-auth/core/dist/types/init-options.d.mts` `hooks` and `better-auth/api` exports if the import path differs; `ctx.body` is the raw request body; `ctx.path` is the endpoint path without the `/api/auth` base.) **Keep `throw new APIError(...)` — do not return a Response from the hook.** On the `auth.api.*` path a before-hook APIError is re-thrown (that is why the test asserts a rejection there), while the HTTP route handler converts it to a 403 JSON body that `AuthForm` shows via `res.error.message`. If the test fails, fix the test, not the hook.
 
 `app/(auth)/sign-up/page.tsx`: under the `<h1>`, `{isSignupGated() && <p className="text-[13px] text-muted">Sign-ups are invite-only right now.</p>}`. `.env.example`:
 
@@ -1903,14 +2017,15 @@ SIGNUP_ALLOWLIST=
 - [ ] Spec amendments (edit in place, keep the date-stamped note):
   - §4 table row "Nightly compute": **GitHub Actions step after the daily ingest** (`ingest/nightly.ts`) — not Vercel Cron → endpoint. Reason: the Actions job already holds the DB credentials and runs immediately after the prices land; no shared secret, no function duration cap, and no deployed app required for history to accumulate.
   - §6 step 5 rewritten accordingly.
-  - §7 Sharing: note cost basis/gain are excluded from the public view. Card detail: printing pills on the chart.
-  - §13: strike "Gate sign-up" (done: `SIGNUP_ALLOWLIST`); add new follow-ups: `listAlerts` does two queries per alert for the 30-day change; `materializePortfolioHistory` is one statement over all binders (fine for hundreds of users, revisit at thousands); no per-user daily email cap beyond `MAX_ALERTS_PER_USER`; share page has no rate limit (128-bit tokens make enumeration infeasible, but add one before public); `RangePills` scroll position depends on `Pill scroll={false}` (Next `Link`); the alerts form threshold hint rounds to whole percent.
+  - §7 Sharing: note cost basis/gain are excluded from the public view. Card detail: printing pills on the chart. Alerts: "v1 has no edit — changing a threshold or direction is delete + recreate (which re-arms and drops `last_fired_at`)"; an alert whose line is already crossed when created emails on the first nightly.
+  - §13: strike "Gate sign-up" (done: `SIGNUP_ALLOWLIST`); add new follow-ups: email verification before public launch (alerts email whatever address was registered — with the allowlist unset, anyone could point alerts at a third party's inbox; `requireEmailVerification` + a Resend sender closes it); `listAlerts` does two queries per alert for the 30-day change; `materializePortfolioHistory` is one statement over all binders (fine for hundreds of users, revisit at thousands); alert send + disarm are two non-transactional writes (a DB failure right after a successful send re-emails next night — at-least-once by design); no per-user daily email cap beyond `MAX_ALERTS_PER_USER`; share page has no rate limit (128-bit tokens make enumeration infeasible, but add one before public); `RangePills` scroll position depends on `Pill scroll={false}` (Next `Link`); the alerts form threshold hint rounds to whole percent; `Button size="sm"` replaced ad-hoc `min-h-8` overrides — grep for any new ones in review.
 - [ ] `docs/design/README.md` "Implemented as": `LineChart`, `RangePills`, `CardRow tone="inverted"`.
 - [ ] Tick this plan's boxes; add "Executed — deviations" like Phase 2b's.
 - [ ] Final whole-branch review → fix → push → CI green → merge to `main`.
 
 ## Self-review notes
 
-- Spec coverage: §5 tables ✔ (T1); §6 step 5 nightly ✔ (T6, as an Actions step — amended); §7 portfolios chart ✔ (T3), card detail chart + holders + alert shortcut ✔ (T3), sharing `/s/[token]` + toggle/regenerate ✔ (T4), alerts CRUD + email content ✔ (T5–T7); §9 idempotent nightly / retry-on-failure / disabled links 404 ✔ (T6, T4); §10 alert threshold/re-arm unit tests ✔ (T5), share boundary tests ✔ (T4), auth boundary on new tables ✔ (T1, T4, T5); §13 gate sign-up ✔ (T8).
-- Type consistency: `Point`/`Range` from `lib/history` used by `LineChart`, `RangePills`, three pages; `ShareLink` shared by data layer, actions, `SharePanel`; `AlertCard`/`Direction`/`Alert`/`CreateAlertInput` from `lib/alerts` used by nightly, actions, form, list; `Mailer`/`Mail` from `ingest/mailer`; `withUser`/`assertId` from `lib/action-utils` used by both action files.
+- Spec coverage: §5 tables ✔ (T1); §6 step 5 nightly ✔ (T6, as an Actions step — amended); §7 portfolios chart ✔ (T3), card detail chart + holders + alert shortcut ✔ (T3), sharing `/s/[token]` + toggle/regenerate ✔ (T4), alerts create/list/delete + email content ✔ (T5–T7; no update — recorded in the §7 amendment); §9 idempotent nightly / retry-on-failure / disabled links 404 ✔ (T6, T4); §10 alert threshold/re-arm unit tests ✔ (T5), share boundary tests ✔ (T4), auth boundary on new tables ✔ (T1, T4, T5); §13 gate sign-up ✔ (T8).
+- Type consistency: `Point`/`Range` from `lib/history` used by `LineChart`, `RangePills`, three pages; `chartFrom`/`withLivePoint`/`RANGE_CAPTION` used identically on the card, binder and share pages; `ShareLink` shared by data layer, actions, `SharePanel` (whose `run<T>` is generic because `disableShareAction` returns `ActionResult<void>`); `AlertCard`/`Direction`/`Alert`/`CreateAlertInput` from `lib/alerts` used by nightly, actions, form, list; `Mailer`/`Mail` from `ingest/mailer`; `withUser`/`assertId` from `lib/action-utils` used by both action files.
+- Reviewed 2026-09-07 by four independent reviewers + adversarial verification before execution; 16 confirmed findings folded in (SharePanel generic `run`, Better Auth before-hook error surfacing in tests, nullable `chartPrinting`, `All`-range axis anchoring, live point on empty history, `Button size="sm"` for the 44px rule, pinned `asOf` in the alerts test, copy fixes).
 - Ownership: every new read/write joins `portfolios.user_id` or filters `price_alerts.user_id`; the share token authorizes exactly one binder and the public shape strips cost; the nightly is the only cross-user reader and runs outside the app.
