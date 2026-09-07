@@ -9,6 +9,7 @@ export async function db(): Promise<Client> {
   if (!client) {
     const url = process.env.TURSO_DATABASE_URL;
     if (!url) throw new Error("TURSO_DATABASE_URL is not set");
+    // intMode must stay the default "number": ingest/prices.ts compares REAL/INTEGER values with ===
     client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
   }
   if (!schemaReady) {

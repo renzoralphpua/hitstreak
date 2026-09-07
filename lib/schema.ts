@@ -45,7 +45,7 @@ export const SCHEMA_SQL = `
     market REAL, low REAL, mid REAL, high REAL,
     PRIMARY KEY (printing_id, date)
   );
-  CREATE INDEX IF NOT EXISTS idx_snapshots_date ON price_snapshots(date);
+  CREATE INDEX IF NOT EXISTS idx_snapshots_date ON price_snapshots(date); -- used by ingest/prices.ts (rows at a given date) and later by movers queries
 
   -- Current price per printing: O(1) app reads and the write-on-change diff base.
   CREATE TABLE IF NOT EXISTS latest_prices (
