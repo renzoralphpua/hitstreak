@@ -1109,6 +1109,8 @@ git add ingest/r2.ts tests/r2.test.ts
 git commit -m "feat: R2 raw-response archiver, disabled gracefully without env"
 ```
 
+- [ ] **Step 6: Hardening (from Task 6's review)** — `fix: R2 client timeouts, documented archive-first failure contract, env-parsing tests`: the `S3Client` gets `requestHandler: new NodeHttpHandler({ connectionTimeout: 5_000, requestTimeout: 30_000 })` (`@smithy/node-http-handler` declared explicitly); the header states the contract that `putRaw` errors propagate and callers must not continue past a failed archive; tests cover `rawArchiverFromEnv` with full/partial/no env. **Decision:** an R2 failure aborts that game's ingest for the day (archive-first), never "log and skip". Task 7 logs `archiver.enabled` at start and throws when disabled under `CI`.
+
 ---
 
 ### Task 7: Daily orchestrator
@@ -1166,6 +1168,18 @@ describe("runDailyIngest", () => {
     expect(Number((await c.execute("SELECT COUNT(*) AS n FROM games")).rows[0].n)).toBe(2);
   });
 
+  it("fails fast when archiving is required but disabled", async () => {
+    await expect(
+      runDailyIngest({
+        client: stubClient(),
+        archiver: createRawArchiver({ s3: null, bucket: undefined }),
+        date: "2026-09-07",
+        games: [{ tcgplayerCategoryId: 3, name: "Pokémon", slug: "pokemon" }],
+        requireArchiver: true,
+      })
+    ).rejects.toThrow(/R2 archiving is disabled/);
+  });
+
   it("isolates a failing game and reports it", async () => {
     const failing = stubClient({
       fetchGroups: vi.fn().mockRejectedValue(new Error("tcgcsv down")),
@@ -1207,6 +1221,7 @@ export interface DailyIngestOptions {
   archiver: RawArchiver;
   date: string; // YYYY-MM-DD UTC
   games: GameSeed[];
+  requireArchiver?: boolean; // CLI sets this from CI so a misconfigured secret fails loudly; tests leave it off
 }
 
 export interface GameSummary {
@@ -1226,6 +1241,11 @@ export interface DailySummary {
 
 export async function runDailyIngest(opts: DailyIngestOptions): Promise<DailySummary> {
   const summary: DailySummary = { perGame: [], failures: [] };
+  // Archive-first is the #1 risk mitigation; a silently disabled archiver in CI would defeat it.
+  console.log(`R2 raw archiving: ${opts.archiver.enabled ? "enabled" : "DISABLED"}`);
+  if (!opts.archiver.enabled && opts.requireArchiver) {
+    throw new Error("R2 archiving is disabled but required for this run — check the R2_* secrets");
+  }
 
   for (const game of opts.games) {
     try {
@@ -1280,6 +1300,7 @@ if (isMain) {
     archiver: rawArchiverFromEnv(),
     date,
     games: GAMES,
+    requireArchiver: Boolean(process.env.CI),
   })
     .then((s) => {
       closeDb();
@@ -1296,7 +1317,7 @@ if (isMain) {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npm test -- tests/daily.test.ts`
-Expected: 2 passed.
+Expected: 3 passed.
 
 - [ ] **Step 5: Run the FULL suite (regression gate)**
 
