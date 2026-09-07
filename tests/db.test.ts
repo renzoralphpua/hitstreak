@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { useTmpDb } from "./helpers/tmpdb";
+import { tmpDb } from "./helpers/tmpdb";
 
-const tmp = useTmpDb("db");
+const tmp = tmpDb("db");
 
 import { db, closeDb } from "@/lib/db";
 

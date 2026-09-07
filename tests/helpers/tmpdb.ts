@@ -4,7 +4,7 @@
 // handle open past close(), leaving a file that breaks the next run).
 import { readdirSync, rmSync } from "node:fs";
 
-export function useTmpDb(name: string) {
+export function tmpDb(name: string) {
   // pid-scoped so parallel vitest workers can never share a file even if a name is reused
   const prefix = `.tmp-${name}-`;
   const file = `${prefix}${process.pid}-test.db`;

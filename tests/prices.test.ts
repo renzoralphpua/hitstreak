@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { useTmpDb } from "./helpers/tmpdb";
+import { tmpDb } from "./helpers/tmpdb";
 
-const tmp = useTmpDb("prices");
+const tmp = tmpDb("prices");
 
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
@@ -234,6 +234,24 @@ describe("ingestPrices (write-on-change)", () => {
       "2026-08-22"
     );
     expect(res).toMatchObject({ unchanged: 1, written: 0 });
+  });
+
+  it("normalizes a blank price string to null, not zero", async () => {
+    await upsertProducts(3, 604, [{ productId: 450105, name: "Blank Price" }]);
+    const res = await ingestPrices(
+      604,
+      [{ productId: 450105, subTypeName: "Normal", marketPrice: "" as unknown as number }],
+      "2026-07-01"
+    );
+    expect(res).toMatchObject({ written: 1, unchanged: 0 });
+
+    const p = await printingIdFor(450105, "Normal");
+    const c = await db();
+    const row = (await c.execute({
+      sql: "SELECT market FROM latest_prices WHERE printing_id = ?",
+      args: [p],
+    })).rows[0];
+    expect(row.market).toBeNull();
   });
 
   it("mutates a hoisted GroupIndex when it creates printings", async () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { useTmpDb } from "./helpers/tmpdb";
+import { tmpDb } from "./helpers/tmpdb";
 
-const tmp = useTmpDb("catalog");
+const tmp = tmpDb("catalog");
 
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";

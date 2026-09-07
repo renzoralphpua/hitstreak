@@ -50,11 +50,17 @@ const STMT_CHUNK = 200; // statements per write batch
 const IN_CHUNK = 500; // bound parameters per IN (...) list
 
 // A numeric string from the feed must never defeat === equality silently.
+// A blank/whitespace string means "unpriceable", not zero — Number("") === 0
+// would otherwise turn a missing price into a real (and wrong) price of 0.
 const norm = (v: unknown): number | null => {
   if (v == null) return null;
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+  if (typeof v === "string") {
+    if (v.trim() === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 };
 
 const sameTuple = (a: Tuple, b: Tuple) =>
