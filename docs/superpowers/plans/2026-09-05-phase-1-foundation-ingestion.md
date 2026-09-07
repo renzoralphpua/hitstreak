@@ -290,7 +290,7 @@ Create `tests/helpers/tmpdb.ts`:
 // handle open past close(), leaving a file that breaks the next run).
 import { readdirSync, rmSync } from "node:fs";
 
-export function useTmpDb(name: string) {
+export function tmpDb(name: string) {
   // pid-scoped so parallel vitest workers can never share a file even if a name is reused
   const prefix = `.tmp-${name}-`;
   const file = `${prefix}${process.pid}-test.db`;
@@ -315,9 +315,9 @@ Then rewrite the preamble and teardown of `tests/db.test.ts` to use it (test bod
 
 ```ts
 import { describe, it, expect, afterAll } from "vitest";
-import { useTmpDb } from "./helpers/tmpdb";
+import { tmpDb } from "./helpers/tmpdb";
 
-const tmp = useTmpDb("db");
+const tmp = tmpDb("db");
 
 import { db, closeDb } from "@/lib/db";
 
@@ -327,7 +327,7 @@ afterAll(() => {
 });
 ```
 
-(`db()` reads `TURSO_DATABASE_URL` lazily at first call, so it is fine that ESM hoists the `@/lib/db` import above the `useTmpDb` call.)
+(`db()` reads `TURSO_DATABASE_URL` lazily at first call, so it is fine that ESM hoists the `@/lib/db` import above the `tmpDb` call.)
 
 Run: `npm test` twice in a row → both runs green (the second run proves stale-file cleanup works). `npm run typecheck` → exit 0.
 
@@ -336,7 +336,7 @@ git add tests/helpers/tmpdb.ts tests/db.test.ts
 git commit -m "test: shared throwaway-DB helper that cleans stale files before and after"
 ```
 
-Every later test file in this plan uses `useTmpDb("<name>")` the same way.
+Every later test file in this plan uses `tmpDb("<name>")` the same way.
 
 Also add (same commit or a follow-up `chore:` commit) two lifecycle tests to `tests/db.test.ts` in a second `describe("db() lifecycle")` block: `closeDb()` followed by `db()` re-opens the same file and still sees the previously inserted printing; and with `TURSO_DATABASE_URL` deleted, `db()` rejects with `"TURSO_DATABASE_URL is not set"` (restore the env in `finally`).
 
@@ -539,9 +539,9 @@ Upserts are keyed on TCGplayer IDs so re-running a day is idempotent. `extendedD
 ```ts
 // tests/catalog.test.ts
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { useTmpDb } from "./helpers/tmpdb";
+import { tmpDb } from "./helpers/tmpdb";
 
-const tmp = useTmpDb("catalog");
+const tmp = tmpDb("catalog");
 
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
@@ -728,9 +728,9 @@ Core invariant: `price_snapshots` gains a row for a printing on date D **only** 
 ```ts
 // tests/prices.test.ts
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { useTmpDb } from "./helpers/tmpdb";
+import { tmpDb } from "./helpers/tmpdb";
 
-const tmp = useTmpDb("prices");
+const tmp = tmpDb("prices");
 
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
@@ -1118,9 +1118,9 @@ Per-game isolation (one game failing must not block the others), archive-before-
 ```ts
 // tests/daily.test.ts
 import { describe, it, expect, afterAll, vi } from "vitest";
-import { useTmpDb } from "./helpers/tmpdb";
+import { tmpDb } from "./helpers/tmpdb";
 
-const tmp = useTmpDb("daily");
+const tmp = tmpDb("daily");
 
 import { db, closeDb } from "@/lib/db";
 import { runDailyIngest } from "@/ingest/daily";
@@ -1428,9 +1428,9 @@ import { describe, it, expect, afterAll, beforeAll } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { useTmpDb } from "./helpers/tmpdb";
+import { tmpDb } from "./helpers/tmpdb";
 
-const tmp = useTmpDb("backfill");
+const tmp = tmpDb("backfill");
 
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
