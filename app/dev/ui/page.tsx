@@ -17,6 +17,8 @@ import {
   CardRow,
   TopNav,
   BottomTabBar,
+  EmptyState,
+  MoneyDisplay,
 } from "@/components/ui";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { formatMoney, formatDelta } from "@/lib/format";
@@ -228,6 +230,29 @@ export default function Gallery() {
       <Section name="ThemeToggle">
         <Variants>
           <ThemeToggle />
+        </Variants>
+      </Section>
+
+      <Section name="MoneyDisplay">
+        <Variants>
+          <div className="flex flex-wrap items-end gap-6">
+            <MoneyDisplay amount={4812.4} size="md" />
+            <MoneyDisplay amount={4812.4} size="lg" />
+            <MoneyDisplay amount={null} />
+          </div>
+        </Variants>
+      </Section>
+
+      <Section name="EmptyState">
+        <Variants>
+          <div className="flex flex-col gap-4">
+            <EmptyState
+              title="No cards yet"
+              body="Add your first card to start tracking value."
+              action={<Button>Add a card</Button>}
+            />
+            <EmptyState title="No results" body="Try a different search." />
+          </div>
         </Variants>
       </Section>
     </div>
