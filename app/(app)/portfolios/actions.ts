@@ -5,6 +5,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import * as P from "@/lib/portfolios";
+import * as S from "@/lib/share";
 
 export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -91,5 +92,24 @@ export async function removeItemAction(portfolioId: number, itemId: number) {
     revalidatePath("/portfolios");
     revalidatePath("/sets");
   }
+  return r;
+}
+
+// Share links (lib/share.ts). Only the binder page shows the link, so that is all that revalidates.
+export async function enableShareAction(portfolioId: number) {
+  const r = await withUser((u) => S.enableShare(u, assertId(portfolioId)));
+  if (r.ok) revalidatePath(`/portfolios/${portfolioId}`);
+  return r;
+}
+export async function regenerateShareAction(portfolioId: number) {
+  const r = await withUser((u) => S.regenerateShare(u, assertId(portfolioId)));
+  if (r.ok) revalidatePath(`/portfolios/${portfolioId}`);
+  return r;
+}
+export async function disableShareAction(portfolioId: number) {
+  const r = await withUser(async (u) => {
+    if (!(await S.disableShare(u, assertId(portfolioId)))) throw new Error("Portfolio not found");
+  });
+  if (r.ok) revalidatePath(`/portfolios/${portfolioId}`);
   return r;
 }

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
 import { getPortfolio, getPortfolioHoldings, getPortfolioSummary } from "@/lib/portfolios";
+import { getShareLink } from "@/lib/share";
 import {
   parseRange,
   rangeStart,
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui";
 import HoldingsTable from "./HoldingsTable";
 import AddItemDialog from "./AddItemDialog";
+import SharePanel from "./SharePanel";
 
 // Per-user data valued from latest_prices: never prerender or cache across users.
 export const dynamic = "force-dynamic";
@@ -56,9 +58,10 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
   const range = parseRange(rawRange);
   const today = new Date().toISOString().slice(0, 10);
   const from = rangeStart(range, today);
-  const [holdings, summary] = await Promise.all([
+  const [holdings, summary, shareLink] = await Promise.all([
     getPortfolioHoldings(userId, portfolioId),
     getPortfolioSummary(userId, portfolioId),
+    getShareLink(userId, portfolioId),
   ]);
   // portfolio_history is materialized nightly; tonight's live value is the final point until then.
   const history = withLivePoint(await getPortfolioHistory(userId, portfolioId, from, today), today, summary.value);
@@ -117,6 +120,8 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
         )}
 
         {holdings.length > 0 && <AddItemDialog portfolioId={portfolioId} />}
+
+        <SharePanel portfolioId={portfolioId} link={shareLink} />
       </div>
 
       <div className="flex flex-col gap-4">
