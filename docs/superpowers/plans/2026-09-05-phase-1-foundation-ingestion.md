@@ -1731,7 +1731,11 @@ git commit -m "feat: historical price backfill replaying tcgcsv archives"
 
 - [ ] **Step 8: MANUAL GATE — run the backfill** (after Task 8's manual gate + first daily run)
 
-User (or engineer with secrets access) dispatches the "Historical price backfill" workflow in chunks (e.g. 3 months per run to stay well inside the 6h limit; watch the first run's timing and adjust). Order: **backfill BEFORE more daily runs accumulate**, oldest chunk first: `2024-02-08 → 2024-04-30`, then `2024-05-01 → …`, chronologically. Watch Turso's monthly row-write quota (10M free): each chunk's log lines report written counts; if a month approaches the quota, pause until the quota resets.
+User (or engineer with secrets access) dispatches the "Historical price backfill" workflow in chunks, oldest first: `2024-02-08 → 2024-04-30`, then `2024-05-01 → …`, chronologically. Run the daily ingest at least once BEFORE the backfill so the catalog exists (unknown groups are skipped without DB work).
+
+**Turso write budget — read before dispatching.** The daily job has already set every printing's `latest_prices.date` to today, so the backfill's `latest_prices` upserts are blocked by the SQL guard (no writes). What it does write is `price_snapshots` rows on days a price changed: ~54k tracked printings × the real daily change rate (unknown until measured; assume 30–60%) ≈ 16–32k rows/day ≈ **15–30M rows for the full 940 days**, versus the free tier's 10M rows written per month. Options: spread the backfill over 2–3 calendar months (~300 days per month), or take Turso's paid Developer plan for one month. **Procedure:** dispatch a first 30-day chunk, read `written=` from its log lines to get the real change rate, then size the remaining chunks to fit the month's quota. Each chunk is also bounded by the 6-hour Actions limit (~90 days per dispatch is comfortable with the category/known-group pruning in place).
+
+Archive facts (verified against the real 2024-02-08 archive): layout `<date>/<categoryId>/<groupId>/prices`, bare filename, all ~92 TCGplayer categories present (~6,566 files/day); the walker prunes untracked categories and `replayDay` skips groups not in `sets` without touching the DB. The log's `skippedUnknownGroup=` is the count of groups in OUR categories that are not in the catalog (e.g. delisted sets) — rare and worth a glance.
 
 ---
 
