@@ -24,9 +24,10 @@
 //   snapshot, so the refused tuple would be a stale one and the next day's
 //   `prev` would be wrong (a fabricated change row, or a wrong current price).
 //   So the out-of-order path also scans each printing's MAX snapshot date and,
-//   when `date >= MAX`, repairs the tuple with a plain UPDATE that leaves
-//   `latest_prices.date` (LAST SEEN) alone. When `date < MAX` the newest
-//   snapshot is untouched and no repair is needed.
+//   when `date >= MAX`, repairs the tuple with an UPDATE — guarded against a
+//   concurrently newer snapshot (see below) — that leaves `latest_prices.date`
+//   (LAST SEEN) alone. When `date < MAX` the newest snapshot is untouched and
+//   no repair is needed.
 // - Re-runs are idempotent AND canonicalizing: replaying a day with corrected
 //   data overwrites a wrong row, and DELETES a row that the correction makes
 //   redundant (equal to the preceding snapshot). Without that delete, a bad
@@ -188,8 +189,9 @@ export async function ingestPrices(
   // A hoisted index caches `cardByProduct` from whenever it was built, so a card
   // added to THIS group afterwards would look like catalog drift. Before we
   // conclude anything is skippable, reload the group's cards into the index
-  // (mutating it, like the printings reload) and re-partition. The reload only
-  // happens when something is about to be skipped, so the steady state is free.
+  // (mutating it, like the printings reload) and re-partition. This reload runs
+  // on every call where anything is skipped; it is cheap because skips are rare
+  // when the catalog includes every product in the feed.
   if (skipped.length > 0) {
     await loadCardsInto(c, groupId, idx.cardByProduct);
     partition();
@@ -358,6 +360,11 @@ export async function ingestPrices(
     // On the out-of-order path the guard above may have refused the tuple
     // (`latest.date > date`) even though this call just changed the NEWEST
     // snapshot. Repair the tuple — never the date — so the invariant holds.
+    // The repair's own SQL guard (NOT EXISTS a newer snapshot) closes the
+    // read-then-write race with a concurrent in-order run: if another run
+    // commits a newer snapshot for this printing between our MAX(date) read
+    // above and this batch's commit, the repair becomes a no-op instead of
+    // overwriting that newer tuple.
     if (outOfOrder.has(id)) {
       const maxDate = maxSnapshotDate.get(id);
       // `date >= maxDate` (or no snapshots at all) means the row we just wrote
@@ -369,8 +376,13 @@ export async function ingestPrices(
         const newest = wroteSnapshot ? next : prev;
         if (newest !== undefined) {
           unit.push({
-            sql: "UPDATE latest_prices SET market = ?, low = ?, mid = ?, high = ? WHERE printing_id = ?",
-            args: [newest.market, newest.low, newest.mid, newest.high, id],
+            sql: `UPDATE latest_prices SET market = ?, low = ?, mid = ?, high = ?
+                  WHERE printing_id = ?
+                    AND NOT EXISTS (
+                      SELECT 1 FROM price_snapshots
+                      WHERE printing_id = latest_prices.printing_id AND date > ?
+                    )`,
+            args: [newest.market, newest.low, newest.mid, newest.high, id, date],
           });
         }
       }

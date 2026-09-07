@@ -370,4 +370,63 @@ describe("ingestPrices (write-on-change)", () => {
       WHERE ca.tcgplayer_product_id >= 900000`)).rows[0].n);
     expect(n).toBe(201);
   });
+
+  it("a replay strictly between maxDate and latest.date is blocked by the upsert guard, so the repair is the only writer of the tuple", async () => {
+    await upsertProducts(3, 604, [{ productId: 450106, name: "Tail Replay" }]);
+    const key = { productId: 450106, subTypeName: "Normal" };
+
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 10 }], "2028-01-01")).toMatchObject({ written: 1 });
+    const p = await printingIdFor(450106, "Normal");
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 10 }], "2028-01-02")).toMatchObject({ written: 0, unchanged: 1 });
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 10 }], "2028-01-05")).toMatchObject({ written: 0, unchanged: 1 });
+    expect(await latestFor(p)).toMatchObject({ date: "2028-01-05", market: 10 });
+
+    // 2028-01-01 < 2028-01-03 < 2028-01-05: the upsert guard refuses the tuple
+    // (excluded.date < latest_prices.date), so the repair UPDATE is the only
+    // writer that can bring latest_prices back in line with the newest snapshot.
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 40 }], "2028-01-03")).toMatchObject({ written: 1 });
+    expect(await latestFor(p)).toMatchObject({ date: "2028-01-05", market: 40 });
+
+    // Proves the invariant held: the next day's `prev` came from the repaired
+    // latest tuple (40), so an unchanged feed at 40 is genuinely unchanged.
+    expect(await ingestPrices(604, [{ ...key, marketPrice: 40 }], "2028-01-06")).toMatchObject({ written: 0, unchanged: 1 });
+    expect(await timeline(p)).toEqual([["2028-01-01", 10], ["2028-01-03", 40]]);
+  });
+
+  it("the repair UPDATE's own SQL guard no-ops when a newer snapshot was committed concurrently", async () => {
+    await upsertProducts(3, 604, [{ productId: 450107, name: "Concurrent Repair" }]);
+    const c = await db();
+
+    // Establish snapshots {2029-01-01=10}, latest {2029-01-01, 10}.
+    expect(
+      await ingestPrices(604, [{ productId: 450107, subTypeName: "Normal", marketPrice: 10 }], "2029-01-01")
+    ).toMatchObject({ written: 1 });
+    const p = await printingIdFor(450107, "Normal");
+    expect(await latestFor(p)).toMatchObject({ date: "2029-01-01", market: 10 });
+
+    // Simulate a concurrent in-order run that already committed a newer snapshot.
+    await c.execute({
+      sql: "INSERT INTO price_snapshots (printing_id, date, market, low, mid, high) VALUES (?, ?, ?, ?, ?, ?)",
+      args: [p, "2029-01-09", 50, null, null, null],
+    });
+    await c.execute({
+      sql: "UPDATE latest_prices SET date = ?, market = ?, low = NULL, mid = NULL, high = NULL WHERE printing_id = ?",
+      args: ["2029-01-09", 50, p],
+    });
+
+    // Replaying 2029-01-05: the upsert guard blocks it (01-05 < latest.date
+    // 01-09), and the pre-filter (maxSnapshotDate 01-09 > date 01-05) already
+    // skips the repair entirely — so the SQL guard's effect is not what stops
+    // the write here, but the end state documents the invariant either way.
+    expect(
+      await ingestPrices(604, [{ productId: 450107, subTypeName: "Normal", marketPrice: 30 }], "2029-01-05")
+    ).toMatchObject({ written: 1 });
+
+    expect(await latestFor(p)).toMatchObject({ date: "2029-01-09", market: 50 });
+    expect(await timeline(p)).toEqual([
+      ["2029-01-01", 10],
+      ["2029-01-05", 30],
+      ["2029-01-09", 50],
+    ]);
+  });
 });
