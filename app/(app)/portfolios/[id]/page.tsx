@@ -2,6 +2,7 @@ import { cache } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { parseRouteId } from "@/lib/route-id";
 import { getPortfolio, getPortfolioHoldings, getPortfolioSummary } from "@/lib/portfolios";
 import { formatMoney } from "@/lib/format";
 import { SectionHeading, StatTile, PriceDelta, MoneyDisplay, EmptyState } from "@/components/ui";
@@ -16,8 +17,8 @@ type Params = { params: Promise<{ id: string }> };
 /** The binder id and the owner, or `notFound()`. `cache` makes this one query per request even
  *  though both `generateMetadata` and the page ask for it. */
 const load = cache(async (id: string) => {
-  const portfolioId = Number(id);
-  if (!Number.isInteger(portfolioId)) notFound();
+  const portfolioId = parseRouteId(id);
+  if (portfolioId == null) notFound();
   const session = await getSession();
   if (!session) redirect("/sign-in"); // the layout already gates; this is for the user id
   const portfolio = await getPortfolio(session.user.id, portfolioId);

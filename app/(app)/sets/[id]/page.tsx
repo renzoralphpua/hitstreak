@@ -2,6 +2,7 @@ import { cache } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { parseRouteId } from "@/lib/route-id";
 import { getSetDetail } from "@/lib/catalog";
 import { listPortfolios } from "@/lib/portfolios";
 import { formatMoney } from "@/lib/format";
@@ -16,8 +17,8 @@ type Params = { params: Promise<{ id: string }> };
 /** The set with the signed-in user's ownership folded in, or `notFound()`. `cache` makes this one
  *  query per request even though both `generateMetadata` and the page ask for it. */
 const load = cache(async (id: string) => {
-  const setId = Number(id);
-  if (!Number.isInteger(setId)) notFound();
+  const setId = parseRouteId(id);
+  if (setId == null) notFound();
   const session = await getSession();
   if (!session) redirect("/sign-in"); // the layout already gates; this is for the user id
   const detail = await getSetDetail(session.user.id, setId);

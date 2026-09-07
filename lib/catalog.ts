@@ -138,10 +138,16 @@ export async function getCardDetail(userId: string, cardId: number, asOf = new D
           FROM printings p LEFT JOIN latest_prices lp ON lp.printing_id = p.id WHERE p.card_id = ? ORDER BY p.id`,
     args: [userId, cardId],
   })).rows;
-  const printings = [];
-  for (const p of ps) {
-    printings.push({ printingId: Number(p.id), subtype: String(p.subtype), market: p.market == null ? null : Number(p.market), priceDate: p.date == null ? null : String(p.date), owned: Number(p.owned), change30d: await thirtyDayChange(Number(p.id), asOf) });
-  }
+  const printings = await Promise.all(
+    ps.map(async (p) => ({
+      printingId: Number(p.id),
+      subtype: String(p.subtype),
+      market: p.market == null ? null : Number(p.market),
+      priceDate: p.date == null ? null : String(p.date),
+      owned: Number(p.owned),
+      change30d: await thirtyDayChange(Number(p.id), asOf),
+    }))
+  );
   let attrs: Record<string, string> = {};
   try { attrs = JSON.parse(String(r.attrs ?? "{}")); } catch { /* keep {} */ }
   return {
