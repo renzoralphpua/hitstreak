@@ -1336,7 +1336,7 @@ git commit -m "feat: daily ingest orchestrator with per-game isolation and CLI e
 - **Per-group isolation:** each group body has its own try/catch (archive-first ordering unchanged); a failing group is recorded in `failedGroups` and the run continues. A breaker aborts the game after 5 consecutive group failures (Turso/tcgcsv outage). Any failed group still makes the CLI exit 1 (no ratio gate yet — add one if nightly alerts get chatty).
 - **Soft deadline:** `deadlineAt` (CLI: now + 50 min) is checked between groups so a slow night ends with a summary instead of a hard Actions kill.
 - **CLI:** `npx tsx ingest/daily.ts [YYYY-MM-DD]` (or `INGEST_DATE`), validated (usage error → exit 2); default today UTC. `runDailyIngest` re-validates `date`. Exit via `process.exitCode = 1` (streams drain). Final greppable `DAILY_SUMMARY {json}` line, plus a heartbeat every 50 groups.
-- Tests: 9 in `tests/daily.test.ts` (archive-first abort with nothing written; true game isolation; group isolation; breaker; deadline; date validation; plus the original three, made order-independent).
+- Tests: 10 in `tests/daily.test.ts` (archive-first abort with nothing written; true game isolation; group isolation; breaker; deadline before groups and before per-game setup; date validation; plus the original three, made order-independent).
 - The first real local run happened during this review (see Task 8 Step 3 numbers). Real-data observations: 907 of 54,548 printings have a null market price (no listings) — correctly stored as null.
 
 ---
@@ -1378,8 +1378,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx tsx ingest/daily.ts ${{ inputs.date }}
+      - run: npx tsx ingest/daily.ts
         env:
+          INGEST_DATE: ${{ inputs.date }} # empty on scheduled runs = today (UTC)
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -1711,6 +1712,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: command -v 7z > /dev/null # p7zip is preinstalled on ubuntu-latest; fail fast if not
       - run: npx tsx ingest/backfill.ts "${{ inputs.from }}" "${{ inputs.to }}"
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
@@ -1728,6 +1730,10 @@ Expected: all green.
 git add ingest/backfill.ts tests/backfill.test.ts .github/workflows/backfill.yml
 git commit -m "feat: historical price backfill replaying tcgcsv archives"
 ```
+
+- [ ] **Step 8: Hardening (from Task 9's code review)** — `fix: backfill prunes untracked categories and unknown groups; date-tagged failures; injectable fetch; safer 7z preflight`: `collectGroupPrices(root, categoryIds?)` prunes untracked category directories one level under `<date>` (fail-open for non-integer names); `replayDay(date, groups, cache, knownGroupIds?)` skips groups absent from `sets` without any DB work (`skippedUnknownGroup`), with `loadKnownGroupIds()`; the per-day error is tagged `[date] replay failed: …`; `downloadAndExtract(date, fetchImpl = fetch)` is exported and drains non-OK bodies; the workflow preflight is `command -v 7z` (not `7z --help`, which 7-Zip parses as a command). Follow-up in the final pre-merge pass: duplicate group files merged, temp dir removed on 7z failure, shared strict `isCalendarDate` for CLI args, `loadKnownGroupIds` tested.
+
+**Fixture note (spec §10):** no raw tcgcsv fixture files are checked in; instead the per-game `extendedData` shapes were verified against the real first-run database (all three games expose `Number`/`Rarity`; sealed products have neither). Inline literals in tests remain the pattern for v1.
 
 - [ ] **Step 8: MANUAL GATE — run the backfill** (after Task 8's manual gate + first daily run)
 

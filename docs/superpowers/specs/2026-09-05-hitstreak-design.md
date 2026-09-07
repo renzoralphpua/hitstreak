@@ -55,7 +55,7 @@ Core loop: add cards you own to portfolios → the app tracks each card's market
 - No SKU (condition-level) pricing; one price per card/printing-subtype
 - Etiquette: identifiable User-Agent, ~250ms between requests (site's own guidance)
 
-**Risks & mitigations:** tcgcsv is a single-maintainer hobby mirror in a legal gray zone (TCGplayer's public API is closed). Mitigation: archive every raw daily response to our own R2 bucket before processing, so the DB can always be re-derived and history is never lost. An archive failure aborts that game's ingest for the day (archive-first — never write rows whose raw source wasn't kept). Commercial-scale use would need a licensed source (JustTCG, etc.) — a swap at the ingestion layer only.
+**Risks & mitigations:** tcgcsv is a single-maintainer hobby mirror in a legal gray zone (TCGplayer's public API is closed). Mitigation: archive every raw daily response to our own R2 bucket before processing, so the DB can always be re-derived and history is never lost. Archive-first: a raw response is archived before its rows are written, and an archive failure aborts the affected unit — the whole game if the groups listing fails to archive, otherwise just that group for the day (other groups continue; the run still exits non-zero). Commercial-scale use would need a licensed source (JustTCG, etc.) — a swap at the ingestion layer only.
 
 **R2 volume note:** raw archives are uncompressed JSON, ~800+ objects/day for Pokémon alone; realistically tens of MB/day across the three games, so the 10 GB free tier lasts months, not years. Overage is ~$0.015/GB-month with free egress — under $1/month even at 50 GB over — so this is a cost footnote, not a design constraint. If it matters later, an R2 lifecycle rule expiring raw archives older than N months (once the backfill is verified) is the lever.
 
@@ -196,6 +196,6 @@ Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art 
 ## 13. Open questions / follow-ups
 
 - Riftbound deck-construction rules — verify against official Riot rules (step 10)
-- Exact per-game `extendedData` field shapes — confirm from fixture data during step 2
+- ~~Exact per-game `extendedData` field shapes~~ — **resolved 2026-09-05 against real data:** all three games expose `Number` and `Rarity` (Pokémon also HP/Stage/Attacks; One Piece: Color/CardType/Life/Power/Attribute; Riftbound: Energy Cost/Power Cost/Might/Card Type/Tag/Domain). Sealed products (~10% of rows) have neither, and correctly land with null number/rarity.
 - Domain registration (`hitstreak.gg` / `hitstreak.app`) — user purchase, not build-blocking
 - Whether Pokémon catalog volume (largest of the three) needs ingestion batching/chunked upserts — measure in step 2
