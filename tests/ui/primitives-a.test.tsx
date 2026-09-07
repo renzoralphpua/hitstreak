@@ -25,6 +25,20 @@ describe("Pill", () => {
     render(<Pill>7D</Pill>);
     expect(screen.getByRole("button", { name: "7D" })).toHaveAttribute("aria-pressed", "false");
   });
+
+  it("with href it is a link, and the selected one is aria-current", () => {
+    render(
+      <>
+        <Pill href="/sets?game=pokemon" selected>Pokémon</Pill>
+        <Pill href="/sets?game=one-piece">One Piece</Pill>
+      </>
+    );
+    const active = screen.getByRole("link", { name: "Pokémon" });
+    expect(active).toHaveAttribute("href", "/sets?game=pokemon");
+    expect(active).toHaveAttribute("aria-current", "page");
+    expect(active.className).toMatch(/bg-chip/);
+    expect(screen.getByRole("link", { name: "One Piece" })).not.toHaveAttribute("aria-current");
+  });
 });
 
 describe("Panel", () => {
