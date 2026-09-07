@@ -1,0 +1,19 @@
+import Link from "next/link";
+import AuthForm from "../AuthForm";
+import { safeNext } from "../safe-next";
+
+export const metadata = { title: "Sign in — Hitstreak" };
+
+export default async function SignInPage({ searchParams }: PageProps<"/sign-in">) {
+  const { next } = await searchParams;
+  return (
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-ground px-6 py-12">
+      <span className="font-display text-3xl text-ink">Hitstreak</span>
+      <h1 className="font-display text-2xl text-ink">Welcome back</h1>
+      <AuthForm mode="sign-in" next={safeNext(next)} />
+      <p className="text-[13px] text-muted">
+        New here? <Link href="/sign-up">Create an account</Link>
+      </p>
+    </div>
+  );
+}

@@ -1,0 +1,23 @@
+import { describe, it, expect } from "vitest";
+import { NextRequest } from "next/server";
+import { proxy } from "@/proxy";
+
+function req(path: string, cookie?: string) {
+  return new NextRequest(new URL(path, "http://localhost:3000"), { headers: cookie ? { cookie } : {} });
+}
+
+describe("proxy (optimistic auth redirect)", () => {
+  it("redirects unauthenticated /portfolios to /sign-in with a next param", async () => {
+    const res = await proxy(req("/portfolios"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://localhost:3000/sign-in?next=%2Fportfolios");
+  });
+  it("lets a request with a session cookie through", async () => {
+    const res = await proxy(req("/portfolios", "better-auth.session_token=abc"));
+    expect(res.headers.get("location")).toBeNull();
+  });
+  it("does not touch public routes", async () => {
+    const res = await proxy(req("/sign-in"));
+    expect(res.headers.get("location")).toBeNull();
+  });
+});
