@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hitstreak
 
-## Getting Started
+TCG collection, market-value, and deck tracker for Pokémon, One Piece, and Riftbound.
 
-First, run the development server:
+## Status
+
+Phase 1 complete: data pipeline — catalog + daily write-on-change price ingestion from tcgcsv,
+raw archives to R2, historical backfill from 2024-02-08. App UI lands in Phase 2 (see `docs/superpowers/plans/`).
+
+## Stack
+
+Next.js (App Router) on Vercel · Turso (libSQL) · Cloudflare R2 · GitHub Actions ingestion · vitest
+
+## Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm test            # vitest against throwaway file: DBs
+npm run typecheck   # tsc --noEmit (vitest does not type-check)
+npm run lint
+npm run dev         # Next.js dev server (UI arrives in Phase 2)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Local ingestion run against a file database (bash):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+TURSO_DATABASE_URL=file:hitstreak.local.db npx tsx ingest/daily.ts
+TURSO_DATABASE_URL=file:hitstreak.local.db npx tsx scripts/db-counts.mts
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+PowerShell: `$env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx ingest/daily.ts`
 
-## Learn More
+## Ingestion
 
-To learn more about Next.js, take a look at the following resources:
+- `ingest/daily.ts [YYYY-MM-DD]` — daily sync (GitHub Actions "Daily price ingest", 21:00 UTC): catalog upsert + write-on-change prices. Pass a date to re-run a failed night under its own date. Exits 1 if any game or group failed; prints a final `DAILY_SUMMARY {json}` line.
+- `ingest/backfill.ts <from> <to>` — one-time archive replay from 2024-02-08 (GitHub Actions "Historical price backfill", manual). Run oldest-first in chunks; see the Turso write-budget note in the Phase 1 plan before dispatching.
+- Raw tcgcsv responses are archived to R2 under `raw/tcgplayer/<date>/<category>/` BEFORE processing; an archive failure aborts that game for the day.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Env vars: see `.env.example`. CI secrets: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`,
+`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Design docs
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Spec: `docs/superpowers/specs/2026-09-05-hitstreak-design.md`
+- Plans: `docs/superpowers/plans/`
+- Design system (Binder): `docs/design/README.md`
