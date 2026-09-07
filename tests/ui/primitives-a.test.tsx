@@ -30,6 +30,16 @@ describe("Button", () => {
     expect(secondary.className).toMatch(/border-hairline/);
     expect(secondary).toHaveAttribute("aria-disabled", "true");
   });
+
+  it("size=sm keeps the 44px thumb target on phones and shrinks to 32px from md up", () => {
+    render(<Button size="sm">x</Button>);
+    const sm = screen.getByRole("button", { name: "x" });
+    expect(sm.className).toMatch(/min-h-11/);
+    expect(sm.className).toMatch(/md:min-h-8/);
+    expect(sm).not.toHaveAttribute("size");
+    render(<Button>y</Button>);
+    expect(screen.getByRole("button", { name: "y" }).className).not.toMatch(/md:min-h-8/);
+  });
 });
 
 describe("Pill", () => {

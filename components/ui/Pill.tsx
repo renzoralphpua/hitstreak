@@ -2,7 +2,7 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 import Link from "next/link";
 import { cn } from "./cn";
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean; href?: string };
+type Props = ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean; href?: string; scroll?: boolean };
 
 // 44px minimum on phones (thumb target), back to the compact 32px chip from md up.
 const shape = "rounded-full px-3 py-1.5 text-[13px] leading-none min-h-11 md:min-h-8 transition-colors";
@@ -28,15 +28,16 @@ const BUTTON_ONLY = new Set([
 
 /** Filter / tab chip. Selected = inverted ink chip (docs/design/README.md "Selected state").
  *  With `href` it is a `Link` instead of a button (navigational pills, e.g. the game row on /sets)
- *  and the selected one carries `aria-current="page"`. */
-export default function Pill({ selected = false, className, href, children, ...rest }: Props) {
+ *  and the selected one carries `aria-current="page"`. `scroll={false}` keeps the page where it
+ *  is — chart range pills sit mid-page. */
+export default function Pill({ selected = false, className, href, scroll, children, ...rest }: Props) {
   const classes = cn(shape, skin(selected), className);
   if (href !== undefined) {
     const anchorProps = Object.fromEntries(
       Object.entries(rest).filter(([k]) => !BUTTON_ONLY.has(k))
     ) as AnchorHTMLAttributes<HTMLAnchorElement>;
     return (
-      <Link {...anchorProps} href={href} aria-current={selected ? "page" : undefined} className={classes}>
+      <Link {...anchorProps} href={href} scroll={scroll} aria-current={selected ? "page" : undefined} className={classes}>
         {children}
       </Link>
     );

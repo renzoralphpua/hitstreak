@@ -20,11 +20,25 @@ import {
   BottomTabBar,
   EmptyState,
   MoneyDisplay,
+  LineChart,
+  RangePills,
 } from "@/components/ui";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { formatMoney, formatDelta } from "@/lib/format";
 
 const PERIODS = ["7D", "30D", "90D", "1Y", "All"];
+
+// A 30-day window of write-on-change points: each value holds until the next, the last carries
+// to the right edge.
+const CHART_FROM = "2026-08-08";
+const CHART_TO = "2026-09-07";
+const CHART_POINTS = [
+  { date: "2026-08-08", value: 1102.75 },
+  { date: "2026-08-12", value: 1140 },
+  { date: "2026-08-19", value: 1098.5 },
+  { date: "2026-08-26", value: 1210 },
+  { date: "2026-09-03", value: 1465 },
+];
 
 /** Shows children once in a light column and once in a forced-dark column, side by side. */
 function Variants({ children }: { children: ReactNode }) {
@@ -65,14 +79,29 @@ export default function Gallery() {
 
       <Section name="Button">
         <Variants>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button>Primary</Button>
-            <Button variant="secondary">Secondary</Button>
-            <Button disabled>Disabled</Button>
-            <Button href="/dev/ui">Link</Button>
-            <Button href="/dev/ui" variant="secondary">
-              Secondary link
-            </Button>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button>Primary</Button>
+              <Button variant="secondary">Secondary</Button>
+              <Button disabled>Disabled</Button>
+              <Button href="/dev/ui">Link</Button>
+              <Button href="/dev/ui" variant="secondary">
+                Secondary link
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button size="sm">Small</Button>
+              <Button size="sm" variant="secondary">
+                Small secondary
+              </Button>
+              <Button size="sm" variant="secondary" disabled>
+                Small disabled
+              </Button>
+              <Button size="sm" href="/dev/ui" variant="secondary">
+                Small link
+              </Button>
+              <span className="text-xs text-dim">size=&quot;sm&quot;: 44px on phones, 32px from md up</span>
+            </div>
           </div>
         </Variants>
       </Section>
@@ -267,6 +296,21 @@ export default function Gallery() {
             />
             <EmptyState title="No results" body="Try a different search." />
           </div>
+        </Variants>
+      </Section>
+
+      <Section name="LineChart">
+        <Variants>
+          <div className="flex flex-col gap-4">
+            <LineChart points={CHART_POINTS} from={CHART_FROM} to={CHART_TO} label="Binder value, past 30 days" />
+            <LineChart points={[]} from={CHART_FROM} to={CHART_TO} height={80} label="Empty chart" />
+          </div>
+        </Variants>
+      </Section>
+
+      <Section name="RangePills">
+        <Variants>
+          <RangePills current="30d" hrefFor={(r) => `#${r}`} />
         </Variants>
       </Section>
     </div>
