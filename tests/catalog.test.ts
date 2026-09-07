@@ -61,4 +61,18 @@ describe("catalog upsert", () => {
     })).rows[0];
     expect(row.name).toBe("Pikachu (Revised)");
   });
+
+  it("throws when upserting products for a group whose set has not been upserted", async () => {
+    await expect(
+      upsertProducts(3, 999999, [{ productId: 1, name: "Orphan" }])
+    ).rejects.toThrow("set for group 999999 not upserted yet");
+  });
+
+  it("chunks large product lists across multiple batches", async () => {
+    const many = Array.from({ length: 201 }, (_, i) => ({ productId: 900000 + i, name: `Bulk ${i}` }));
+    await upsertProducts(3, 604, many);
+    const c = await db();
+    const r = await c.execute("SELECT COUNT(*) AS n FROM cards WHERE tcgplayer_product_id >= 900000");
+    expect(Number(r.rows[0].n)).toBe(201);
+  });
 });

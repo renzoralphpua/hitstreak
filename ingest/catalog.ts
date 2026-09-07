@@ -58,12 +58,14 @@ export async function upsertProducts(
   if (!setRow) throw new Error(`set for group ${groupId} not upserted yet`);
 
   const CHUNK = 200;
+  // Each 200-statement batch commits on its own; a failure mid-loop leaves earlier chunks applied. Acceptable: the daily run is idempotent and re-applies everything.
   for (let i = 0; i < products.length; i += CHUNK) {
     await c.batch(
       products.slice(i, i + CHUNK).map((p) => {
         const attrs: Record<string, string> = {};
         for (const e of p.extendedData ?? []) attrs[e.name] = e.value;
         return {
+          // set_id is not updated on conflict: products are fetched per group, so a card's set is a call-site invariant.
           sql: `INSERT INTO cards (set_id, tcgplayer_product_id, name, number, rarity, image_url, attrs)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(tcgplayer_product_id) DO UPDATE SET
