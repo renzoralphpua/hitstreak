@@ -36,6 +36,13 @@ export const auth = betterAuth({
       isAdmin: { type: "boolean", required: false, defaultValue: false, input: false },
     },
   },
+  // Better Auth's origin check rejects POSTs from origins other than baseURL; preview
+  // deploys have their own hostnames.
+  trustedOrigins: [
+    ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+    ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
+  ],
   plugins: [nextCookies()],
 });
 

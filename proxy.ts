@@ -10,8 +10,9 @@ export async function proxy(request: NextRequest) {
   if (!PROTECTED.some((p) => pathname === p || pathname.startsWith(p + "/"))) return NextResponse.next();
   if (getSessionCookie(request)) return NextResponse.next();
   const url = new URL("/sign-in", request.url);
-  url.searchParams.set("next", pathname);
+  url.searchParams.set("next", pathname + request.nextUrl.search);
   return NextResponse.redirect(url);
 }
 
+// NOTE: /api is excluded wholesale; new /api routes must call getSession() themselves.
 export const config = { matcher: ["/((?!api|_next|favicon.ico).*)"] };

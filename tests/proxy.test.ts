@@ -20,4 +20,9 @@ describe("proxy (optimistic auth redirect)", () => {
     const res = await proxy(req("/sign-in"));
     expect(res.headers.get("location")).toBeNull();
   });
+  it("preserves the query string in the next param", async () => {
+    const res = await proxy(req("/cards?q=pika"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://localhost:3000/sign-in?next=%2Fcards%3Fq%3Dpika");
+  });
 });

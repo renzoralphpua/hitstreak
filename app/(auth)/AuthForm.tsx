@@ -24,8 +24,8 @@ export default function AuthForm({ mode, next = "/portfolios" }: { mode: "sign-i
       setError(res.error.message ?? "Something went wrong");
       return;
     }
-    router.push(next);
     router.refresh();
+    router.push(next);
   }
 
   const field = "h-11 w-full rounded-tile border border-hairline bg-surface px-3.5 text-ink outline-none focus:border-ink";
