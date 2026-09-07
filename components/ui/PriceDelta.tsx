@@ -6,6 +6,15 @@ type Props = { amount: number | null | undefined; ratio?: number | null; caption
 /** Signed money change with ▲/▼, gain green or terracotta for losses; em dash when unknown. */
 export default function PriceDelta({ amount, ratio, caption, className }: Props) {
   if (amount == null || !Number.isFinite(amount)) return <span className={cn("text-dim", className)}>—</span>;
+  if (amount === 0) {
+    return (
+      <span className={cn("num text-sm text-dim", className)}>
+        — $0.00
+        {ratio != null && <> ({formatPercent(ratio)})</>}
+        {caption && <span className="ml-1 font-normal text-dim">{caption}</span>}
+      </span>
+    );
+  }
   const up = amount >= 0;
   return (
     <span className={cn("num text-sm font-medium", up ? "text-gain" : "text-accent", className)}>

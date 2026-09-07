@@ -15,6 +15,7 @@ export function splitMoney(v: number): { whole: string; cents: string } {
 
 export function formatPercent(ratio: number): string {
   const pct = (Math.abs(ratio) * 100).toFixed(1);
+  if (pct === "0.0") return "0.0%";
   if (ratio > 0) return `+${pct}%`;
   if (ratio < 0) return `−${pct}%`;
   return `${pct}%`;

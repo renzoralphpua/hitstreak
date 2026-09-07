@@ -15,9 +15,13 @@ describe("format", () => {
     expect(formatPercent(0.0282)).toBe("+2.8%");
     expect(formatPercent(-0.15)).toBe("−15.0%");
     expect(formatPercent(0)).toBe("0.0%");
+    expect(formatPercent(0.00004)).toBe("0.0%");
   });
   it("formatDelta: signed money using a true minus sign", () => {
     expect(formatDelta(132.1)).toBe("+$132.10");
     expect(formatDelta(-6.8)).toBe("−$6.80");
+  });
+  it("formatMoney: negative values", () => {
+    expect(formatMoney(-4812.4)).toBe("-$4,812.40");
   });
 });

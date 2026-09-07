@@ -67,6 +67,13 @@ describe("PriceDelta", () => {
     render(<PriceDelta amount={null} />);
     expect(screen.getByText("—")).toBeInTheDocument();
   });
+  it("renders a neutral state when amount is zero: no arrow, dim color", () => {
+    render(<PriceDelta amount={0} />);
+    const el = screen.getByText(/\$0\.00/);
+    expect(el.textContent).not.toMatch(/▲/);
+    expect(el.textContent).not.toMatch(/▼/);
+    expect(el.className).toMatch(/text-dim/);
+  });
 });
 
 describe("ProgressBar", () => {
@@ -76,5 +83,7 @@ describe("ProgressBar", () => {
     expect(bar).toHaveAttribute("aria-valuenow", "34");
     render(<ProgressBar value={1.7} label="Over" />);
     expect(screen.getByRole("progressbar", { name: "Over" })).toHaveAttribute("aria-valuenow", "100");
+    render(<ProgressBar value={-0.5} label="Under" />);
+    expect(screen.getByRole("progressbar", { name: "Under" })).toHaveAttribute("aria-valuenow", "0");
   });
 });
