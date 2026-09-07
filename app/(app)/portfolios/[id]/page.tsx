@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
@@ -12,9 +13,9 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
-/** The binder id and the owner, or `notFound()`. */
-async function load(params: Params["params"]) {
-  const { id } = await params;
+/** The binder id and the owner, or `notFound()`. `cache` makes this one query per request even
+ *  though both `generateMetadata` and the page ask for it. */
+const load = cache(async (id: string) => {
   const portfolioId = Number(id);
   if (!Number.isInteger(portfolioId)) notFound();
   const session = await getSession();
@@ -22,19 +23,17 @@ async function load(params: Params["params"]) {
   const portfolio = await getPortfolio(session.user.id, portfolioId);
   if (!portfolio) notFound();
   return { userId: session.user.id, portfolioId, portfolio };
-}
+});
 
 export async function generateMetadata({ params }: Params) {
   const { id } = await params;
-  const portfolioId = Number(id);
-  if (!Number.isInteger(portfolioId)) return { title: "Binder — Hitstreak" };
-  const session = await getSession();
-  const portfolio = session ? await getPortfolio(session.user.id, portfolioId) : null;
-  return { title: portfolio ? `${portfolio.name} — Hitstreak` : "Binder — Hitstreak" };
+  const { portfolio } = await load(id);
+  return { title: `${portfolio.name} — Hitstreak` };
 }
 
 export default async function PortfolioDetailPage({ params }: Params) {
-  const { userId, portfolioId, portfolio } = await load(params);
+  const { id } = await params;
+  const { userId, portfolioId, portfolio } = await load(id);
   const [holdings, summary] = await Promise.all([
     getPortfolioHoldings(userId, portfolioId),
     getPortfolioSummary(userId, portfolioId),

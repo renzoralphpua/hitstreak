@@ -1,10 +1,10 @@
 "use client";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PrintingPrice } from "@/lib/catalog";
 import { CONDITIONS } from "@/lib/portfolios";
 import { formatMoney } from "@/lib/format";
-import { Button, CardRow, Panel, Pill, SearchField } from "@/components/ui";
+import { Button, CardRow, Input, Panel, Pill, SearchField } from "@/components/ui";
 import { addItemAction } from "../actions";
 
 /** A card the dialog can add: either picked from search, or handed in preselected (card detail). */
@@ -21,8 +21,10 @@ const MIN_QUERY = 2;
 const DEBOUNCE_MS = 250;
 const MAX_RESULTS = 10;
 
-const field =
-  "h-11 w-full rounded-tile border border-hairline bg-surface px-3.5 text-ink outline-none focus:border-ink";
+// Everything the browser lets you tab to, in document order, for the focus trap.
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const focusablesIn = (panel: HTMLElement) => Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
 
 function lowestMarket(printings: PrintingPrice[]): number | null {
   let low: number | null = null;
@@ -35,6 +37,8 @@ function lowestMarket(printings: PrintingPrice[]): number | null {
 export default function AddItemDialog({ portfolioId, label, preselected }: Props) {
   const router = useRouter();
   const headingId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -62,13 +66,38 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
     setCondition(CONDITIONS[0]);
     setPrice("");
     setError(null);
+    // Focus goes back where it came from, so the keyboard doesn't land at the top of the page.
+    triggerRef.current?.focus();
   }, [preselected]);
 
-  // Escape closes, wherever focus happens to be inside the overlay.
+  // On open, put focus inside the panel: the search variant's field carries autoFocus, the
+  // preselected variant has no field, so take its first focusable control instead.
+  useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    if (!panel || panel.contains(document.activeElement)) return;
+    focusablesIn(panel)[0]?.focus();
+  }, [open]);
+
+  // Escape closes, wherever focus happens to be inside the overlay; Tab wraps within the panel.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") {
+        close();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const items = focusablesIn(panel);
+      if (items.length === 0) return;
+      const edge = e.shiftKey ? items[0] : items[items.length - 1];
+      const wrapTo = e.shiftKey ? items[items.length - 1] : items[0];
+      if (document.activeElement === edge || !panel.contains(document.activeElement)) {
+        e.preventDefault();
+        wrapTo.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -142,11 +171,19 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{label ?? "Add a card"}</Button>
+      <Button ref={triggerRef} onClick={() => setOpen(true)}>
+        {label ?? "Add a card"}
+      </Button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/40 p-4 pt-16">
-          <Panel role="dialog" aria-modal="true" aria-labelledby={headingId} className="w-full max-w-lg">
+          <Panel
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={headingId}
+            className="w-full max-w-lg"
+          >
             <div className="flex flex-col gap-4">
               <h2 id={headingId} className="font-display text-[22px] leading-none text-ink">
                 Add a card
@@ -207,8 +244,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
                   <div className="grid grid-cols-2 gap-3">
                     <label className="flex flex-col gap-1.5 text-xs text-dim">
                       Quantity
-                      <input
-                        className={field}
+                      <Input
                         type="number"
                         min={1}
                         step={1}
@@ -218,8 +254,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
                     </label>
                     <label className="flex flex-col gap-1.5 text-xs text-dim">
                       Price paid (each, optional)
-                      <input
-                        className={field}
+                      <Input
                         type="number"
                         min={0}
                         step={0.01}

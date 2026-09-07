@@ -41,6 +41,15 @@ describe("portfolio server actions", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
+  it("rejects ids that aren't positive integers before they reach the data layer", async () => {
+    signedIn(U1);
+    expect(await renamePortfolioAction(NaN as never, "x")).toEqual({ ok: false, error: "Invalid id" });
+    expect(await deletePortfolioAction(-1)).toEqual({ ok: false, error: "Invalid id" });
+    expect(await addItemAction(1.5, { printingId: 1, quantity: 1, condition: "NM" })).toEqual({ ok: false, error: "Invalid id" });
+    expect(await addItemAction(1, { printingId: "1" as never, quantity: 1, condition: "NM" })).toEqual({ ok: false, error: "Invalid id" });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
   it("creates a binder for the signed-in user and revalidates /portfolios", async () => {
     signedIn(U1);
     const r = await createPortfolioAction("Main");

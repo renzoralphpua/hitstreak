@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 
 export default function AuthForm({ mode, next = "/portfolios" }: { mode: "sign-in" | "sign-up"; next?: string }) {
   const router = useRouter();
@@ -33,31 +33,28 @@ export default function AuthForm({ mode, next = "/portfolios" }: { mode: "sign-i
     }
   }
 
-  const field = "h-11 w-full rounded-tile border border-hairline bg-surface px-3.5 text-ink outline-none focus:border-ink";
   return (
     <form onSubmit={submit} className="flex w-full max-w-sm flex-col gap-3">
       {mode === "sign-up" && (
-        <label className="flex flex-col gap-1 text-[13px] text-muted">
-          Name
-          <input className={field} value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" />
-        </label>
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" />
       )}
-      <label className="flex flex-col gap-1 text-[13px] text-muted">
-        Email
-        <input className={field} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
-      </label>
-      <label className="flex flex-col gap-1 text-[13px] text-muted">
-        Password
-        <input
-          className={field}
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-          autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
-        />
-      </label>
+      <Input
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        autoComplete="email"
+      />
+      <Input
+        label="Password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+        minLength={8}
+        autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+      />
       {error && <p role="alert" className="text-[13px] text-accent">{error}</p>}
       <Button type="submit" disabled={busy}>{mode === "sign-in" ? "Sign in" : "Create account"}</Button>
     </form>

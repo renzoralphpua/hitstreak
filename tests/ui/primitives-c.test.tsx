@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { EmptyState, MoneyDisplay } from "@/components/ui";
+import { EmptyState, Input, MoneyDisplay } from "@/components/ui";
 
 describe("EmptyState", () => {
   it("renders a title heading, body text, and the action node", () => {
@@ -15,6 +15,24 @@ describe("EmptyState", () => {
     render(<EmptyState title="Empty" />);
     expect(screen.getByRole("heading", { name: "Empty" })).toBeInTheDocument();
     expect(screen.queryByText(/get started/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("Input", () => {
+  it("carries the field classes, merges className last, and forwards input props", () => {
+    render(<Input aria-label="Binder name" className="max-w-xs" placeholder="New binder…" maxLength={80} />);
+    const input = screen.getByLabelText("Binder name");
+    expect(input.className).toMatch(/border-hairline/);
+    expect(input.className).toMatch(/max-w-xs$/);
+    expect(input).toHaveAttribute("placeholder", "New binder…");
+    expect(input).toHaveAttribute("maxlength", "80");
+  });
+
+  it("with a label it wraps itself in one, so the input is still reachable by label text", () => {
+    render(<Input label="Email" type="email" />);
+    const input = screen.getByLabelText("Email");
+    expect(input).toHaveAttribute("type", "email");
+    expect(input.closest("label")?.className).toMatch(/text-muted/);
   });
 });
 

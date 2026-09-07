@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
@@ -12,9 +13,9 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
-/** The card with the signed-in user's copies folded in, or `notFound()`. */
-async function load(params: Params["params"]) {
-  const { id } = await params;
+/** The card with the signed-in user's copies folded in, or `notFound()`. `cache` makes this one
+ *  query per request even though both `generateMetadata` and the page ask for it. */
+const load = cache(async (id: string) => {
   const cardId = Number(id);
   if (!Number.isInteger(cardId)) notFound();
   const session = await getSession();
@@ -22,14 +23,12 @@ async function load(params: Params["params"]) {
   const detail = await getCardDetail(session.user.id, cardId);
   if (!detail) notFound();
   return { userId: session.user.id, detail };
-}
+});
 
 export async function generateMetadata({ params }: Params) {
   const { id } = await params;
-  const cardId = Number(id);
-  const session = Number.isInteger(cardId) ? await getSession() : null;
-  const detail = session ? await getCardDetail(session.user.id, cardId) : null;
-  return { title: detail ? `${detail.card.name} — Hitstreak` : "Card — Hitstreak" };
+  const { detail } = await load(id);
+  return { title: `${detail.card.name} — Hitstreak` };
 }
 
 const MAX_ATTRS = 8;
@@ -37,7 +36,8 @@ const MAX_ATTRS = 8;
 const SKIP_ATTRS = new Set(["number", "rarity"]);
 
 export default async function CardDetailPage({ params }: Params) {
-  const { userId, detail } = await load(params);
+  const { id } = await params;
+  const { userId, detail } = await load(id);
   const { card, printings } = detail;
   const portfolios = await listPortfolios(userId);
 

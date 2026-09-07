@@ -1,14 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import { createPortfolioAction, renamePortfolioAction } from "./actions";
 
 type Props = { mode: "create" } | { mode: "rename"; id: number; name: string; onDone?: () => void };
-
-// Same field styling as the auth form.
-const field =
-  "h-11 w-full max-w-xs rounded-tile border border-hairline bg-surface px-3.5 text-ink outline-none focus:border-ink";
 
 /** Create a binder, or rename one inline. Errors from the action surface as role="alert". */
 export default function PortfolioForm(props: Props) {
@@ -43,8 +39,8 @@ export default function PortfolioForm(props: Props) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <input
-          className={field}
+        <Input
+          className="max-w-xs"
           aria-label="Binder name"
           placeholder="New binder…"
           maxLength={80}

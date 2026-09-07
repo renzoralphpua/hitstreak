@@ -1,13 +1,8 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import type { Portfolio } from "@/lib/portfolios";
-import { Pill } from "@/components/ui";
+import { Button, Pill } from "@/components/ui";
 import AddItemDialog, { type DialogCard } from "../../portfolios/[id]/AddItemDialog";
-
-// `Button` renders a <button> only, so the no-binder case is a Link wearing the secondary skin.
-const secondaryButton =
-  "inline-flex items-center justify-center gap-2 rounded-full border border-hairline bg-surface px-4 py-2.5 text-sm font-semibold text-ink min-h-11 hover:bg-hairline-soft";
 
 /** Picks which binder the card detail page adds to, then hands the card to `AddItemDialog`
  *  preselected (so the dialog opens straight on the printing/quantity step). */
@@ -16,9 +11,9 @@ export default function AddToBinder({ portfolios, card }: { portfolios: Portfoli
 
   if (portfolios.length === 0) {
     return (
-      <Link href="/portfolios" className={secondaryButton}>
+      <Button href="/portfolios" variant="secondary">
         Create a binder first
-      </Link>
+      </Button>
     );
   }
 

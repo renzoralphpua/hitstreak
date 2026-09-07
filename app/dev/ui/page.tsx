@@ -13,6 +13,7 @@ import {
   TierBadge,
   ValidationList,
   SearchField,
+  Input,
   CardTile,
   CardRow,
   TopNav,
@@ -68,6 +69,10 @@ export default function Gallery() {
             <Button>Primary</Button>
             <Button variant="secondary">Secondary</Button>
             <Button disabled>Disabled</Button>
+            <Button href="/dev/ui">Link</Button>
+            <Button href="/dev/ui" variant="secondary">
+              Secondary link
+            </Button>
           </div>
         </Variants>
       </Section>
@@ -155,6 +160,15 @@ export default function Gallery() {
       <Section name="SearchField">
         <Variants>
           <SearchField value={query} onChange={setQuery} placeholder="Find a card…" />
+        </Variants>
+      </Section>
+
+      <Section name="Input">
+        <Variants>
+          <div className="flex max-w-sm flex-col gap-3">
+            <Input label="Email" type="email" placeholder="you@example.com" />
+            <Input aria-label="Binder name" placeholder="New binder…" />
+          </div>
         </Variants>
       </Section>
 

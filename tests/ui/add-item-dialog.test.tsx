@@ -86,6 +86,36 @@ describe("AddItemDialog", () => {
     expect(addItem).not.toHaveBeenCalled();
   });
 
+  it("returns focus to the trigger when it closes", async () => {
+    render(<AddItemDialog portfolioId={7} />);
+    const trigger = screen.getByRole("button", { name: "Add a card" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("focuses the first control when the card is preselected, and traps Tab in the panel", () => {
+    render(
+      <AddItemDialog
+        portfolioId={7}
+        preselected={{ name: "Pikachu", subtitle: "Prismatic Evolutions · 025/131", imageUrl: null, printings }}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add a card" }));
+    const panel = screen.getByRole("dialog");
+    expect(panel.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Normal · $0.25" }));
+
+    // Shift+Tab off the first control wraps to the last one instead of leaving the dialog.
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Add to binder" }));
+    // …and Tab off the last wraps back to the first.
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Normal · $0.25" }));
+  });
+
   it("does not search for a one-character query", async () => {
     render(<AddItemDialog portfolioId={7} />);
     fireEvent.click(screen.getByRole("button", { name: "Add a card" }));

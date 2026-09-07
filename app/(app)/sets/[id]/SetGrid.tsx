@@ -30,6 +30,10 @@ export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portf
   const [added, setAdded] = useState<{ base: SetCard[]; counts: Record<number, number> }>({ base: cards, counts: {} });
   const [error, setError] = useState<string | null>(null);
 
+  // Identity check, not a deep compare: `router.refresh()` hands down a brand-new `cards` array, so
+  // `base !== cards` means the server has already counted these copies and the local bumps are
+  // dropped. Known narrow race: two taps in flight when a refresh lands — the second one's bump is
+  // discarded and its card can read one low until the next refresh, which self-heals it.
   const optimistic = added.base === cards ? added.counts : {};
 
   const quantityOf = (card: SetCard) => card.ownedQuantity + (optimistic[card.cardId] ?? 0);
