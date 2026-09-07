@@ -173,6 +173,25 @@ describe("runDailyIngest", () => {
     expect(summary.perGame[0].groupsOk).toBe(0);
   });
 
+  it("checks the deadline before per-game setup too, so a later game does no I/O", async () => {
+    const client = groupsClient([901]);
+    const summary = await runDailyIngest({
+      client,
+      archiver: noArchiver(),
+      date: "2026-09-13",
+      games: [
+        { tcgplayerCategoryId: 3, name: "Pokémon", slug: "pokemon" },
+        { tcgplayerCategoryId: 68, name: "One Piece Card Game", slug: "one-piece" },
+      ],
+      deadlineAt: Date.now() - 1,
+    });
+    expect(summary.failures).toHaveLength(2);
+    for (const failure of summary.failures) {
+      expect(failure.error).toMatch(/deadline exceeded/);
+    }
+    expect(client.fetchGroups).not.toHaveBeenCalled();
+  });
+
   it("rejects a malformed date before touching R2 or the DB", async () => {
     await expect(
       runDailyIngest({

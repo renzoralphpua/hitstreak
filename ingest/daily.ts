@@ -68,7 +68,13 @@ export async function runDailyIngest(opts: DailyIngestOptions): Promise<DailySum
     };
     summary.perGame.push(g);
 
+    let gameError: string | undefined;
     try {
+      // Checked before any I/O for this game too, so once the deadline passes a
+      // later game does no work at all instead of starting fresh only to abort.
+      if (opts.deadlineAt && Date.now() > opts.deadlineAt) {
+        throw new Error(`deadline exceeded before starting ${game.slug}`);
+      }
       await ensureGame(game);
       const cat = game.tcgplayerCategoryId;
 
@@ -118,21 +124,23 @@ export async function runDailyIngest(opts: DailyIngestOptions): Promise<DailySum
           }
         }
       }
-
-      g.elapsedMs = Date.now() - gameStartedAt;
-      console.log(
-        `[${game.slug}] sets=${g.sets} groupsOk=${g.groupsOk} failedGroups=${g.failedGroups.length} cards=${g.cards}` +
-        ` priceWrites=${g.written} unchanged=${g.unchanged} skippedNoCard=${g.skippedNoCard}` +
-        ` skippedWrongGroup=${g.skippedWrongGroup} zeroPriceGroups=${formatIds(g.zeroPriceGroups)}` +
-        ` elapsedMs=${g.elapsedMs}`
-      );
-      if (g.skippedWrongGroup > 0) console.warn(`[${game.slug}] ${g.skippedWrongGroup} prices belong to products catalogued under another group (catalog drift)`);
     } catch (e) {
-      g.elapsedMs = Date.now() - gameStartedAt;
       const msg = e instanceof Error ? e.message : String(e);
+      gameError = msg;
       summary.failures.push({ slug: game.slug, error: msg });
-      console.error(`[${game.slug}] FAILED: ${msg}`);
     }
+
+    // One line per game either way, so a run's log is greppable without hunting
+    // for a success line here and a failure line there.
+    g.elapsedMs = Date.now() - gameStartedAt;
+    const status = gameError ? `FAILED (${gameError})` : "OK";
+    console.log(
+      `[${game.slug}] ${status} sets=${g.sets} groupsOk=${g.groupsOk} failedGroups=${g.failedGroups.length} cards=${g.cards}` +
+      ` priceWrites=${g.written} unchanged=${g.unchanged} skippedNoCard=${g.skippedNoCard}` +
+      ` skippedWrongGroup=${g.skippedWrongGroup} zeroPriceGroups=${formatIds(g.zeroPriceGroups)}` +
+      ` elapsedMs=${g.elapsedMs}`
+    );
+    if (g.skippedWrongGroup > 0) console.warn(`[${game.slug}] ${g.skippedWrongGroup} prices belong to products catalogued under another group (catalog drift)`);
   }
 
   summary.elapsedMs = Date.now() - startedAt;
