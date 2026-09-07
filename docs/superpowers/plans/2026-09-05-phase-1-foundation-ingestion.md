@@ -14,6 +14,7 @@
 - All tests run against a throwaway `file:` libSQL DB — **never `:memory:`** (schema is not shared across libSQL connections; license-hub lesson).
 - Windows dev machine: `npm test` must pass locally; ingestion runs on ubuntu-latest in CI.
 - Commit after every green test. Conventional-commit style messages.
+- **Every "run tests" step also runs `npm run typecheck`** (added after Task 1's review: vitest does not type-check, `next build` does — catch type errors in the TDD loop, not at build time). Task 1 is complete; the vitest config is `vitest.config.mts`.
 
 ---
 
@@ -189,6 +190,7 @@ export const SCHEMA_SQL = `
     code TEXT,
     release_date TEXT
   );
+  CREATE INDEX IF NOT EXISTS idx_sets_game ON sets(game_id);
 
   CREATE TABLE IF NOT EXISTS cards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -276,6 +278,69 @@ Expected: 2 passed.
 git add lib/schema.ts lib/db.ts tests/db.test.ts
 git commit -m "feat: self-initializing libSQL schema and async db client"
 ```
+
+- [ ] **Step 7: Shared throwaway-DB test helper** (added after Task 2's review: on Windows the libSQL file handle can outlive `close()`, so a stale `.tmp-*.db` from a previous run makes the next run fail on UNIQUE constraints. Clean **before** and after.)
+
+Create `tests/helpers/tmpdb.ts`:
+
+```ts
+// tests/helpers/tmpdb.ts
+// Points lib/db at a throwaway file: libSQL database for one test file and
+// removes stale copies both before and after the run (Windows can keep the
+// handle open past close(), leaving a file that breaks the next run).
+import { readdirSync, rmSync } from "node:fs";
+
+export function tmpDb(name: string) {
+  // pid-scoped so parallel vitest workers can never share a file even if a name is reused
+  const prefix = `.tmp-${name}-`;
+  const file = `${prefix}${process.pid}-test.db`;
+  const clean = () => {
+    // sweep this run's file AND leftovers from earlier runs (different pids) for this name
+    let stale: string[] = [];
+    try {
+      stale = readdirSync(".").filter((f) => f.startsWith(prefix) && f.includes("-test.db"));
+    } catch { /* cwd unreadable — nothing to sweep */ }
+    for (const f of new Set([file, `${file}-shm`, `${file}-wal`, ...stale])) {
+      try { rmSync(f); } catch { /* not present, or handle still held — ignore */ }
+    }
+  };
+  clean();
+  process.env.TURSO_DATABASE_URL = `file:${file}`;
+  delete process.env.TURSO_AUTH_TOKEN;
+  return { file, clean };
+}
+```
+
+Then rewrite the preamble and teardown of `tests/db.test.ts` to use it (test bodies unchanged):
+
+```ts
+import { describe, it, expect, afterAll } from "vitest";
+import { tmpDb } from "./helpers/tmpdb";
+
+const tmp = tmpDb("db");
+
+import { db, closeDb } from "@/lib/db";
+
+afterAll(() => {
+  closeDb();
+  tmp.clean();
+});
+```
+
+(`db()` reads `TURSO_DATABASE_URL` lazily at first call, so it is fine that ESM hoists the `@/lib/db` import above the `tmpDb` call.)
+
+Run: `npm test` twice in a row → both runs green (the second run proves stale-file cleanup works). `npm run typecheck` → exit 0.
+
+```bash
+git add tests/helpers/tmpdb.ts tests/db.test.ts
+git commit -m "test: shared throwaway-DB helper that cleans stale files before and after"
+```
+
+Every later test file in this plan uses `tmpDb("<name>")` the same way.
+
+Also add (same commit or a follow-up `chore:` commit) two lifecycle tests to `tests/db.test.ts` in a second `describe("db() lifecycle")` block: `closeDb()` followed by `db()` re-opens the same file and still sees the previously inserted printing; and with `TURSO_DATABASE_URL` deleted, `db()` rejects with `"TURSO_DATABASE_URL is not set"` (restore the env in `finally`).
+
+**Decisions recorded in the spec (§5) after this task's review:** referential integrity is enforced by ingestion code + tests (SQLite FK pragmas are off by default and unreliable over Turso HTTP — do NOT add `PRAGMA foreign_keys`); money is `REAL` dollars rounded at display, never integer cents.
 
 ---
 
@@ -445,6 +510,20 @@ git add ingest/tcgcsv.ts tests/tcgcsv.test.ts
 git commit -m "feat: polite tcgcsv HTTP client with retry and injectable fetch"
 ```
 
+- [ ] **Step 6: Hardening (from Task 3's code review — required before Task 7 uses the client)**
+
+Because the orchestrator calls this client sequentially for ~800 requests inside one 60-minute job, three things matter that the first cut missed:
+1. **Per-request timeout** — add `timeoutMs?: number` (default `30_000`) to `TcgcsvClientOptions` and pass `signal: AbortSignal.timeout(timeoutMs)` to fetch; a hung connection otherwise stalls the whole run past the per-game try/catch.
+2. **Drain non-OK bodies** — `await res.text().catch(() => {})` before retrying/throwing, so undici releases the connection.
+3. **Retry policy** — retry only `429`, `>= 500`, and thrown errors (network/timeout); any other non-OK status (404, 403…) throws immediately after one request. Retries back off: wait `delayMs` before attempt 0, `delayMs * 2 ** N` before attempt N ≥ 1 (so `delayMs: 0` never sleeps in tests).
+
+Add four tests: thrown network error then success (2 calls); 404 throws `/404/` after exactly 1 call even with `maxRetries: 3`; a 200 body without `results` → `[]`; the fetch init carries an `AbortSignal` when `timeoutMs` is set. Full suite + typecheck green, then:
+
+```bash
+git add ingest/tcgcsv.ts tests/tcgcsv.test.ts
+git commit -m "fix: tcgcsv client times out requests, drains bodies, retries only 429/5xx with backoff"
+```
+
 ---
 
 ### Task 4: Catalog upsert
@@ -460,11 +539,9 @@ Upserts are keyed on TCGplayer IDs so re-running a day is idempotent. `extendedD
 ```ts
 // tests/catalog.test.ts
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { rmSync } from "node:fs";
+import { tmpDb } from "./helpers/tmpdb";
 
-const DB_FILE = ".tmp-catalog-test.db";
-process.env.TURSO_DATABASE_URL = `file:${DB_FILE}`;
-delete process.env.TURSO_AUTH_TOKEN;
+const tmp = tmpDb("catalog");
 
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
@@ -475,9 +552,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   closeDb();
-  for (const f of [DB_FILE, `${DB_FILE}-shm`, `${DB_FILE}-wal`]) {
-    try { rmSync(f); } catch { /* ignore */ }
-  }
+  tmp.clean();
 });
 
 const GROUPS = [{ groupId: 604, name: "Scarlet & Violet", abbreviation: "SVI", publishedOn: "2023-03-31T00:00:00" }];
@@ -653,11 +728,9 @@ Core invariant: `price_snapshots` gains a row for a printing on date D **only** 
 ```ts
 // tests/prices.test.ts
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { rmSync } from "node:fs";
+import { tmpDb } from "./helpers/tmpdb";
 
-const DB_FILE = ".tmp-prices-test.db";
-process.env.TURSO_DATABASE_URL = `file:${DB_FILE}`;
-delete process.env.TURSO_AUTH_TOKEN;
+const tmp = tmpDb("prices");
 
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
@@ -671,9 +744,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   closeDb();
-  for (const f of [DB_FILE, `${DB_FILE}-shm`, `${DB_FILE}-wal`]) {
-    try { rmSync(f); } catch { /* ignore */ }
-  }
+  tmp.clean();
 });
 
 const P1 = { productId: 450101, subTypeName: "Holofoil", marketPrice: 2.5, lowPrice: 1.0, midPrice: 2.0, highPrice: 9.9 };
@@ -913,6 +984,27 @@ git add ingest/prices.ts tests/prices.test.ts
 git commit -m "feat: write-on-change price ingestion with on-demand printings"
 ```
 
+- [ ] **Step 6: Rework after code review (required — the first cut had a correctness bug)**
+
+The review found that a same-date re-run with corrected data did nothing when the corrected value equalled the previous day's snapshot (the `unchanged` branch emitted no statement), leaving a wrong row permanently in `price_snapshots` and `latest_prices` disagreeing with it. That defeats "re-run to repair." The reworked module — the version that exists in the repo — has this contract:
+
+- **Semantics (module header):** `price_snapshots` = one row per printing per day the tuple CHANGED vs. the most recent snapshot strictly before that day (readers carry forward); `latest_prices.date` = LAST SEEN (upserted on every appearance), `MAX(price_snapshots.date)` = LAST CHANGED; tuples may be all-null (unpriceable, never zero); invariant `latest_prices` tuple == most recent snapshot tuple; re-runs are idempotent AND canonicalizing.
+- **API:** `ingestPrices(groupId, prices, date, index?: GroupIndex)`, `resolveGroupIndex(groupId): Promise<GroupIndex>` (`cardByProduct`, `printingId` maps — the backfill hoists this per group and passes it; the function mutates the passed index when it creates printings). `IngestPriceResult` gains `skippedWrongGroup` (productId exists in the catalog under a different group = catalog drift; the orchestrator should log it).
+- **Validation:** `date` must be `YYYY-MM-DD` (throws otherwise — every comparison is lexicographic); prices normalized via `norm(unknown)` (strings → numbers, non-finite → null); input deduped by `productId|subtype` (last wins).
+- **Performance:** printings inserted only when missing from the index (not insert-on-conflict per row); the previous tuple comes from `latest_prices` when `latest.date < date` (by the invariant), and the `MAX(date)` history scan runs only for out-of-order printings, restricted by `printing_id IN (...)`.
+- **Correctness:** when the tuple is unchanged and a snapshot already exists AT `date`, it is DELETED (canonicalizing); the `latest_prices` upsert carries `WHERE excluded.date >= latest_prices.date` in SQL (atomic — no read-then-write race between daily and backfill); a printing's statements are kept in the same batch chunk.
+- **Tests:** the original seven plus ten more (corrected re-run repairs history; all-null pair; middle insert equal to the later neighbour reconstructs correctly; stale latest ignored; wrong-group vs no-card; dedupe; invalid date throws; string price normalized; index hoisting; >200 printings).
+
+Commit: `fix: canonicalizing write-on-change prices — corrected re-runs repair history; atomic latest guard; validate dates; normalize numbers`
+
+Re-review then found two more holes, fixed in a follow-up commit (`fix: keep latest_prices tuple in sync when replaying recent days; refresh hoisted card index; stricter date + bigint normalization`):
+- **Replaying a recent day** (one already followed by later runs) rewrote/deleted the newest snapshot while the SQL guard kept `latest_prices`' old tuple → invariant broken → a fabricated change the next day. Fix: on the out-of-order branch, when `date >= MAX(snapshot date)` for the printing, also `UPDATE latest_prices SET <tuple>` (date untouched) with the post-write newest tuple (`next` if written, else `prev`).
+- **Hoisted `GroupIndex` never refreshed `cardByProduct`**, so a card added to the same group after hoisting was skipped and misreported as drift. Fix: reload `cardByProduct` into the index before classifying skips.
+- Minors: canonicalization is per-replayed-day (the following day's row may become redundant — harmless for carry-forward; movers queries must tolerate 0-delta rows); date validation also round-trips through `Date` (rejects `2026-13-45`); `norm` accepts `bigint`, `tupleOf` normalizes DB values.
+- Final round (`fix: guard latest_prices tuple repair against a concurrently newer snapshot`): the repair `UPDATE` carries `AND NOT EXISTS (SELECT 1 FROM price_snapshots WHERE printing_id = latest_prices.printing_id AND date > ?)` so a concurrent in-order run that committed a newer snapshot between this call's scan and its batch is never overwritten. **Known coverage gap:** that race cannot be staged in a single-threaded vitest run; the guard is defensive and reviewed, not exercised by a test. The adjacent test documents the pre-filter behavior only.
+
+**Consequences for later tasks:** Task 7 derives `date` with `toISOString().slice(0, 10)` (never a locale date), logs `skippedWrongGroup`, and treats a group returning zero prices as suspicious (warn). Task 9 calls `resolveGroupIndex` once per group and caches it across days, and must NOT record a day as complete if `ingestPrices` throws (earlier chunks may have committed; the re-run repairs).
+
 ---
 
 ### Task 6: R2 raw archiver
@@ -1017,6 +1109,8 @@ git add ingest/r2.ts tests/r2.test.ts
 git commit -m "feat: R2 raw-response archiver, disabled gracefully without env"
 ```
 
+- [ ] **Step 6: Hardening (from Task 6's review)** — `fix: R2 client timeouts, documented archive-first failure contract, env-parsing tests`: the `S3Client` gets `requestHandler: new NodeHttpHandler({ connectionTimeout: 5_000, requestTimeout: 30_000 })` (`@smithy/node-http-handler` declared explicitly); the header states the contract that `putRaw` errors propagate and callers must not continue past a failed archive; tests cover `rawArchiverFromEnv` with full/partial/no env. **Decision:** an R2 failure aborts that game's ingest for the day (archive-first), never "log and skip". Task 7 logs `archiver.enabled` at start and throws when disabled under `CI`.
+
 ---
 
 ### Task 7: Daily orchestrator
@@ -1032,11 +1126,9 @@ Per-game isolation (one game failing must not block the others), archive-before-
 ```ts
 // tests/daily.test.ts
 import { describe, it, expect, afterAll, vi } from "vitest";
-import { rmSync } from "node:fs";
+import { tmpDb } from "./helpers/tmpdb";
 
-const DB_FILE = ".tmp-daily-test.db";
-process.env.TURSO_DATABASE_URL = `file:${DB_FILE}`;
-delete process.env.TURSO_AUTH_TOKEN;
+const tmp = tmpDb("daily");
 
 import { db, closeDb } from "@/lib/db";
 import { runDailyIngest } from "@/ingest/daily";
@@ -1045,9 +1137,7 @@ import type { TcgcsvClient } from "@/ingest/tcgcsv";
 
 afterAll(() => {
   closeDb();
-  for (const f of [DB_FILE, `${DB_FILE}-shm`, `${DB_FILE}-wal`]) {
-    try { rmSync(f); } catch { /* ignore */ }
-  }
+  tmp.clean();
 });
 
 function stubClient(overrides: Partial<TcgcsvClient> = {}): TcgcsvClient {
@@ -1076,6 +1166,18 @@ describe("runDailyIngest", () => {
 
     const c = await db();
     expect(Number((await c.execute("SELECT COUNT(*) AS n FROM games")).rows[0].n)).toBe(2);
+  });
+
+  it("fails fast when archiving is required but disabled", async () => {
+    await expect(
+      runDailyIngest({
+        client: stubClient(),
+        archiver: createRawArchiver({ s3: null, bucket: undefined }),
+        date: "2026-09-07",
+        games: [{ tcgplayerCategoryId: 3, name: "Pokémon", slug: "pokemon" }],
+        requireArchiver: true,
+      })
+    ).rejects.toThrow(/R2 archiving is disabled/);
   });
 
   it("isolates a failing game and reports it", async () => {
@@ -1119,6 +1221,7 @@ export interface DailyIngestOptions {
   archiver: RawArchiver;
   date: string; // YYYY-MM-DD UTC
   games: GameSeed[];
+  requireArchiver?: boolean; // CLI sets this from CI so a misconfigured secret fails loudly; tests leave it off
 }
 
 export interface GameSummary {
@@ -1128,6 +1231,7 @@ export interface GameSummary {
   written: number;
   unchanged: number;
   skippedNoCard: number;
+  skippedWrongGroup: number;
 }
 
 export interface DailySummary {
@@ -1137,6 +1241,11 @@ export interface DailySummary {
 
 export async function runDailyIngest(opts: DailyIngestOptions): Promise<DailySummary> {
   const summary: DailySummary = { perGame: [], failures: [] };
+  // Archive-first is the #1 risk mitigation; a silently disabled archiver in CI would defeat it.
+  console.log(`R2 raw archiving: ${opts.archiver.enabled ? "enabled" : "DISABLED"}`);
+  if (!opts.archiver.enabled && opts.requireArchiver) {
+    throw new Error("R2 archiving is disabled but required for this run — check the R2_* secrets");
+  }
 
   for (const game of opts.games) {
     try {
@@ -1148,7 +1257,7 @@ export async function runDailyIngest(opts: DailyIngestOptions): Promise<DailySum
       await upsertSets(cat, groups);
 
       const g: GameSummary = {
-        slug: game.slug, sets: groups.length, cards: 0, written: 0, unchanged: 0, skippedNoCard: 0,
+        slug: game.slug, sets: groups.length, cards: 0, written: 0, unchanged: 0, skippedNoCard: 0, skippedWrongGroup: 0,
       };
 
       for (const group of groups) {
@@ -1159,14 +1268,19 @@ export async function runDailyIngest(opts: DailyIngestOptions): Promise<DailySum
 
         const prices = await opts.client.fetchPrices(cat, group.groupId);
         await opts.archiver.putRaw(opts.date, cat, `${group.groupId}-prices`, { results: prices });
+        if (prices.length === 0 && products.length > 0) {
+          console.warn(`[${game.slug}] group ${group.groupId} returned 0 prices for ${products.length} products — suspicious`);
+        }
         const r = await ingestPrices(group.groupId, prices, opts.date);
         g.written += r.written;
         g.unchanged += r.unchanged;
         g.skippedNoCard += r.skippedNoCard;
+        g.skippedWrongGroup += r.skippedWrongGroup;
       }
 
       summary.perGame.push(g);
-      console.log(`[${game.slug}] sets=${g.sets} cards=${g.cards} priceWrites=${g.written} unchanged=${g.unchanged} skipped=${g.skippedNoCard}`);
+      console.log(`[${game.slug}] sets=${g.sets} cards=${g.cards} priceWrites=${g.written} unchanged=${g.unchanged} skippedNoCard=${g.skippedNoCard} skippedWrongGroup=${g.skippedWrongGroup}`);
+      if (g.skippedWrongGroup > 0) console.warn(`[${game.slug}] ${g.skippedWrongGroup} prices belong to products catalogued under another group (catalog drift)`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       summary.failures.push({ slug: game.slug, error: msg });
@@ -1186,6 +1300,7 @@ if (isMain) {
     archiver: rawArchiverFromEnv(),
     date,
     games: GAMES,
+    requireArchiver: Boolean(process.env.CI),
   })
     .then((s) => {
       closeDb();
@@ -1202,7 +1317,7 @@ if (isMain) {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npm test -- tests/daily.test.ts`
-Expected: 2 passed.
+Expected: 3 passed.
 
 - [ ] **Step 5: Run the FULL suite (regression gate)**
 
@@ -1215,6 +1330,14 @@ Expected: all tests pass across all files.
 git add ingest/daily.ts tests/daily.test.ts
 git commit -m "feat: daily ingest orchestrator with per-game isolation and CLI entry"
 ```
+
+- [ ] **Step 7: Hardening (from Task 7's code review)** — `fix: orchestrator reports partial progress, isolates group failures with a breaker, soft deadline, date arg, summary line`. What the repo's `ingest/daily.ts` actually does beyond the code above:
+- Each `GameSummary` is pushed into `perGame` BEFORE the game's work and mutated in place, so a game that fails midway still reports what it completed (`groupsOk`, `failedGroups`, `zeroPriceGroups`, `elapsedMs`); `sets` is a floor for a failed game — consumers cross-check `failures`.
+- **Per-group isolation:** each group body has its own try/catch (archive-first ordering unchanged); a failing group is recorded in `failedGroups` and the run continues. A breaker aborts the game after 5 consecutive group failures (Turso/tcgcsv outage). Any failed group still makes the CLI exit 1 (no ratio gate yet — add one if nightly alerts get chatty).
+- **Soft deadline:** `deadlineAt` (CLI: now + 50 min) is checked between groups so a slow night ends with a summary instead of a hard Actions kill.
+- **CLI:** `npx tsx ingest/daily.ts [YYYY-MM-DD]` (or `INGEST_DATE`), validated (usage error → exit 2); default today UTC. `runDailyIngest` re-validates `date`. Exit via `process.exitCode = 1` (streams drain). Final greppable `DAILY_SUMMARY {json}` line, plus a heartbeat every 50 groups.
+- Tests: 10 in `tests/daily.test.ts` (archive-first abort with nothing written; true game isolation; group isolation; breaker; deadline before groups and before per-game setup; date validation; plus the original three, made order-independent).
+- The first real local run happened during this review (see Task 8 Step 3 numbers). Real-data observations: 907 of 54,548 printings have a null market price (no listings) — correctly stored as null.
 
 ---
 
@@ -1233,7 +1356,12 @@ name: Daily price ingest
 on:
   schedule:
     - cron: "0 21 * * *" # ~1h after tcgcsv's 20:00 UTC refresh
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Ingest date to record (YYYY-MM-DD). Leave empty for today (UTC). Use this to re-run a failed night under its own date."
+        required: false
+        default: ""
 
 concurrency:
   group: ingest
@@ -1252,6 +1380,7 @@ jobs:
       - run: npm ci
       - run: npx tsx ingest/daily.ts
         env:
+          INGEST_DATE: ${{ inputs.date }} # empty on scheduled runs = today (UTC)
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -1284,10 +1413,10 @@ Run a real end-to-end ingest against a local file DB (PowerShell):
 $env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx ingest/daily.ts
 ```
 
-Expected: per-game log lines (`[riftbound] sets=… cards=… priceWrites=…` etc.), Riftbound finishing in seconds, Pokémon taking several minutes, exit code 0. Then verify row counts with a small script — create `scripts/db-counts.ts`:
+Expected: per-game log lines (`[riftbound] sets=… cards=… priceWrites=…` etc.), Riftbound finishing in seconds, Pokémon taking several minutes, exit code 0. (Already done once during Task 7's review: Pokémon 220 sets / 32,675 cards / 45,214 price writes; One Piece 87 / 7,524 / 7,326; Riftbound 13 / 1,560 / 2,008.) Then verify row counts with a small script — create `scripts/db-counts.mts` (`.mts`, because the package is not `"type": "module"` and tsx only allows top-level `await` in ESM files):
 
 ```ts
-// scripts/db-counts.ts — quick sanity check of table sizes. Usage: npx tsx scripts/db-counts.ts
+// scripts/db-counts.mts — quick sanity check of table sizes. Usage: npx tsx scripts/db-counts.mts
 import { db, closeDb } from "../lib/db";
 
 const c = await db();
@@ -1299,15 +1428,15 @@ closeDb();
 ```
 
 ```powershell
-$env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx scripts/db-counts.ts
+$env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx scripts/db-counts.mts
 ```
 
-Expected: `games 3`, non-zero counts for every other table, Pokémon dominating `cards`. Commit `scripts/db-counts.ts` along with the workflow in the next step. Delete `hitstreak.local.db*` afterwards (gitignored anyway).
+Expected: `games 3`, non-zero counts for every other table, Pokémon dominating `cards`. Commit `scripts/db-counts.mts` along with the workflow in the next step. Delete `hitstreak.local.db*` afterwards (gitignored anyway).
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add .github/workflows/daily-ingest.yml .env.example scripts/db-counts.ts
+git add .github/workflows/daily-ingest.yml .env.example scripts/db-counts.mts
 git commit -m "ci: scheduled daily ingest workflow, env template, db-counts script"
 ```
 
@@ -1330,22 +1459,20 @@ Ask the user to:
 
 Replays tcgcsv's daily price archives (`https://tcgcsv.com/archive/tcgplayer/prices-YYYY-MM-DD.ppmd.7z`, available from 2024-02-08) through the same `ingestPrices` write-on-change path. Catalog must already be populated (Task 8's first live run). Extraction uses the `7z` binary (p7zip, preinstalled on ubuntu-latest). The archive extracts to date-based folders containing per-category/per-group price JSON files; the walker is path-shape-agnostic: it scans for files whose parsed JSON has `results` with `productId`/`subTypeName`, taking the group id from the parent directory name.
 
-**Ordering:** because `ingestPrices` (Task 5) diffs each date against the most recent snapshot *before* it and only advances `latest_prices` for newer dates, the backfill is correct regardless of whether daily runs have already happened, and can be re-run safely. Replay oldest-first anyway: it's the cheapest order (each day's diff finds its predecessor immediately) and produces the fewest redundant rows. Prices for products no longer in the current catalog are counted as `skippedNoCard` — those cards' history is lost, which is acceptable (they no longer exist on TCGplayer to be collected).
+**Ordering:** because `ingestPrices` (Task 5, as reworked in its Step 6) diffs each date against the most recent snapshot *before* it, only advances `latest_prices` for newer dates (guarded in SQL), and canonicalizes on re-run, the backfill is correct regardless of whether daily runs have already happened, and can be re-run safely. Do not mark a day complete when `ingestPrices` throws — re-run it. Replay oldest-first anyway: it's the cheapest order (each day's diff finds its predecessor immediately) and produces the fewest redundant rows. Prices for products no longer in the current catalog are counted as `skippedNoCard` — those cards' history is lost, which is acceptable (they no longer exist on TCGplayer to be collected).
 
 - [ ] **Step 1: Write the failing test (replay core, no network/7z)**
 
 ```ts
 // tests/backfill.test.ts
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { rmSync } from "node:fs";
-
-const DB_FILE = ".tmp-backfill-test.db";
-process.env.TURSO_DATABASE_URL = `file:${DB_FILE}`;
-delete process.env.TURSO_AUTH_TOKEN;
-
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { tmpDb } from "./helpers/tmpdb";
+
+const tmp = tmpDb("backfill");
+
 import { db, closeDb } from "@/lib/db";
 import { ensureGame, upsertSets, upsertProducts } from "@/ingest/catalog";
 import { replayDay, collectGroupPrices } from "@/ingest/backfill";
@@ -1358,9 +1485,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   closeDb();
-  for (const f of [DB_FILE, `${DB_FILE}-shm`, `${DB_FILE}-wal`]) {
-    try { rmSync(f); } catch { /* ignore */ }
-  }
+  tmp.clean();
 });
 
 describe("replayDay", () => {
@@ -1424,7 +1549,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ingestPrices } from "./prices";
+import { ingestPrices, resolveGroupIndex, type GroupIndex } from "./prices";
 import type { TcgcsvPrice } from "./tcgcsv";
 import { closeDb } from "@/lib/db";
 
@@ -1433,16 +1558,27 @@ export interface GroupPrices {
   prices: TcgcsvPrice[];
 }
 
+/** Per-group catalog lookups are identical across the ~900 replayed days; cache them.
+ *  ingestPrices mutates a passed index when it creates printings, so the cache stays valid. */
+export type GroupIndexCache = Map<number, GroupIndex>;
+
 export async function replayDay(
   date: string,
-  groups: GroupPrices[]
-): Promise<{ written: number; unchanged: number; skippedNoCard: number }> {
-  const total = { written: 0, unchanged: 0, skippedNoCard: 0 };
+  groups: GroupPrices[],
+  cache: GroupIndexCache = new Map()
+): Promise<{ written: number; unchanged: number; skippedNoCard: number; skippedWrongGroup: number }> {
+  const total = { written: 0, unchanged: 0, skippedNoCard: 0, skippedWrongGroup: 0 };
   for (const g of groups) {
-    const r = await ingestPrices(g.groupId, g.prices, date);
+    let index = cache.get(g.groupId);
+    if (!index) {
+      index = await resolveGroupIndex(g.groupId);
+      cache.set(g.groupId, index);
+    }
+    const r = await ingestPrices(g.groupId, g.prices, date, index);
     total.written += r.written;
     total.unchanged += r.unchanged;
     total.skippedNoCard += r.skippedNoCard;
+    total.skippedWrongGroup += r.skippedWrongGroup;
   }
   return total;
 }
@@ -1511,16 +1647,22 @@ if (isMain) {
     process.exit(2);
   }
   (async () => {
+    const cache: GroupIndexCache = new Map();
     for (const date of dateRange(from, to)) {
       const extracted = await downloadAndExtract(date);
       if (!extracted) {
         console.log(`[${date}] no archive, skipped`);
         continue;
       }
-      const groups = collectGroupPrices(extracted);
-      const r = await replayDay(date, groups);
-      console.log(`[${date}] groups=${groups.length} written=${r.written} unchanged=${r.unchanged} skipped=${r.skippedNoCard}`);
-      rmSync(join(extracted, ".."), { recursive: true, force: true });
+      try {
+        const groups = collectGroupPrices(extracted);
+        // A throw here leaves the day PARTIALLY applied (earlier groups committed). It is logged
+        // and the loop stops so the operator re-runs from this date; re-runs repair.
+        const r = await replayDay(date, groups, cache);
+        console.log(`[${date}] groups=${groups.length} written=${r.written} unchanged=${r.unchanged} skippedNoCard=${r.skippedNoCard} skippedWrongGroup=${r.skippedWrongGroup}`);
+      } finally {
+        rmSync(join(extracted, ".."), { recursive: true, force: true });
+      }
     }
     closeDb();
   })().catch((e) => {
@@ -1570,6 +1712,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: command -v 7z > /dev/null # p7zip is preinstalled on ubuntu-latest; fail fast if not
       - run: npx tsx ingest/backfill.ts "${{ inputs.from }}" "${{ inputs.to }}"
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
@@ -1588,16 +1731,52 @@ git add ingest/backfill.ts tests/backfill.test.ts .github/workflows/backfill.yml
 git commit -m "feat: historical price backfill replaying tcgcsv archives"
 ```
 
+- [ ] **Step 8: Hardening (from Task 9's code review)** — `fix: backfill prunes untracked categories and unknown groups; date-tagged failures; injectable fetch; safer 7z preflight`: `collectGroupPrices(root, categoryIds?)` prunes untracked category directories one level under `<date>` (fail-open for non-integer names); `replayDay(date, groups, cache, knownGroupIds?)` skips groups absent from `sets` without any DB work (`skippedUnknownGroup`), with `loadKnownGroupIds()`; the per-day error is tagged `[date] replay failed: …`; `downloadAndExtract(date, fetchImpl = fetch)` is exported and drains non-OK bodies; the workflow preflight is `command -v 7z` (not `7z --help`, which 7-Zip parses as a command). Follow-up in the final pre-merge pass: duplicate group files merged, temp dir removed on 7z failure, shared strict `isCalendarDate` for CLI args, `loadKnownGroupIds` tested.
+
+**Fixture note (spec §10):** no raw tcgcsv fixture files are checked in; instead the per-game `extendedData` shapes were verified against the real first-run database (all three games expose `Number`/`Rarity`; sealed products have neither). Inline literals in tests remain the pattern for v1.
+
 - [ ] **Step 8: MANUAL GATE — run the backfill** (after Task 8's manual gate + first daily run)
 
-User (or engineer with secrets access) dispatches the "Historical price backfill" workflow in chunks (e.g. 3 months per run to stay well inside the 6h limit; watch the first run's timing and adjust). Order: **backfill BEFORE more daily runs accumulate**, oldest chunk first: `2024-02-08 → 2024-04-30`, then `2024-05-01 → …`, chronologically. Watch Turso's monthly row-write quota (10M free): each chunk's log lines report written counts; if a month approaches the quota, pause until the quota resets.
+User (or engineer with secrets access) dispatches the "Historical price backfill" workflow in chunks, oldest first: `2024-02-08 → 2024-04-30`, then `2024-05-01 → …`, chronologically. Run the daily ingest at least once BEFORE the backfill so the catalog exists (unknown groups are skipped without DB work).
+
+**Turso write budget — read before dispatching.** The daily job has already set every printing's `latest_prices.date` to today, so the backfill's `latest_prices` upserts are blocked by the SQL guard (no writes). What it does write is `price_snapshots` rows on days a price changed: ~54k tracked printings × the real daily change rate (unknown until measured; assume 30–60%) ≈ 16–32k rows/day ≈ **15–30M rows for the full 940 days**, versus the free tier's 10M rows written per month. Options: spread the backfill over 2–3 calendar months (~300 days per month), or take Turso's paid Developer plan for one month. **Procedure:** dispatch a first 30-day chunk, read `written=` from its log lines to get the real change rate, then size the remaining chunks to fit the month's quota. Each chunk is also bounded by the 6-hour Actions limit (~90 days per dispatch is comfortable with the category/known-group pruning in place).
+
+Archive facts (verified against the real 2024-02-08 archive): layout `<date>/<categoryId>/<groupId>/prices`, bare filename, all ~92 TCGplayer categories present (~6,566 files/day); the walker prunes untracked categories and `replayDay` skips groups not in `sets` without touching the DB. The log's `skippedUnknownGroup=` is the count of groups in OUR categories that are not in the catalog (e.g. delisted sets) — rare and worth a glance.
 
 ---
 
-### Task 10: README + push
+### Task 10: README + CI workflow + push
 
 **Files:**
 - Create/Replace: `README.md` (create-next-app will have generated a boilerplate one)
+- Create: `.github/workflows/ci.yml` (from Task 8's review: nothing else gates broken code before the nightly job runs it)
+
+- [ ] **Step 0: CI workflow**
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+```
 
 - [ ] **Step 1: Write the README**
 

@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; background: #f6f1e8; color: #1f1b16; font-family: "DM Sans", "Segoe UI", system-ui, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+    a { color: #b5573a; } a:hover { color: #8f4128; }
+    .serif { font-family: "DM Serif Display", Georgia, "Times New Roman", serif; }
+    .num { font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 820px; display: flex; flex-direction: column; background: #f6f1e8; overflow: hidden;">
+
+  <!-- Top bar -->
+  <div style="display: flex; align-items: center; gap: 36px; height: 64px; padding: 0 40px; border-bottom: 1px solid #e3dccf;">
+    <span class="serif" style="font-size: 24px; letter-spacing: -0.01em;">Hitstreak</span>
+    <div style="display: flex; gap: 22px; font-size: 15px;">
+      <span style="color: #6f665a;">Binder</span>
+      <span style="font-weight: 600; border-bottom: 2px solid #1f1b16; padding-bottom: 2px;">Sets</span>
+      <span style="color: #6f665a;">Decks</span>
+      <span style="color: #6f665a;">Alerts</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 10px; width: 300px; height: 38px; padding: 0 14px; border-radius: 999px; background: #ece5d8; color: #8a8072;">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#8a8072" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 L14 14"></path></svg>
+      <span>Find a card…</span>
+    </div>
+    <div style="width: 34px; height: 34px; border-radius: 50%; background: #d9cfbf;"></div>
+  </div>
+
+  <div style="display: flex; flex-grow: 1; overflow: hidden;">
+
+    <!-- Set list -->
+    <div style="display: flex; flex-direction: column; gap: 14px; width: 300px; flex-shrink: 0; padding: 22px 0 0 40px; border-right: 1px solid #e3dccf;">
+      <div style="display: flex; gap: 4px; padding-right: 20px;">
+        <span style="padding: 6px 12px; border-radius: 999px; background: #1f1b16; color: #f6f1e8; font-size: 13px; font-weight: 500;">Pokémon</span>
+        <span style="padding: 6px 12px; border-radius: 999px; color: #6f665a; font-size: 13px;">One Piece</span>
+        <span style="padding: 6px 12px; border-radius: 999px; color: #6f665a; font-size: 13px;">Riftbound</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px; padding-right: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; background: #fbf8f2; border: 1px solid #e3dccf;">
+          <div style="display: flex; justify-content: space-between;"><span style="font-weight: 600;">Prismatic Evolutions</span><span class="num" style="color: #6f665a; font-size: 12px;">62 / 180</span></div>
+          <div style="height: 4px; background: #ece5d8; border-radius: 2px; overflow: hidden;"><div style="width: 34%; height: 100%; background: #b5573a;"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px;">
+          <div style="display: flex; justify-content: space-between;"><span>Surging Sparks</span><span class="num" style="color: #8a8072; font-size: 12px;">118 / 252</span></div>
+          <div style="height: 4px; background: #ece5d8; border-radius: 2px; overflow: hidden;"><div style="width: 47%; height: 100%; background: #cfc5b4;"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px;">
+          <div style="display: flex; justify-content: space-between;"><span>Obsidian Flames</span><span class="num" style="color: #8a8072; font-size: 12px;">197 / 230</span></div>
+          <div style="height: 4px; background: #ece5d8; border-radius: 2px; overflow: hidden;"><div style="width: 86%; height: 100%; background: #cfc5b4;"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px;">
+          <div style="display: flex; justify-content: space-between;"><span>151</span><span class="num" style="color: #8a8072; font-size: 12px;">207 / 207</span></div>
+          <div style="height: 4px; background: #ece5d8; border-radius: 2px; overflow: hidden;"><div style="width: 100%; height: 100%; background: #2f7a4f;"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px;">
+          <div style="display: flex; justify-content: space-between;"><span>Paldea Evolved</span><span class="num" style="color: #8a8072; font-size: 12px;">41 / 279</span></div>
+          <div style="height: 4px; background: #ece5d8; border-radius: 2px; overflow: hidden;"><div style="width: 15%; height: 100%; background: #cfc5b4;"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px;">
+          <div style="display: flex; justify-content: space-between;"><span>Twilight Masquerade</span><span class="num" style="color: #8a8072; font-size: 12px;">0 / 226</span></div>
+          <div style="height: 4px; background: #ece5d8; border-radius: 2px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Set detail -->
+    <div style="display: flex; flex-direction: column; gap: 18px; flex-grow: 1; padding: 22px 40px 0 32px;">
+      <div style="display: flex; align-items: flex-end; gap: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="color: #6f665a; font-size: 13px;">Scarlet &amp; Violet · Released Jan 17, 2025</span>
+          <span class="serif" style="font-size: 36px; line-height: 1; letter-spacing: -0.01em;">Prismatic Evolutions</span>
+          <span style="color: #6f665a;">You own <span class="num" style="color: #1f1b16; font-weight: 600;">62 of 180</span> cards · set value <span class="num" style="color: #1f1b16; font-weight: 600;">$2,140</span> · your copies worth <span class="num" style="color: #1f1b16; font-weight: 600;">$1,890</span></span>
+        </div>
+        <div style="flex-grow: 1;"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px; width: 220px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6f665a;"><span>Set completion</span><span class="num" style="font-weight: 600; color: #1f1b16;">34%</span></div>
+          <div style="height: 8px; background: #ece5d8; border-radius: 4px; overflow: hidden;"><div style="width: 34%; height: 100%; background: #b5573a;"></div></div>
+          <span style="color: #8a8072; font-size: 12px;">Missing cards cost <span class="num" style="color: #1f1b16; font-weight: 600;">$412</span> to complete</span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span style="padding: 6px 12px; border-radius: 999px; background: #1f1b16; color: #f6f1e8; font-size: 13px;">All 180</span>
+        <span style="padding: 6px 12px; border-radius: 999px; border: 1px solid #e3dccf; color: #6f665a; font-size: 13px;">Owned 62</span>
+        <span style="padding: 6px 12px; border-radius: 999px; border: 1px solid #e3dccf; color: #6f665a; font-size: 13px;">Missing 118</span>
+        <div style="flex-grow: 1;"></div>
+        <span style="color: #8a8072; font-size: 13px;">Sort · Number</span>
+        <span style="color: #8a8072; font-size: 13px;">Tap a card to mark it owned</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 14px 12px;">
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; background: #e9d9c2; border: 1px solid #d9c6a8; box-shadow: 0 6px 14px rgba(60, 40, 10, 0.12); display: flex; align-items: flex-start; justify-content: flex-end; padding: 6px;"><span class="num" style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 999px; background: #1f1b16; color: #f6f1e8;">×2</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #6f665a;">001</span><span class="num" style="font-weight: 600;">$0.40</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; background: #e9d9c2; border: 1px solid #d9c6a8; box-shadow: 0 6px 14px rgba(60, 40, 10, 0.12); display: flex; align-items: flex-start; justify-content: flex-end; padding: 6px;"><span class="num" style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 999px; background: #1f1b16; color: #f6f1e8;">×1</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #6f665a;">002</span><span class="num" style="font-weight: 600;">$0.35</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed #cfc5b4; background: #f2ece1;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #8a8072;">003</span><span class="num" style="color: #8a8072;">$0.30</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; background: #e9d9c2; border: 1px solid #d9c6a8; box-shadow: 0 6px 14px rgba(60, 40, 10, 0.12); display: flex; align-items: flex-start; justify-content: flex-end; padding: 6px;"><span class="num" style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 999px; background: #1f1b16; color: #f6f1e8;">×4</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #6f665a;">004</span><span class="num" style="font-weight: 600;">$0.25</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed #cfc5b4; background: #f2ece1;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #8a8072;">005</span><span class="num" style="color: #8a8072;">$1.10</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed #cfc5b4; background: #f2ece1;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #8a8072;">006</span><span class="num" style="color: #8a8072;">$0.30</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; background: #e9d9c2; border: 1px solid #d9c6a8; box-shadow: 0 6px 14px rgba(60, 40, 10, 0.12); display: flex; align-items: flex-start; justify-content: flex-end; padding: 6px;"><span class="num" style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 999px; background: #1f1b16; color: #f6f1e8;">×1</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #6f665a;">007</span><span class="num" style="font-weight: 600;">$3.80</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed #cfc5b4; background: #f2ece1;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #8a8072;">008</span><span class="num" style="color: #8a8072;">$0.45</span></div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed #cfc5b4; background: #f2ece1;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #8a8072;">009</span><span class="num" style="color: #8a8072;">$0.30</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; background: #e9d9c2; border: 1px solid #d9c6a8; box-shadow: 0 6px 14px rgba(60, 40, 10, 0.12); display: flex; align-items: flex-start; justify-content: flex-end; padding: 6px;"><span class="num" style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 999px; background: #1f1b16; color: #f6f1e8;">×1</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #6f665a;">010</span><span class="num" style="font-weight: 600;">$12.60</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed #cfc5b4; background: #f2ece1;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #8a8072;">011</span><span class="num" style="color: #8a8072;">$0.35</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; background: #e9d9c2; border: 1px solid #d9c6a8; box-shadow: 0 6px 14px rgba(60, 40, 10, 0.12); display: flex; align-items: flex-start; justify-content: flex-end; padding: 6px;"><span class="num" style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 999px; background: #1f1b16; color: #f6f1e8;">×2</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #6f665a;">012</span><span class="num" style="font-weight: 600;">$0.50</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed #cfc5b4; background: #f2ece1;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #8a8072;">013</span><span class="num" style="color: #8a8072;">$0.30</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed #cfc5b4; background: #f2ece1;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #8a8072;">014</span><span class="num" style="color: #8a8072;">$0.40</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; background: #e9d9c2; border: 1px solid #d9c6a8; box-shadow: 0 6px 14px rgba(60, 40, 10, 0.12); display: flex; align-items: flex-start; justify-content: flex-end; padding: 6px;"><span class="num" style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 999px; background: #1f1b16; color: #f6f1e8;">×1</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #6f665a;">015</span><span class="num" style="font-weight: 600;">$0.60</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed #cfc5b4; background: #f2ece1;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;"><span class="num" style="color: #8a8072;">016</span><span class="num" style="color: #8a8072;">$0.30</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

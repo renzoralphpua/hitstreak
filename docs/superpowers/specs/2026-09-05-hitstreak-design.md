@@ -55,7 +55,9 @@ Core loop: add cards you own to portfolios → the app tracks each card's market
 - No SKU (condition-level) pricing; one price per card/printing-subtype
 - Etiquette: identifiable User-Agent, ~250ms between requests (site's own guidance)
 
-**Risks & mitigations:** tcgcsv is a single-maintainer hobby mirror in a legal gray zone (TCGplayer's public API is closed). Mitigation: archive every raw daily response to our own R2 bucket before processing, so the DB can always be re-derived and history is never lost. Commercial-scale use would need a licensed source (JustTCG, etc.) — a swap at the ingestion layer only.
+**Risks & mitigations:** tcgcsv is a single-maintainer hobby mirror in a legal gray zone (TCGplayer's public API is closed). Mitigation: archive every raw daily response to our own R2 bucket before processing, so the DB can always be re-derived and history is never lost. Archive-first: a raw response is archived before its rows are written, and an archive failure aborts the affected unit — the whole game if the groups listing fails to archive, otherwise just that group for the day (other groups continue; the run still exits non-zero). Commercial-scale use would need a licensed source (JustTCG, etc.) — a swap at the ingestion layer only.
+
+**R2 volume note:** raw archives are uncompressed JSON, ~800+ objects/day for Pokémon alone; realistically tens of MB/day across the three games, so the 10 GB free tier lasts months, not years. Overage is ~$0.015/GB-month with free egress — under $1/month even at 50 GB over — so this is a cost footnote, not a design constraint. If it matters later, an R2 lifecycle rule expiring raw archives older than N months (once the backfill is verified) is the lever.
 
 **Meta decks:** manually curated by admin (~monthly, after set releases). No scraping in v1.
 
@@ -81,6 +83,10 @@ License-hub patterns carried forward: async `db()` with cached schema-ensure pro
 ## 5. Data model
 
 Conventions: integer PKs, ISO-8601 text dates, `user_id` scoping on all user data, TCGplayer IDs preserved as natural keys for idempotent upserts.
+
+Two deliberate decisions (from Task 2's review):
+- **Referential integrity is enforced by application code and tests, not the database.** SQLite/libSQL leaves `REFERENCES` unenforced unless `PRAGMA foreign_keys = ON` is issued per connection, and per-connection pragmas are not dependable over Turso's stateless HTTP transport. The `REFERENCES` clauses in the schema are documentation; ingestion code maps TCGplayer IDs to internal IDs explicitly and tests assert no orphans.
+- **Money is stored as `REAL` (dollars), rounded at display time — not ledger-grade.** This mirrors tcgcsv's decimal JSON prices exactly. All later money columns (`acquired_price`, `total_value`, alert `threshold`) use the same `REAL` dollars convention so values join and subtract without unit conversion; UI formats with 2 decimals. Never introduce integer cents alongside.
 
 **Catalog** (upserted daily from tcgcsv):
 - `games` — id, tcgplayer_category_id, name, slug
@@ -178,9 +184,18 @@ Pure functions over catalog data (card `attrs`), run live in the builder UI and 
 11. Admin curation screen
 12. Polish pass: responsive layouts, empty states, seed real collection
 
-## 12. Open questions / follow-ups
+## 12. Visual design
+
+Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art as the hero, DM Serif Display for values and headings, DM Sans body, terracotta accent; light is the default theme with a dark (warm charcoal) toggle. Tokens, conventions (owned vs missing, selected state, nav, icons) and the per-screen mockups live in `docs/design/README.md` and the `docs/design/*.dc.html` artboards; the live canvas is linked from that README. Screens covered: portfolio home, set browser, card detail, meta decks + gap analysis, deck builder + validation, alerts, phone layout, dark-mode reference.
+
+**Implementation approach (binding for Phase 2+):** the mockups are the reference, not the code. The app is built from a small reusable component library so any visual change is made once and lands on every screen:
+- **Tokens** live in one place — `app/globals.css` via Tailwind v4 `@theme` (the scaffold already ships Tailwind 4). Every Binder color/font/radius is a CSS variable exposed as a Tailwind utility (`bg-ground`, `bg-surface`, `text-ink`, `text-muted`, `text-dim`, `text-accent`, `text-gain`, `border-hairline`, `font-display`, `font-body`). Dark mode is a `[data-theme="dark"]` block reassigning the same variables; light is default.
+- **Primitives** in `components/ui/`, one component per file, small typed props: `TopNav`, `Pill` (tab/filter chip; selected = inverted ink), `Panel`, `StatTile`, `PriceDelta`, `ProgressBar`, `CardTile` (owned/missing states + `×N` chip), `CardRow`, `SectionHeading`, `SearchField`, `Button` (primary/secondary), `TierBadge`, `ValidationList`, `BottomTabBar` (phone).
+- **Screens compose primitives only** — no ad-hoc styling in route files. Each primitive gets a Storybook-free "gallery" route (`/dev/ui`, dev-only) so all variants can be reviewed on one page.
+
+## 13. Open questions / follow-ups
 
 - Riftbound deck-construction rules — verify against official Riot rules (step 10)
-- Exact per-game `extendedData` field shapes — confirm from fixture data during step 2
+- ~~Exact per-game `extendedData` field shapes~~ — **resolved 2026-09-05 against real data:** all three games expose `Number` and `Rarity` (Pokémon also HP/Stage/Attacks; One Piece: Color/CardType/Life/Power/Attribute; Riftbound: Energy Cost/Power Cost/Might/Card Type/Tag/Domain). Sealed products (~10% of rows) have neither, and correctly land with null number/rarity.
 - Domain registration (`hitstreak.gg` / `hitstreak.app`) — user purchase, not build-blocking
 - Whether Pokémon catalog volume (largest of the three) needs ingestion batching/chunked upserts — measure in step 2
