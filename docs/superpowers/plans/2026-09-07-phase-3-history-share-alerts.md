@@ -2094,6 +2094,10 @@ The whole-branch review that closes Task 9 found these; fixed on this branch in
 - Commit `2c502a3`'s message names the design README, which it did not touch (Tasks 2 and 7 had
   already made those edits). The branch is never force-pushed, so: drop "design README" from the
   squash-merge message.
+- **`APP_URL` is required only once Resend is configured.** The CLI used to exit 2 without it before
+  materializing anything, so a missing secret would have cost a night of `portfolio_history` even
+  with email disabled (when the URL is never used). Now it exits 2 only when a mailer exists and
+  there is no origin for the email links; README and `.env.example` say so.
 
 ### Known items, deliberately left
 

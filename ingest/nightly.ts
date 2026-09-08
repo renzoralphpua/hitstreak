@@ -122,12 +122,15 @@ if (isMain) {
     console.error("usage: tsx ingest/nightly.ts [YYYY-MM-DD]");
     process.exit(2);
   }
+  // The origin is only used for links inside alert emails, so it is required only once Resend is
+  // configured — a missing APP_URL must never cost a night of portfolio_history.
+  const mailer = mailerFromEnv();
   const appUrl = process.env.APP_URL ?? process.env.BETTER_AUTH_URL;
-  if (!appUrl) {
-    console.error("APP_URL (or BETTER_AUTH_URL) is required for links in alert emails");
+  if (mailer && !appUrl) {
+    console.error("APP_URL (or BETTER_AUTH_URL) is required for links in alert emails when Resend is configured");
     process.exit(2);
   }
-  void runNightly({ date: argDate ?? new Date().toISOString().slice(0, 10), mailer: mailerFromEnv(), appUrl })
+  void runNightly({ date: argDate ?? new Date().toISOString().slice(0, 10), mailer, appUrl: appUrl ?? "http://localhost:3000" })
     .then((s) => {
       closeDb();
       console.log(`NIGHTLY_SUMMARY ${JSON.stringify(s)}`);
