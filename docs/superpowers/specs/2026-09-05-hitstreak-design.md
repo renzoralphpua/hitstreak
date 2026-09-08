@@ -107,7 +107,7 @@ Two deliberate decisions (from Task 2's review):
 - `share_links` — id, portfolio_id, token (unguessable), enabled, created_at
 
 **Alerts:**
-- `price_alerts` — id, user_id, printing_id, direction (above/below), threshold, last_fired_at. Re-arms only after price crosses back over the threshold.
+- `price_alerts` — id, user_id, printing_id, direction (above/below), threshold, `armed` (1 = emails on the next crossing; 0 = fired, waiting to re-arm), last_fired_at, last_fired_price, created_at. Re-arms only after price crosses back over the threshold (columns as shipped 2026-09-08).
 
 **Decks:**
 - `decks` — id, game_id, owner_user_id (**NULL = curated meta deck**), name, archetype, tier, format, source_note, updated_at
