@@ -60,7 +60,7 @@ tests/ui/card-row-tone.test.tsx
 
 **Files:** modify `lib/schema.ts`, `lib/db.ts`, `lib/portfolios.ts`; create `lib/history.ts`, `tests/history.test.ts`
 
-- [ ] **Step 1: Schema.** Append to `lib/schema.ts`:
+- [x] **Step 1: Schema.** Append to `lib/schema.ts`:
 
 ```ts
 // Phase 3: materialized binder value, share links, price alerts. FKs are documentation (unenforced
@@ -101,7 +101,7 @@ export const HISTORY_SCHEMA_SQL = `
 
 In `lib/db.ts` import it and run `SCHEMA_SQL + AUTH_SCHEMA_SQL + PORTFOLIO_SCHEMA_SQL + HISTORY_SCHEMA_SQL`; update the comment.
 
-- [ ] **Step 2: Cascade.** In `lib/portfolios.ts` `deletePortfolio`, add to the batch before the portfolios delete:
+- [x] **Step 2: Cascade.** In `lib/portfolios.ts` `deletePortfolio`, add to the batch before the portfolios delete:
 
 ```ts
       { sql: "DELETE FROM portfolio_history WHERE portfolio_id = ?", args: [id] },
@@ -128,7 +128,7 @@ export async function getCardHolders(userId: string, cardId: number): Promise<Ca
 }
 ```
 
-- [ ] **Step 3: Failing tests** — `tests/history.test.ts`:
+- [x] **Step 3: Failing tests** — `tests/history.test.ts`:
 
 ```ts
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -254,7 +254,7 @@ describe("getCardHolders", () => {
 
 Run: `npx vitest run tests/history.test.ts` → FAIL (module not found).
 
-- [ ] **Step 4: Implement `lib/history.ts`:**
+- [x] **Step 4: Implement `lib/history.ts`:**
 
 ```ts
 // lib/history.ts
@@ -345,8 +345,8 @@ export function seriesStats(points: Point[]): SeriesStats | null {
 }
 ```
 
-- [ ] **Step 5:** `npx vitest run tests/history.test.ts` → PASS. Full `npm test`, `npm run typecheck`, `npm run lint`.
-- [ ] **Step 6: Commit** — `feat(history): portfolio_history/share_links/price_alerts schema, history read layer, card holders`
+- [x] **Step 5:** `npx vitest run tests/history.test.ts` → PASS. Full `npm test`, `npm run typecheck`, `npm run lint`.
+- [x] **Step 6: Commit** — `feat(history): portfolio_history/share_links/price_alerts schema, history read layer, card holders`
 
 ---
 
@@ -354,7 +354,7 @@ export function seriesStats(points: Point[]): SeriesStats | null {
 
 **Files:** create `components/ui/LineChart.tsx`, `components/ui/RangePills.tsx`, `tests/ui/line-chart.test.tsx`, `tests/ui/range-pills.test.tsx`; modify `components/ui/Pill.tsx`, `components/ui/Button.tsx`, `app/(app)/portfolios/[id]/HoldingsTable.tsx`, `tests/ui/primitives-a.test.tsx`, `components/ui/index.ts`, `app/dev/ui/page.tsx`, `docs/design/README.md`
 
-- [ ] **Step 1: Failing tests.** `tests/ui/line-chart.test.tsx`:
+- [x] **Step 1: Failing tests.** `tests/ui/line-chart.test.tsx`:
 
 ```tsx
 // @vitest-environment jsdom
@@ -423,11 +423,11 @@ describe("RangePills", () => {
 });
 ```
 
-- [ ] **Step 2: `Pill` scroll prop.** In `components/ui/Pill.tsx`: `type Props = ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean; href?: string; scroll?: boolean }`; destructure `scroll` alongside `href` (so it never reaches the `<button>`), and pass `scroll={scroll}` to `Link`. Doc: "`scroll={false}` keeps the page where it is — chart range pills sit mid-page."
+- [x] **Step 2: `Pill` scroll prop.** In `components/ui/Pill.tsx`: `type Props = ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean; href?: string; scroll?: boolean }`; destructure `scroll` alongside `href` (so it never reaches the `<button>`), and pass `scroll={scroll}` to `Link`. Doc: "`scroll={false}` keeps the page where it is — chart range pills sit mid-page."
 
-- [ ] **Step 2b: `Button` size prop** (the 44px rule in `docs/design/README.md` — callers have been overriding `min-h-11` with `min-h-8`, which `twMerge` honours at every breakpoint, giving 32px targets on phones). Add `size?: "md" | "sm"` to both arms of `Props` in `components/ui/Button.tsx`; compute `cn(base, size === "sm" && "min-h-11 px-3 py-1 text-[13px] md:min-h-8", skin(variant), className)` (the `md:` variant has a different modifier so it survives beside `min-h-11`, exactly like `Pill`'s shape string); add `"size"` to the keys `domProps` strips. Sweep the three existing offenders in `app/(app)/portfolios/[id]/HoldingsTable.tsx` (the `−`/`+` steppers and Remove: drop `min-h-8 … py-1` from their `className`, add `size="sm"`, keep `px-2.5` on the steppers). Test in `tests/ui/primitives-a.test.tsx`: `render(<Button size="sm">x</Button>)` → `className` matches `/min-h-11/` and `/md:min-h-8/`; default has no `md:min-h-8`. README "Tap targets" paragraph becomes: "`Button` and `Input` are 44px everywhere (`min-h-11`); `Button size="sm"` and `Pill` are `min-h-11 md:min-h-8` — a thumb target on phones, the compact 32px control of the mockups from `md` up." Gallery: one `size="sm"` row. **Every Button in Tasks 3–7 below uses `size="sm"` instead of a `min-h-8` class override.**
+- [x] **Step 2b: `Button` size prop** (the 44px rule in `docs/design/README.md` — callers have been overriding `min-h-11` with `min-h-8`, which `twMerge` honours at every breakpoint, giving 32px targets on phones). Add `size?: "md" | "sm"` to both arms of `Props` in `components/ui/Button.tsx`; compute `cn(base, size === "sm" && "min-h-11 px-3 py-1 text-[13px] md:min-h-8", skin(variant), className)` (the `md:` variant has a different modifier so it survives beside `min-h-11`, exactly like `Pill`'s shape string); add `"size"` to the keys `domProps` strips. Sweep the three existing offenders in `app/(app)/portfolios/[id]/HoldingsTable.tsx` (the `−`/`+` steppers and Remove: drop `min-h-8 … py-1` from their `className`, add `size="sm"`, keep `px-2.5` on the steppers). Test in `tests/ui/primitives-a.test.tsx`: `render(<Button size="sm">x</Button>)` → `className` matches `/min-h-11/` and `/md:min-h-8/`; default has no `md:min-h-8`. README "Tap targets" paragraph becomes: "`Button` and `Input` are 44px everywhere (`min-h-11`); `Button size="sm"` and `Pill` are `min-h-11 md:min-h-8` — a thumb target on phones, the compact 32px control of the mockups from `md` up." Gallery: one `size="sm"` row. **Every Button in Tasks 3–7 below uses `size="sm"` instead of a `min-h-8` class override.**
 
-- [ ] **Step 3: `LineChart`:**
+- [x] **Step 3: `LineChart`:**
 
 ```tsx
 // components/ui/LineChart.tsx
@@ -507,7 +507,7 @@ export default function LineChart({ points, from, to, height = 150, label, class
 }
 ```
 
-- [ ] **Step 4: `RangePills`:**
+- [x] **Step 4: `RangePills`:**
 
 ```tsx
 // components/ui/RangePills.tsx
@@ -531,8 +531,8 @@ export default function RangePills({ current, hrefFor, className }: { current: R
 
 (Use `cn` rather than the template string if you prefer — either way, no ad-hoc colours.)
 
-- [ ] **Step 5:** export both from `components/ui/index.ts`; add gallery sections "LineChart" (sample points over a 30-day window, plus an empty one) and "RangePills" (`hrefFor={(r) => `#${r}`}`) to `app/dev/ui/page.tsx`; add rows to the "Implemented as" table in `docs/design/README.md`: `Value / price chart → LineChart`, `7D · 30D · 90D · 1Y · All row → RangePills`. Run `tests/ui/gallery.test.tsx` — extend it if it enumerates sections.
-- [ ] **Step 6:** `npm test`, typecheck, lint → green. **Commit** — `feat(ui): LineChart and RangePills primitives; Pill scroll prop; Button size`
+- [x] **Step 5:** export both from `components/ui/index.ts`; add gallery sections "LineChart" (sample points over a 30-day window, plus an empty one) and "RangePills" (`hrefFor={(r) => `#${r}`}`) to `app/dev/ui/page.tsx`; add rows to the "Implemented as" table in `docs/design/README.md`: `Value / price chart → LineChart`, `7D · 30D · 90D · 1Y · All row → RangePills`. Run `tests/ui/gallery.test.tsx` — extend it if it enumerates sections.
+- [x] **Step 6:** `npm test`, typecheck, lint → green. **Commit** — `feat(ui): LineChart and RangePills primitives; Pill scroll prop; Button size`
 
 ---
 
@@ -540,7 +540,7 @@ export default function RangePills({ current, hrefFor, className }: { current: R
 
 **Files:** modify `app/(app)/cards/[id]/page.tsx`, `app/(app)/portfolios/[id]/page.tsx`
 
-- [ ] **Step 1: Card detail.** Switch the page's props to `PageProps<"/cards/[id]">` (keep `type Params` for `generateMetadata`). Move the existing `primary` computation above the data loads. `primary` is `PrintingPrice | null` — ~4% of catalog cards (sealed products, promo sets) have **no printings yet** because printings are created by the price ingest — so the charted printing is nullable too. `searchParams` values are `string | string[] | undefined`, and `parseRouteId` takes a `string`, hence the `typeof` narrowing:
+- [x] **Step 1: Card detail.** Switch the page's props to `PageProps<"/cards/[id]">` (keep `type Params` for `generateMetadata`). Move the existing `primary` computation above the data loads. `primary` is `PrintingPrice | null` — ~4% of catalog cards (sealed products, promo sets) have **no printings yet** because printings are created by the price ingest — so the charted printing is nullable too. `searchParams` values are `string | string[] | undefined`, and `parseRouteId` takes a `string`, hence the `typeof` narrowing:
 
 ```ts
   const { range: rawRange, p: rawP } = await searchParams;
@@ -627,7 +627,7 @@ Under the printings panel add the "In your binders" block and the alert shortcut
 
 The alerts page (Task 7) reads `?printing=`; until then the link lands on the placeholder — fine.
 
-- [ ] **Step 2: Binder detail.** Same `searchParams` treatment (`PageProps<"/portfolios/[id]">`). Nothing populates `portfolio_history` until Task 6, so today every binder has an empty history — `withLivePoint` adds tonight's live value as the single point (and, once the nightly runs, only when today's row isn't there yet):
+- [x] **Step 2: Binder detail.** Same `searchParams` treatment (`PageProps<"/portfolios/[id]">`). Nothing populates `portfolio_history` until Task 6, so today every binder has an empty history — `withLivePoint` adds tonight's live value as the single point (and, once the nightly runs, only when today's row isn't there yet):
 
 ```ts
   const history = withLivePoint(await getPortfolioHistory(userId, portfolioId, from, today), today, summary.value);
@@ -652,7 +652,7 @@ Under the `PriceDelta` add:
         </div>
 ```
 
-- [ ] **Step 3:** typecheck (`next typegen` runs first, so `PageProps` resolves), lint, test. Manually: `npm run dev`, sign in, open `/cards/22189?range=1y` (real snapshots), `/cards/31532` or any card with no printings (empty panel, no crash), `/portfolios/2?range=all` — must show a single flat line at today's value (one `M` in the path, end dot present), not "Not enough history yet." **Commit** — `feat(charts): price history on card detail (range + printing), binder value chart, card holders, alert shortcut`
+- [x] **Step 3:** typecheck (`next typegen` runs first, so `PageProps` resolves), lint, test. Manually: `npm run dev`, sign in, open `/cards/22189?range=1y` (real snapshots), `/cards/31532` or any card with no printings (empty panel, no crash), `/portfolios/2?range=all` — must show a single flat line at today's value (one `M` in the path, end dot present), not "Not enough history yet." **Commit** — `feat(charts): price history on card detail (range + printing), binder value chart, card holders, alert shortcut`
 
 ---
 
@@ -660,7 +660,7 @@ Under the `PriceDelta` add:
 
 **Files:** create `lib/share.ts`, `tests/share.test.ts`, `tests/share-actions.test.ts`, `app/(app)/portfolios/[id]/SharePanel.tsx`, `tests/ui/share-panel.test.tsx`, `app/s/[token]/page.tsx`; modify `app/(app)/portfolios/actions.ts`, `app/(app)/portfolios/[id]/page.tsx`, `tests/proxy.test.ts`
 
-- [ ] **Step 1: Failing data-layer tests** — `tests/share.test.ts`:
+- [x] **Step 1: Failing data-layer tests** — `tests/share.test.ts`:
 
 ```ts
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -727,7 +727,7 @@ describe("share links", () => {
 });
 ```
 
-- [ ] **Step 2: Implement `lib/share.ts`:**
+- [x] **Step 2: Implement `lib/share.ts`:**
 
 ```ts
 // lib/share.ts
@@ -823,7 +823,7 @@ export async function getSharedPortfolio(token: string): Promise<SharedPortfolio
 
 Run `tests/share.test.ts` → PASS.
 
-- [ ] **Step 3: Actions.** Append to `app/(app)/portfolios/actions.ts`:
+- [x] **Step 3: Actions.** Append to `app/(app)/portfolios/actions.ts`:
 
 ```ts
 export async function enableShareAction(portfolioId: number) {
@@ -847,7 +847,7 @@ export async function disableShareAction(portfolioId: number) {
 
 (`import * as S from "@/lib/share"`.) Test `tests/share-actions.test.ts` in the style of `tests/actions.test.ts`: no session → `Not signed in`; bad id → `Invalid id`; owner enable → `{ ok: true, data: { token, enabled: true } }` and `revalidatePath("/portfolios/<id>")`; other user → `Portfolio not found`; disable on a binder with no link → `Portfolio not found`.
 
-- [ ] **Step 4: `SharePanel` (client)** — `app/(app)/portfolios/[id]/SharePanel.tsx`:
+- [x] **Step 4: `SharePanel` (client)** — `app/(app)/portfolios/[id]/SharePanel.tsx`:
 
 ```tsx
 "use client";
@@ -932,7 +932,7 @@ export default function SharePanel({ portfolioId, link }: { portfolioId: number;
 
 Test `tests/ui/share-panel.test.tsx` (mock the three actions and `next/navigation` as `holdings-table.test.tsx` does; stub `navigator.clipboard.writeText` with `vi.fn`): Off state shows "Share this binder" → click → `enableShareAction(7)` → shows `/s/<token>` and "Anyone with the link can view"; Copy → clipboard gets `http://localhost:3000/s/<token>` (jsdom origin) and "Link copied."; Turn off → `disableShareAction(7)` and back to Off; New link confirms first then `regenerateShareAction(7)` and shows the new token; an action error renders an alert.
 
-- [ ] **Step 5: Public page** — `app/s/[token]/page.tsx` (outside `(app)`: no shell, no session):
+- [x] **Step 5: Public page** — `app/s/[token]/page.tsx` (outside `(app)`: no shell, no session):
 
 ```tsx
 import { cache } from "react";
@@ -1022,8 +1022,8 @@ export default async function SharedPortfolioPage({ params, searchParams }: Page
 
 Add to `tests/proxy.test.ts`: `it("leaves public share pages alone", …)` → `proxy(req("/s/abcdefghijklmnopqrstuv"))` has no `location` header.
 
-- [ ] **Step 6: Wire the panel.** In `app/(app)/portfolios/[id]/page.tsx` load `getShareLink(userId, portfolioId)` with the other reads and render `<SharePanel portfolioId={portfolioId} link={shareLink} />` at the bottom of the left column.
-- [ ] **Step 7:** `npm test`, typecheck, lint. Manually: enable sharing on binder 2, open the `/s/…` URL in a private window (no cookie) → renders; `curl -si localhost:3000/s/AAAAAAAAAAAAAAAAAAAAAA` → 404. **Commit** — `feat(share): read-only binder share links (/s/[token]) with on/off/regenerate`
+- [x] **Step 6: Wire the panel.** In `app/(app)/portfolios/[id]/page.tsx` load `getShareLink(userId, portfolioId)` with the other reads and render `<SharePanel portfolioId={portfolioId} link={shareLink} />` at the bottom of the left column.
+- [x] **Step 7:** `npm test`, typecheck, lint. Manually: enable sharing on binder 2, open the `/s/…` URL in a private window (no cookie) → renders; `curl -si localhost:3000/s/AAAAAAAAAAAAAAAAAAAAAA` → 404. **Commit** — `feat(share): read-only binder share links (/s/[token]) with on/off/regenerate`
 
 ---
 
@@ -1031,7 +1031,7 @@ Add to `tests/proxy.test.ts`: `it("leaves public share pages alone", …)` → `
 
 **Files:** create `lib/alerts.ts`, `tests/alerts.test.ts`
 
-- [ ] **Step 1: Failing tests** — `tests/alerts.test.ts`:
+- [x] **Step 1: Failing tests** — `tests/alerts.test.ts`:
 
 ```ts
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -1113,7 +1113,7 @@ describe("alerts data layer", () => {
 });
 ```
 
-- [ ] **Step 2: Implement `lib/alerts.ts`:**
+- [x] **Step 2: Implement `lib/alerts.ts`:**
 
 ```ts
 // lib/alerts.ts
@@ -1210,7 +1210,7 @@ export async function getAlertCard(userId: string, printingId: number): Promise<
 }
 ```
 
-- [ ] **Step 3:** PASS; full suite, typecheck, lint. **Commit** — `feat(alerts): price alert data layer and evaluateAlert state machine`
+- [x] **Step 3:** PASS; full suite, typecheck, lint. **Commit** — `feat(alerts): price alert data layer and evaluateAlert state machine`
 
 ---
 
@@ -1218,7 +1218,7 @@ export async function getAlertCard(userId: string, printingId: number): Promise<
 
 **Files:** create `ingest/mailer.ts`, `ingest/nightly.ts`, `tests/mailer.test.ts`, `tests/nightly.test.ts`; modify `.github/workflows/daily-ingest.yml`, `.env.example`
 
-- [ ] **Step 1: Mailer** — `ingest/mailer.ts`:
+- [x] **Step 1: Mailer** — `ingest/mailer.ts`:
 
 ```ts
 // Email delivery for alerts. Resend's REST API over fetch (no SDK); `Mailer` is the seam the
@@ -1280,7 +1280,7 @@ export function alertEmail(i: AlertEmailInput): Mail {
 
 `tests/mailer.test.ts`: `alertEmail` subject/text/html contain card, threshold, price, link, and `<` in a card name is escaped in the html; `createResendMailer` posts the right JSON to `https://api.resend.com/emails` with the bearer header (fake `fetchImpl`), and throws on a non-2xx; `mailerFromEnv()` is null without both env vars.
 
-- [ ] **Step 2: Failing nightly tests** — `tests/nightly.test.ts`:
+- [x] **Step 2: Failing nightly tests** — `tests/nightly.test.ts`:
 
 ```ts
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
@@ -1382,7 +1382,7 @@ describe("runNightly alerts", () => {
 
 (Adjust the "ignores an unpriced printing" assertions to whatever is exact once the earlier tests' state is known — the point is that the `bundle` alert neither fires nor re-arms. The `vi` import is unused if you don't need it; drop it.)
 
-- [ ] **Step 3: Implement `ingest/nightly.ts`:**
+- [x] **Step 3: Implement `ingest/nightly.ts`:**
 
 ```ts
 // Nightly job, run by the "Daily price ingest" workflow right after ingest/daily.ts:
@@ -1520,7 +1520,7 @@ if (isMain) {
 }
 ```
 
-- [ ] **Step 4: Workflow + env.** In `.github/workflows/daily-ingest.yml` add after the ingest step:
+- [x] **Step 4: Workflow + env.** In `.github/workflows/daily-ingest.yml` add after the ingest step:
 
 ```yaml
       # Runs even when the ingest step failed part-way: whatever prices did land are worth
@@ -1548,7 +1548,7 @@ ALERT_FROM_EMAIL=Hitstreak <alerts@hitstreak.app>
 APP_URL=
 ```
 
-- [ ] **Step 5:** tests, typecheck, lint. Locally: `$env:TURSO_DATABASE_URL='file:hitstreak.local.db'; $env:APP_URL='http://localhost:3000'; npx tsx ingest/nightly.ts` → `NIGHTLY_SUMMARY` with `portfolios ≥ 1`, then `/portfolios/2` shows a materialized point. **Commit** — `feat(nightly): materialize portfolio_history and evaluate/email price alerts after the daily ingest`
+- [x] **Step 5:** tests, typecheck, lint. Locally: `$env:TURSO_DATABASE_URL='file:hitstreak.local.db'; $env:APP_URL='http://localhost:3000'; npx tsx ingest/nightly.ts` → `NIGHTLY_SUMMARY` with `portfolios ≥ 1`, then `/portfolios/2` shows a materialized point. **Commit** — `feat(nightly): materialize portfolio_history and evaluate/email price alerts after the daily ingest`
 
 ---
 
@@ -1556,9 +1556,9 @@ APP_URL=
 
 **Files:** create `lib/action-utils.ts`, `app/(app)/alerts/actions.ts`, `app/(app)/alerts/AlertList.tsx`, `app/(app)/alerts/NewAlertForm.tsx`, `components/ui/useCardSearch.ts`, `tests/alert-actions.test.ts`, `tests/ui/alert-list.test.tsx`, `tests/ui/new-alert-form.test.tsx`, `tests/ui/card-row-tone.test.tsx`; modify `app/(app)/alerts/page.tsx`, `app/(app)/portfolios/actions.ts`, `app/(app)/portfolios/[id]/AddItemDialog.tsx`, `components/ui/CardRow.tsx`, `components/ui/index.ts`, `app/dev/ui/page.tsx`, `docs/design/README.md`
 
-- [ ] **Step 1: Shared action helpers.** Create `lib/action-utils.ts` with `ActionResult`, `assertId`, `withUser` moved verbatim from `app/(app)/portfolios/actions.ts` (no `"use server"` in this file — it exports non-async values); the portfolios action file imports them. `tests/actions.test.ts` must still pass unchanged.
+- [x] **Step 1: Shared action helpers.** Create `lib/action-utils.ts` with `ActionResult`, `assertId`, `withUser` moved verbatim from `app/(app)/portfolios/actions.ts` (no `"use server"` in this file — it exports non-async values); the portfolios action file imports them. `tests/actions.test.ts` must still pass unchanged.
 
-- [ ] **Step 2: Alert actions** — `app/(app)/alerts/actions.ts`:
+- [x] **Step 2: Alert actions** — `app/(app)/alerts/actions.ts`:
 
 ```ts
 "use server";
@@ -1582,9 +1582,9 @@ export async function deleteAlertAction(id: number) {
 
 `tests/alert-actions.test.ts`: no session; invalid id; create for u1 returns the id and revalidates `/alerts`; validation error surfaces as `{ ok: false, error }`; u2 cannot delete u1's alert (`Alert not found`); u1 can.
 
-- [ ] **Step 3: `CardRow` tone.** Add `tone?: "default" | "inverted"` (default `"default"`): inverted = `bg-chip text-chip-ink border-chip`, name `text-chip-ink`, subtitle `text-chip-ink/70`, and the `right` slot inherits colour. Test `tests/ui/card-row-tone.test.tsx`: default row has `bg-surface`; inverted has `bg-chip`. Gallery: one inverted row. Design README: "Triggered alert row → `CardRow tone="inverted"`".
+- [x] **Step 3: `CardRow` tone.** Add `tone?: "default" | "inverted"` (default `"default"`): inverted = `bg-chip text-chip-ink border-chip`, name `text-chip-ink`, subtitle `text-chip-ink/70`, and the `right` slot inherits colour. Test `tests/ui/card-row-tone.test.tsx`: default row has `bg-surface`; inverted has `bg-chip`. Gallery: one inverted row. Design README: "Triggered alert row → `CardRow tone="inverted"`".
 
-- [ ] **Step 4: `useCardSearch` hook** — `components/ui/useCardSearch.ts`:
+- [x] **Step 4: `useCardSearch` hook** — `components/ui/useCardSearch.ts`:
 
 ```ts
 "use client";
@@ -1634,7 +1634,7 @@ export function useCardSearch(query: string, enabled = true) {
 
 Refactor `AddItemDialog` to use it (`const { hits, settled, error: searchError, reset } = useCardSearch(q, open && selected == null)`; call `reset()` in `close`; render `searchError ?? error`). `tests/ui/add-item-dialog.test.tsx` must pass unchanged — it is the safety net for this refactor.
 
-- [ ] **Step 5: `NewAlertForm` (client)** — `app/(app)/alerts/NewAlertForm.tsx`:
+- [x] **Step 5: `NewAlertForm` (client)** — `app/(app)/alerts/NewAlertForm.tsx`:
 
 ```tsx
 "use client";
@@ -1747,7 +1747,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
 
 `tests/ui/new-alert-form.test.tsx` (mock `./actions` `createAlertAction`, `next/navigation`, stub `fetch` like `add-item-dialog.test.tsx`): search → pick Pikachu → printing pills present, first selected; "drops below" selected by default; typing `0.20` shows `20% under today` (market 0.25); Create → `createAlertAction({ printingId: 2, direction: "below", threshold: 0.2 })` and `refresh`; "rises above" + `0.5` → direction `above`, hint `100% over today`; action error → alert; preselected card skips search and starts on that printing (`printingId: 3` selected when preselected.printingId is 3); Create is disabled with an empty price.
 
-- [ ] **Step 6: `AlertList` (client)** — `app/(app)/alerts/AlertList.tsx`:
+- [x] **Step 6: `AlertList` (client)** — `app/(app)/alerts/AlertList.tsx`:
 
 ```tsx
 "use client";
@@ -1839,7 +1839,7 @@ export default function AlertList({ alerts }: { alerts: Alert[] }) {
 
 `tests/ui/alert-list.test.tsx`: a triggered and a watching alert render under "Triggered" / "Watching"; the triggered row shows `emailed Sep 7` and `re-arms below $1,450.00`; the watching row shows `+33.2% · 30D` with the `text-gain` class (and a negative change gets `text-accent`); Delete confirms then calls `deleteAlertAction(id)` and refreshes; dismissing the confirm does nothing; an action error renders an alert.
 
-- [ ] **Step 7: The page** — `app/(app)/alerts/page.tsx`:
+- [x] **Step 7: The page** — `app/(app)/alerts/page.tsx`:
 
 ```tsx
 import { redirect } from "next/navigation";
@@ -1887,7 +1887,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
 
 (`NewAlertForm` is keyed off `preselected?.printingId` if you find the form doesn't reset when the query string changes: `<NewAlertForm key={preselected?.printingId ?? "search"} …/>`.)
 
-- [ ] **Step 8:** `npm test`, typecheck, lint. Manually: `/cards/22189` → "Set a price alert" → form opens on that printing; create one; `/alerts` lists it under Watching; run `npx tsx ingest/nightly.ts` locally with a threshold that crosses → moves to Triggered (email disabled locally → stays Watching; verify the warning line instead). **Commit** — `feat(alerts): alerts page with grouped list and new-alert form; shared card search hook; CardRow tone`
+- [x] **Step 8:** `npm test`, typecheck, lint. Manually: `/cards/22189` → "Set a price alert" → form opens on that printing; create one; `/alerts` lists it under Watching; run `npx tsx ingest/nightly.ts` locally with a threshold that crosses → moves to Triggered (email disabled locally → stays Watching; verify the warning line instead). **Commit** — `feat(alerts): alerts page with grouped list and new-alert form; shared card search hook; CardRow tone`
 
 ---
 
@@ -1895,7 +1895,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
 
 **Files:** create `lib/signup-gate.ts`, `tests/signup-gate.test.ts`; modify `lib/auth.ts`, `app/(auth)/sign-up/page.tsx`, `.env.example`
 
-- [ ] **Step 1: Failing tests** — `tests/signup-gate.test.ts`:
+- [x] **Step 1: Failing tests** — `tests/signup-gate.test.ts`:
 
 ```ts
 import { describe, it, expect, afterAll } from "vitest";
@@ -1961,7 +1961,7 @@ describe("Better Auth sign-up hook", () => {
 });
 ```
 
-- [ ] **Step 2: Implement.** `lib/signup-gate.ts`:
+- [x] **Step 2: Implement.** `lib/signup-gate.ts`:
 
 ```ts
 // lib/signup-gate.ts
@@ -2007,20 +2007,20 @@ const allowlist = parseAllowlist(process.env.SIGNUP_ALLOWLIST);
 SIGNUP_ALLOWLIST=
 ```
 
-- [ ] **Step 3:** `npm test` (the existing `tests/auth*.test.ts` run with the variable unset and must still pass), typecheck, lint. **Commit** — `feat(auth): SIGNUP_ALLOWLIST gate on email sign-up`
+- [x] **Step 3:** `npm test` (the existing `tests/auth*.test.ts` run with the variable unset and must still pass), typecheck, lint. **Commit** — `feat(auth): SIGNUP_ALLOWLIST gate on email sign-up`
 
 ---
 
 ### Task 9: Docs, spec amendments, plan bookkeeping, merge prep
 
-- [ ] README: Status → Phase 3 complete (charts, nightly, share links, alerts, gate); Screens: `/s/[token]`, `/alerts` real, `/cards/[id]` + `/portfolios/[id]` charts; Ingestion: `ingest/nightly.ts` line + secrets `RESEND_API_KEY`, `ALERT_FROM_EMAIL`, `APP_URL`; Auth: `SIGNUP_ALLOWLIST`; a "Before going public" checklist (set `SIGNUP_ALLOWLIST`, Resend domain, secrets).
-- [ ] Spec amendments (edit in place, keep the date-stamped note):
+- [x] README: Status → Phase 3 complete (charts, nightly, share links, alerts, gate); Screens: `/s/[token]`, `/alerts` real, `/cards/[id]` + `/portfolios/[id]` charts; Ingestion: `ingest/nightly.ts` line + secrets `RESEND_API_KEY`, `ALERT_FROM_EMAIL`, `APP_URL`; Auth: `SIGNUP_ALLOWLIST`; a "Before going public" checklist (set `SIGNUP_ALLOWLIST`, Resend domain, secrets).
+- [x] Spec amendments (edit in place, keep the date-stamped note):
   - §4 table row "Nightly compute": **GitHub Actions step after the daily ingest** (`ingest/nightly.ts`) — not Vercel Cron → endpoint. Reason: the Actions job already holds the DB credentials and runs immediately after the prices land; no shared secret, no function duration cap, and no deployed app required for history to accumulate.
   - §6 step 5 rewritten accordingly.
   - §7 Sharing: note cost basis/gain are excluded from the public view. Card detail: printing pills on the chart. Alerts: "v1 has no edit — changing a threshold or direction is delete + recreate (which re-arms and drops `last_fired_at`)"; an alert whose line is already crossed when created emails on the first nightly.
   - §13: strike "Gate sign-up" (done: `SIGNUP_ALLOWLIST`); add new follow-ups: email verification before public launch (alerts email whatever address was registered — with the allowlist unset, anyone could point alerts at a third party's inbox; `requireEmailVerification` + a Resend sender closes it); `listAlerts` does two queries per alert for the 30-day change; `materializePortfolioHistory` is one statement over all binders (fine for hundreds of users, revisit at thousands); alert send + disarm are two non-transactional writes (a DB failure right after a successful send re-emails next night — at-least-once by design); no per-user daily email cap beyond `MAX_ALERTS_PER_USER`; share page has no rate limit (128-bit tokens make enumeration infeasible, but add one before public); `RangePills` scroll position depends on `Pill scroll={false}` (Next `Link`); the alerts form threshold hint rounds to whole percent; `Button size="sm"` replaced ad-hoc `min-h-8` overrides — grep for any new ones in review.
-- [ ] `docs/design/README.md` "Implemented as": `LineChart`, `RangePills`, `CardRow tone="inverted"`.
-- [ ] Tick this plan's boxes; add "Executed — deviations" like Phase 2b's.
+- [x] `docs/design/README.md` "Implemented as": `LineChart`, `RangePills`, `CardRow tone="inverted"`.
+- [x] Tick this plan's boxes; add "Executed — deviations" like Phase 2b's.
 - [ ] Final whole-branch review → fix → push → CI green → merge to `main`.
 
 ## Self-review notes
@@ -2029,3 +2029,65 @@ SIGNUP_ALLOWLIST=
 - Type consistency: `Point`/`Range` from `lib/history` used by `LineChart`, `RangePills`, three pages; `chartFrom`/`withLivePoint`/`RANGE_CAPTION` used identically on the card, binder and share pages; `ShareLink` shared by data layer, actions, `SharePanel` (whose `run<T>` is generic because `disableShareAction` returns `ActionResult<void>`); `AlertCard`/`Direction`/`Alert`/`CreateAlertInput` from `lib/alerts` used by nightly, actions, form, list; `Mailer`/`Mail` from `ingest/mailer`; `withUser`/`assertId` from `lib/action-utils` used by both action files.
 - Reviewed 2026-09-07 by four independent reviewers + adversarial verification before execution; 16 confirmed findings folded in (SharePanel generic `run`, Better Auth before-hook error surfacing in tests, nullable `chartPrinting`, `All`-range axis anchoring, live point on empty history, `Button size="sm"` for the 44px rule, pinned `asOf` in the alerts test, copy fixes).
 - Ownership: every new read/write joins `portfolios.user_id` or filters `price_alerts.user_id`; the share token authorizes exactly one binder and the public shape strips cost; the nightly is the only cross-user reader and runs outside the app.
+
+## Executed 2026-09-08 — deviations
+
+Shipped on `phase-3/history-share-alerts` across Tasks 1–8 (`b135022` … `b8e3840`). Where the code
+differs from the plan above:
+
+- **Card page cleanup.** Replacing the "Charts arrive in Phase 3" `EmptyState` left `changeText` and
+  the `formatDelta` / `formatPercent` imports unused, so they went too (lint); the 30-day change is
+  rendered by `PriceDelta` alone.
+- **Extra fix commit `72c98bc`.** The four scrypt-bound Better Auth tests (`tests/auth.test.ts`,
+  `tests/auth-fresh.test.ts`) time out under the full suite's one-worker-per-file load while passing
+  alone; they carry explicit 20s per-test timeouts rather than a global `testTimeout`.
+  `tests/signup-gate.test.ts` (Task 8) follows the same convention for its two password-hashing tests.
+  No product code changed.
+- **`useCardSearch.reset` is memoised** (`useCallback`) instead of the plan's inline arrow, so
+  `AddItemDialog`'s memoised `close` keeps a stable identity across renders.
+- **`NewAlertForm` is keyed on `preselected?.printingId`** — the plan's optional suggestion, applied
+  because the form seeds its state from props on mount only; arriving at `/alerts?printing=` while
+  already on the page would otherwise not restart it.
+- **`useCardSearch` is imported by path** (`@/components/ui/useCardSearch`), not re-exported from
+  `components/ui/index.ts` — Task 7's file list named `index.ts`, but it is a hook, not a primitive,
+  and the plan's own code imported it by path.
+- **Tests beyond the plan.** `tests/ui/primitives-a.test.tsx` also asserts `size` never reaches the
+  DOM; `tests/ui/share-panel.test.tsx` covers a disabled link re-enabling, the clipboard-unavailable
+  fallback, a dismissed confirm and a thrown action; `tests/ui/new-alert-form.test.tsx` covers a
+  non-first printing being sent, "Change" returning to search, a one-character query issuing no fetch
+  and a thrown action; `tests/ui/alert-list.test.tsx` covers an empty group being omitted and the
+  "no 30D history" fallback. The nightly "ignores an unpriced printing" test asserts the exact state
+  (`alerts: 3, fired: 1` — the Shanks alert left armed by the failing-mailer test fires here; the
+  Booster Bundle row is untouched), as the plan asked.
+- **Manual browser checks were substituted.** Task 3: a throwaway jsdom render test (deleted before
+  commit) covering `?range=1y`, a printing-less card and a binder at `?range=all`. Task 4: a scratch
+  copy of the repo on a throwaway DB under `next dev --webpack -p 3112`, not the running dev server.
+  Task 6: the `/portfolios/2` check became a direct `getPortfolioHistory` call after the CLI run.
+  Task 7: the running dev server with the already-signed-in browser pane, `window.confirm` stubbed
+  for the cleanup delete, and the nightly run via `node --env-file=.env.local --import tsx
+  ingest/nightly.ts`; local DB side effects net to zero apart from today's `portfolio_history` row.
+- **Task 9's design-README item needed no edit** — Tasks 2 and 7 had already added the `LineChart`,
+  `RangePills` and `CardRow tone="inverted"` rows and the `Button size="sm"` tap-target sentence.
+
+### Known items, deliberately left
+
+Also recorded in spec §13.
+
+- `lib/history.ts` statically imports `lib/db` (→ `@libsql/client`) and is reached from the client
+  bundle through `components/ui/index.ts` → `RangePills` (the `"use client"` gallery imports it;
+  `LineChart` only imports a type). Builds today via the package's browser export condition; split
+  the db-free exports into a db-free module before adding `"server-only"` to `lib/db.ts`.
+- `listAlerts` issues two queries per alert for the 30-day change (`thirtyDayChange`) — ~200 at the
+  100-alert cap. `createAlert`'s cap is COUNT-then-INSERT, not atomic.
+- `getSharedPortfolio` reads holdings twice (`getPortfolioSummary` re-reads them).
+- `materializePortfolioHistory` is one `INSERT … SELECT` over all binders; alert send + disarm are two
+  non-transactional writes (at-least-once by design); no per-user daily email cap beyond
+  `MAX_ALERTS_PER_USER`; `/s/[token]` has no rate limit.
+- `HoldingsTable`'s Remove button still carries `ml-1 text-[13px] font-normal` — `text-[13px]` is
+  redundant with `size="sm"`.
+- On the binder page the range `PriceDelta` renders directly under the "vs. paid" one with no spacing
+  element (cosmetic).
+- The alerts form's threshold hint rounds to a whole percent; `RangePills` keeps the scroll position
+  only through `Pill scroll={false}`.
+- `tests/db.test.ts` was not extended for the three new tables; their coverage is
+  `tests/history.test.ts`, `tests/share.test.ts`, `tests/alerts.test.ts`, `tests/nightly.test.ts`.
