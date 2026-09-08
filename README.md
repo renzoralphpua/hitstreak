@@ -66,6 +66,23 @@ TURSO_DATABASE_URL=file:hitstreak.local.db npx tsx scripts/db-counts.mts
 
 PowerShell: `$env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx ingest/daily.ts`
 
+### Curating meta decks locally
+
+Until the admin screen ships, curated (meta) decks are loaded from a plain decklist text file with
+`scripts/import-deck.mts`: it parses the common shapes (`4 Charmander MEW 4`, `4x Charizard ex`,
+`Rare Candy x4`, One Piece `1 OP01-003 Monkey.D.Luffy`, section headers such as `Trainer:` / `Leader` /
+`Runes:` that set the zone), resolves each line against the catalog (exact name → the cheapest priced
+printing, One Piece by card number), and writes the deck through `upsertMetaDeck`. Unresolved lines are
+printed with candidates and nothing is written. The `--as` account must be an admin — flip your local
+user once with `UPDATE "user" SET "isAdmin" = 1 WHERE email = 'dev@example.com'` — and `--id N`
+replaces an existing meta deck instead of creating one:
+
+```bash
+TURSO_DATABASE_URL=file:hitstreak.local.db npx tsx scripts/import-deck.mts \
+  --game pokemon --name "Charizard ex / Pidgeot" --tier 1 --format standard \
+  --source "Regional top cuts, Aug 30" --as dev@example.com --file decks/zard.txt
+```
+
 ## Ingestion
 
 - `ingest/daily.ts [YYYY-MM-DD]` — daily sync (GitHub Actions "Daily price ingest", 21:00 UTC): catalog upsert + write-on-change prices. Pass a date to re-run a failed night under its own date. Exits 1 if any game or group failed; prints a final `DAILY_SUMMARY {json}` line.
