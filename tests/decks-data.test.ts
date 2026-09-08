@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { tmpDb } from "./helpers/tmpdb";
 const tmp = tmpDb("decks-data");
 import { db, closeDb } from "@/lib/db";
@@ -54,13 +54,32 @@ describe("meta decks", () => {
     await expect(upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "x", lines: tooMany })).rejects.toThrow(/at most 200 lines/i);
     expect(await listMetaDecks("pokemon")).toHaveLength(1); // nothing above was written
   });
+  it("creating a meta deck is atomic: a failed line write leaves no empty deck behind", async () => {
+    const c = await db();
+    const real = c.transaction.bind(c);
+    // checkLines has already vetted the lines, so nothing in the schema can fail the batch; make the transaction's batch blow up instead
+    const spy = vi.spyOn(c, "transaction").mockImplementationOnce(async () => {
+      const tx = await real("write"); // upsertMetaDeck opens a "write" transaction
+      tx.batch = async () => { throw new Error("boom"); };
+      return tx;
+    });
+    const before = await listMetaDecks("pokemon");
+    await expect(upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "Half-written", lines: [{ cardId: f.cards.charizardEx, zone: "main", quantity: 4 }] })).rejects.toThrow("boom");
+    spy.mockRestore();
+    expect(await listMetaDecks("pokemon")).toEqual(before); // the decks row was rolled back with the lines
+    expect((await c.execute("SELECT COUNT(*) AS n FROM decks WHERE name = 'Half-written'")).rows[0].n).toBe(0);
+    // the connection the transaction held is back in the pool: the client keeps working
+    const id = await upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "Written", lines: [{ cardId: f.cards.charizardEx, zone: "main", quantity: 4 }] });
+    expect((await getDeck(id, null))?.cardCount).toBe(4);
+    await c.batch([{ sql: "DELETE FROM deck_cards WHERE deck_id = ?", args: [id] }, { sql: "DELETE FROM decks WHERE id = ?", args: [id] }], "write");
+  });
   it("prices a line at the cheapest printing", async () => {
     const meta = (await listMetaDecks("pokemon"))[0];
     expect((await getDeck(meta.id, null))?.cards[0]).toMatchObject({ cardId: f.cards.charizardEx, market: 18.9 });
     const c = await db();
     const p = await c.execute({ sql: "INSERT INTO printings (card_id, subtype) VALUES (?, 'Reverse Holofoil') RETURNING id", args: [f.cards.charizardEx] });
-    await c.execute({ sql: "INSERT INTO latest_prices (printing_id, date, market) VALUES (?, '2026-09-07', 42.5)", args: [Number(p.rows[0].id)] });
-    expect((await getDeck(meta.id, null))?.cards[0].market).toBe(18.9); // MIN across the two printings
+    await c.execute({ sql: "INSERT INTO latest_prices (printing_id, date, market) VALUES (?, '2026-09-07', 5.0)", args: [Number(p.rows[0].id)] });
+    expect((await getDeck(meta.id, null))?.cards[0].market).toBe(5.0); // MIN across the two printings, not the first one inserted
   });
   it("replace-by-id only reaches this game's meta decks", async () => {
     const meta = (await listMetaDecks("pokemon"))[0];

@@ -155,14 +155,22 @@ export async function upsertMetaDeck(adminUserId: string, input: MetaDeckInput):
     });
     return input.id;
   }
-  // INSERT … RETURNING id must run first (the lines need the id); the new deck is invisible until it has lines anyway.
-  const r = await c.execute({
-    sql: "INSERT INTO decks (game_id, owner_user_id, name, archetype, tier, format, source_note) VALUES (?, NULL, ?, ?, ?, ?, ?) RETURNING id",
-    args: [gameId, name, ...meta],
-  });
-  const id = Number(r.rows[0].id);
-  await replaceLines(id, input.lines);
-  return id;
+  // The lines need the new id, so INSERT … RETURNING id and the line batch run in one interactive transaction: a failed
+  // line write rolls the deck row back too (listMetaDecks would otherwise show an empty deck).
+  const tx = await c.transaction("write");
+  try {
+    const r = await tx.execute({
+      sql: "INSERT INTO decks (game_id, owner_user_id, name, archetype, tier, format, source_note) VALUES (?, NULL, ?, ?, ?, ?, ?) RETURNING id",
+      args: [gameId, name, ...meta],
+    });
+    const id = Number(r.rows[0].id);
+    await tx.batch(lineStatements(id, input.lines));
+    await tx.commit();
+    return id;
+  } catch (e) {
+    await tx.rollback().catch(() => { /* already closed (e.g. commit failed) — the error below is the one to surface */ });
+    throw e;
+  }
 }
 
 export async function createDeck(userId: string, input: { gameSlug: GameSlug; name: string }): Promise<number> {
