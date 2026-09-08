@@ -1,6 +1,11 @@
 // Nightly job, run by the "Daily price ingest" workflow right after ingest/daily.ts:
 //   1. materialize portfolio_history for `date` (every binder, every user — one statement),
-//   2. evaluate every price alert against the market price in force on `date` and email crossings.
+//   2. evaluate every price alert against the CURRENT price (latest_prices) and email crossings.
+// History is valued as of `date` so a failed night can be re-run under its own date; alerts
+// deliberately are NOT. The state machine is not order-aware, so judging a fired alert by an older
+// date's price could re-arm it (→ a duplicate email the next night) or fire an armed one on a stale
+// price and link. In the scheduled run the two agree (latest_prices always equals the newest
+// snapshot — see the invariant in ingest/prices.ts); they differ only on an old-date re-run.
 // Idempotent per date (spec §9): history rows are upserted, and an alert that already fired stays
 // disarmed until the price crosses back, so a re-run never emails twice. An email that fails — or
 // can't be sent because Resend isn't configured — leaves the alert armed so it retries next night.
@@ -10,7 +15,7 @@ import { evaluateAlert, type Direction } from "@/lib/alerts";
 import { alertEmail, mailerFromEnv, type Mailer } from "./mailer";
 
 export interface NightlyOptions {
-  date: string;          // YYYY-MM-DD — the ingest date whose prices are "today"
+  date: string;          // YYYY-MM-DD — the date portfolio_history is valued as of (alerts always use the current price)
   mailer: Mailer | null; // null = email disabled (logs what it would have sent)
   appUrl: string;        // origin for links in emails
   now?: () => string;    // ISO timestamp for last_fired_at; tests pin it
@@ -43,20 +48,21 @@ interface AlertJoin {
   direction: Direction; threshold: number; armed: boolean; market: number | null;
 }
 
-async function loadAlerts(date: string): Promise<AlertJoin[]> {
+/** Every alert with its owner, card and the CURRENT market price (latest_prices — the same price
+ *  /alerts shows and the email calls "today"). Not as-of-date on purpose; see the header. */
+async function loadAlerts(): Promise<AlertJoin[]> {
   const c = await db();
-  const rows = (await c.execute({
-    sql: `SELECT a.id, a.direction, a.threshold, a.armed, u.email,
-                 ca.id AS card_id, ca.name AS card_name, ca.number, se.name AS set_name, p.subtype,
-                 (SELECT ps.market FROM price_snapshots ps WHERE ps.printing_id = a.printing_id AND ps.date <= ? ORDER BY ps.date DESC LIMIT 1) AS market
-          FROM price_alerts a
-          JOIN "user" u ON u.id = a.user_id
-          JOIN printings p ON p.id = a.printing_id
-          JOIN cards ca ON ca.id = p.card_id
-          JOIN sets se ON se.id = ca.set_id
-          ORDER BY a.id`,
-    args: [date],
-  })).rows;
+  const rows = (await c.execute(
+    `SELECT a.id, a.direction, a.threshold, a.armed, u.email,
+            ca.id AS card_id, ca.name AS card_name, ca.number, se.name AS set_name, p.subtype, lp.market
+     FROM price_alerts a
+     JOIN "user" u ON u.id = a.user_id
+     JOIN printings p ON p.id = a.printing_id
+     JOIN cards ca ON ca.id = p.card_id
+     JOIN sets se ON se.id = ca.set_id
+     LEFT JOIN latest_prices lp ON lp.printing_id = a.printing_id
+     ORDER BY a.id`
+  )).rows;
   return rows.map((x) => ({
     id: Number(x.id), email: String(x.email), cardId: Number(x.card_id), cardName: String(x.card_name), setName: String(x.set_name),
     number: x.number == null ? null : String(x.number), subtype: String(x.subtype), direction: String(x.direction) as Direction,
@@ -74,7 +80,7 @@ export async function runNightly(opts: NightlyOptions): Promise<NightlySummary> 
   console.log(`[nightly] portfolio_history: ${s.portfolios} binders valued as of ${opts.date}`);
 
   const c = await db();
-  const alerts = await loadAlerts(opts.date);
+  const alerts = await loadAlerts();
   s.alerts = alerts.length;
   for (const a of alerts) {
     const decision = evaluateAlert(a, a.market);

@@ -67,10 +67,14 @@ describe("runNightly alerts", () => {
   it("re-arms once the price is back over the line, then fires again on the next crossing", async () => {
     const c = await db();
     const id = Number((await c.execute("SELECT id FROM price_alerts WHERE user_id = 'u1'")).rows[0].id);
+    // Two nights of price movement. The ingest keeps latest_prices equal to the newest snapshot
+    // (ingest/prices.ts invariant); alerts read latest_prices, so mirror that here night by night.
     await c.execute("INSERT INTO price_snapshots (printing_id, date, market) VALUES (1, '2026-09-08', 1400), (1, '2026-09-09', 1500)");
     const { sent, mailer } = capture();
+    await c.execute("UPDATE latest_prices SET date = '2026-09-08', market = 1400 WHERE printing_id = 1");
     expect((await runNightly({ date: "2026-09-08", mailer, appUrl: "https://hitstreak.test" })).rearmed).toBe(1);
     expect(Number((await alertRow(id)).armed)).toBe(1);
+    await c.execute("UPDATE latest_prices SET date = '2026-09-09', market = 1500 WHERE printing_id = 1");
     expect((await runNightly({ date: "2026-09-09", mailer, appUrl: "https://hitstreak.test" })).fired).toBe(1);
     expect(sent).toHaveLength(1);
   });
@@ -84,7 +88,7 @@ describe("runNightly alerts", () => {
     expect(Number((await alertRow(id)).armed)).toBe(1);
   });
   it("ignores an unpriced printing", async () => {
-    // State here: u1's Umbreon alert is fired (armed=0, and 1465 ≥ 1450 on 2026-09-07 → nothing),
+    // State here: u1's Umbreon alert is fired (armed=0, and 1500 ≥ 1450 today → nothing),
     // u2's Shanks alert is still armed and pending (→ fires now that the mailer works), and this
     // Booster Bundle alert has no snapshots at all → neither fires nor re-arms.
     const id = await createAlert("u2", { printingId: seed.printings.bundle, direction: "below", threshold: 5 });
@@ -93,6 +97,24 @@ describe("runNightly alerts", () => {
     expect(s).toMatchObject({ alerts: 3, fired: 1, rearmed: 0, emailFailed: 0, skippedNoMailer: 0 });
     expect(sent.map((m) => m.subject)).toEqual([expect.stringContaining("Shanks")]);
     expect(await alertRow(id)).toEqual({ armed: 1, last_fired_at: null, last_fired_price: null });
+  });
+  it("judges alerts by the current price, not the re-run date's: re-running an older night neither re-arms nor fires", async () => {
+    // Umbreon is 1500 today (latest_prices) but was 1400 on 2026-09-08. Re-running that night must
+    // leave the fired `above 1450` alert fired (re-arming it would email a duplicate the next night)
+    // and must not fire a fresh `below 1450` alert on the stale 1400 — while history for the date is
+    // still valued as of the date (2 × 1400).
+    const c = await db();
+    const fired = Number((await c.execute("SELECT id FROM price_alerts WHERE user_id = 'u1' AND direction = 'above'")).rows[0].id);
+    expect(Number((await alertRow(fired)).armed)).toBe(0);
+    const below = await createAlert("u1", { printingId: seed.printings.umbreonHolo, direction: "below", threshold: 1450 });
+    const { sent, mailer } = capture();
+    const s = await runNightly({ date: "2026-09-08", mailer, appUrl: "https://hitstreak.test" });
+    expect(s).toMatchObject({ alerts: 4, fired: 0, rearmed: 0, emailFailed: 0, skippedNoMailer: 0 });
+    expect(sent).toHaveLength(0);
+    expect(Number((await alertRow(fired)).armed)).toBe(0);
+    expect(await alertRow(below)).toEqual({ armed: 1, last_fired_at: null, last_fired_price: null });
+    const h = (await c.execute({ sql: "SELECT total_value FROM portfolio_history WHERE portfolio_id = ? AND date = '2026-09-08'", args: [full] })).rows[0];
+    expect(h.total_value).toBe(2800);
   });
   it("rejects a malformed date", async () => {
     await expect(runNightly({ date: "2026-9-7", mailer: null, appUrl: "x" })).rejects.toThrow(/YYYY-MM-DD/);
