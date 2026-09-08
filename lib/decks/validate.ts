@@ -21,7 +21,7 @@ export const RULE_TEXT: Record<GameSlug, Array<{ code: string; text: string }>> 
   "one-piece": [
     { code: "leader", text: "Exactly one Leader" }, { code: "size", text: "Exactly 50 cards in the main deck" },
     { code: "copies", text: "No more than 4 of a card number" }, { code: "color", text: "Every card shares a colour with the Leader" },
-    { code: "zone", text: "Leaders only in the Leader slot" },
+    { code: "zone", text: "Leaders only in the Leader slot; no DON!! cards" },
   ],
   riftbound: [
     { code: "legend", text: "Exactly one Legend" }, { code: "champion", text: "One Chosen Champion matching the Legend" },
