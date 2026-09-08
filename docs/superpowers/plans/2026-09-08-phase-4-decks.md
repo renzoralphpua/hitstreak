@@ -17,7 +17,7 @@
 
 **Conventions:** as Phase 3. `userId` first on every user-scoped function; meta decks are readable by any signed-in user, writable only when `"user".isAdmin = 1`; personal decks readable/writable by their owner only. Money stays `REAL` dollars. Tests use `tmpDb()` + `seedMiniCatalog()` (+ a new `seedDeckFixtures()` for Riftbound and deck-shaped cards). Component tests are `tests/ui/*.test.tsx` with `// @vitest-environment jsdom`. Verify each task with `npm test`, `npm run typecheck`, `npm run lint`; commit after each green task on branch `phase-4/decks`.
 
-**Executed in runs:** Tasks 1–6 (2026-09-08), then Task 7 (2026-09-08). Tasks 8–9 are outlined at the end and get full step detail when they are picked up.
+**Executed in runs:** Tasks 1–6 (2026-09-08), Task 7 (2026-09-08), Task 8 (2026-09-09). Task 9 is outlined at the end and gets full step detail when it is picked up.
 
 **Deferred (do NOT build here):** automated meta scraping, deck sharing, deck price history, wishlists, Phase 5 items (purchase tracking, sealed first-class, UX pass).
 
@@ -1859,9 +1859,251 @@ list shows a failing rule's concrete message and flips to `ok` when the deck is 
 
 ---
 
-### Task 8: Admin curation (outline — not in this run)
+### Task 8: Admin curation
 
-`/admin/decks` gated by `isAdminUser` (redirect otherwise; proxy `PROTECTED` gains `/admin`): paste a list → `parseDecklist` + `resolveDecklist` → fix-up UI for unresolved lines (candidate pills / search) → metadata (game, name, archetype, tier, format, source) → `upsertMetaDeck`. List + edit + delete of meta decks (`deleteMetaDeck` admin-only, new). The CLI stays as the scriptable path.
+**Files:** create `app/(app)/admin/decks/page.tsx`, `app/(app)/admin/decks/actions.ts`, `app/(app)/admin/decks/CurationForm.tsx`, `app/(app)/admin/decks/MetaDeckRow.tsx`, `tests/decks-admin-actions.test.ts`, `tests/ui/curation-form.test.tsx`; modify `lib/decks/data.ts`, `lib/decks/resolve.ts`, `proxy.ts`, `tests/proxy.test.ts`, `tests/decks-resolve.test.ts`, `tests/ui/deck-pages.test.tsx`, `app/(app)/decks/page.tsx`, `README.md`
+
+The screen is the CLI's flow with a fix-up step: paste a list → resolve it against the catalog → pick a
+card for anything ambiguous → fill in the metadata → save. It lives under `app/(app)/` so it inherits the
+shell and the session gate; **admin-ness is checked in the page and in every action**, and a non-admin
+gets `notFound()` rather than a redirect — the route should not advertise itself.
+
+- [ ] **Step 1: `deleteMetaDeck`** in `lib/decks/data.ts` (admin-only, mirrors `deleteDeck`'s shape but
+  scoped to curated rows):
+
+```ts
+/** Admin only. Removes a curated deck and its lines. Personal decks are untouched (deleteDeck owns those). */
+export async function deleteMetaDeck(adminUserId: string, id: number): Promise<boolean> {
+  if (!(await isAdminUser(adminUserId))) throw new Error("Only an admin can curate meta decks");
+  const c = await db();
+  const found = await c.execute({ sql: "SELECT 1 FROM decks WHERE id = ? AND owner_user_id IS NULL", args: [id] });
+  if (found.rows.length === 0) return false;
+  await c.batch(
+    [
+      { sql: "DELETE FROM deck_cards WHERE deck_id = ?", args: [id] },
+      { sql: "DELETE FROM decks WHERE id = ? AND owner_user_id IS NULL", args: [id] },
+    ],
+    "write"
+  );
+  return true;
+}
+```
+
+Add to `tests/decks-data.test.ts`: a non-admin call rejects with `/admin/i` and leaves the deck; an admin
+delete returns `true`, removes the row and its `deck_cards`; deleting a **personal** deck's id through
+this path returns `false` and leaves it intact; deleting a missing id returns `false`.
+
+- [ ] **Step 2: `formatDecklist`** in `lib/decks/resolve.ts` — the inverse of `parseDecklist`, so "Edit"
+  can round-trip an existing deck back through the same paste → resolve path:
+
+```ts
+/** Renders a deck as text `parseDecklist` can read back: one `N Name` line per deck line, grouped under
+ *  the zone headers the parser recognises. Only zones the game uses appear. */
+export function formatDecklist(deck: { gameSlug: GameSlug; cards: Array<{ zone: Zone; quantity: number; name: string }> }): string {
+  const out: string[] = [];
+  for (const zone of ZONES[deck.gameSlug]) {
+    const lines = deck.cards.filter((l) => l.zone === zone);
+    if (lines.length === 0) continue;
+    if (ZONES[deck.gameSlug].length > 1) out.push(`${ZONE_HEADER[zone]}:`);
+    for (const l of lines) out.push(`${l.quantity} ${l.name}`);
+    out.push("");
+  }
+  return out.join("\n").trim();
+}
+```
+
+with `const ZONE_HEADER: Record<Zone, string> = { main: "Main", leader: "Leader", legend: "Legend", champion: "Champion", rune: "Runes", battlefield: "Battlefields" }`
+— these must be strings `parseDecklist`'s header alternation already accepts, so import `ZONES` and `Zone`
+from `./types`. A single-zone game (Pokémon) gets no headers at all.
+
+Add to `tests/decks-resolve.test.ts` a round-trip: build the fixture Pokémon deck's lines, `formatDecklist`
+them, `parseDecklist` the result, `resolveDecklist` it, and assert `mergeResolved` gives back the same
+`(cardId, zone, quantity)` set. Do the same for a One Piece deck with a leader, so the headers are exercised.
+(Note the honest limitation in a comment: a card whose **name** now resolves to a cheaper printing comes
+back as that printing's card id. Round-tripping is for editing a list, not for preserving printings.)
+
+- [ ] **Step 3: proxy.** Add `"/admin"` to `PROTECTED` in `proxy.ts`, and a case to `tests/proxy.test.ts`:
+  `/admin/decks` without a cookie → 307 to `/sign-in?next=%2Fadmin%2Fdecks`.
+
+- [ ] **Step 4: actions** — `app/(app)/admin/decks/actions.ts`:
+
+```ts
+"use server";
+// Meta-deck curation. Every action re-checks the session AND admin-ness: `withUser` only proves someone
+// is signed in, so each body calls isAdminUser before touching a curated row. Failures come back as
+// { ok: false, error } like every other action module.
+import { revalidatePath } from "next/cache";
+import { withUser, assertId } from "@/lib/action-utils";
+import { isGameSlug, type GameSlug } from "@/lib/decks/types";
+import { parseDecklist, resolveDecklist, type Resolution } from "@/lib/decks/resolve";
+import * as D from "@/lib/decks/data";
+
+const TEXT_MAX = 20_000; // a decklist is a few hundred bytes; this is the "someone pasted a book" guard
+
+async function assertAdmin(userId: string) {
+  if (!(await D.isAdminUser(userId))) throw new Error("Admins only");
+}
+
+/** Paste → parsed lines resolved against the catalog. A read, but admin-gated like the rest of the screen. */
+export async function resolveDecklistAction(gameSlug: string, text: string) {
+  return withUser<Resolution[]>(async (u) => {
+    await assertAdmin(u);
+    if (!isGameSlug(gameSlug)) throw new Error("Unknown game");
+    if (typeof text !== "string" || text.length > TEXT_MAX) throw new Error("That list is too long");
+    return resolveDecklist(gameSlug, parseDecklist(text, gameSlug));
+  });
+}
+
+export interface SaveMetaDeckInput {
+  id?: number; gameSlug: string; name: string; archetype?: string | null; tier?: number | null;
+  format?: string | null; sourceNote?: string | null; lines: D.DeckLineInput[];
+}
+
+export async function saveMetaDeckAction(input: SaveMetaDeckInput) {
+  const r = await withUser(async (u) => {
+    await assertAdmin(u);
+    if (!isGameSlug(input.gameSlug)) throw new Error("Unknown game");
+    const lines = input.lines.map((l) => ({ cardId: assertId(l.cardId), zone: l.zone, quantity: assertId(l.quantity) }));
+    return D.upsertMetaDeck(u, { ...input, id: input.id == null ? undefined : assertId(input.id), gameSlug: input.gameSlug as GameSlug, lines });
+  });
+  if (r.ok) { revalidatePath("/admin/decks"); revalidatePath("/decks"); }
+  return r;
+}
+
+export async function deleteMetaDeckAction(id: number) {
+  const r = await withUser(async (u) => {
+    await assertAdmin(u);
+    if (!(await D.deleteMetaDeck(u, assertId(id)))) throw new Error("Deck not found");
+  });
+  if (r.ok) { revalidatePath("/admin/decks"); revalidatePath("/decks"); }
+  return r;
+}
+```
+
+**Note on quantities:** `assertId` is a positive-integer check with no ceiling; `upsertMetaDeck` →
+`checkLines` applies `QTY_MAX`, and unlike the builder's save nothing expensive runs before it (no
+validator), so this is adequate. If you prefer symmetry with `app/(app)/decks/actions.ts`, reuse the same
+`assertQuantity` helper — lift it into `lib/action-utils.ts` and have both modules import it.
+
+`tests/decks-admin-actions.test.ts` (mock `@/lib/session` and `next/cache` as `tests/actions.test.ts`
+does; seed an admin and a non-admin user): every action refused with `"Not signed in"` when there is no
+session, and `"Admins only"` for a signed-in non-admin (assert the DB is unchanged after the refused
+delete); `resolveDecklistAction` returns one resolution per parsed line with `cardId` set for an exact
+name and `null` + candidates for an ambiguous one; an over-long paste is refused; `saveMetaDeckAction`
+creates a deck and returns its id, then updates it in place when `id` is passed (lines replaced, not
+appended); a bad game or a non-integer line id is refused; `deleteMetaDeckAction` removes the deck and its
+lines, returns `"Deck not found"` for a personal deck's id, and revalidates both paths.
+
+- [ ] **Step 5: the page** — `app/(app)/admin/decks/page.tsx`:
+
+```tsx
+import { notFound, redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
+import { listGames } from "@/lib/catalog";
+import { isAdminUser, listMetaDecks, getDeck } from "@/lib/decks/data";
+import { formatDecklist } from "@/lib/decks/resolve";
+import { GAME_SLUGS } from "@/lib/decks/types";
+import { SectionHeading, Panel, EmptyState } from "@/components/ui";
+import CurationForm from "./CurationForm";
+import MetaDeckRow from "./MetaDeckRow";
+
+export const metadata = { title: "Curate meta decks — Hitstreak" };
+export const dynamic = "force-dynamic";
+
+export default async function AdminDecksPage() {
+  const session = await getSession();
+  if (!session) redirect("/sign-in");
+  // Not a redirect: a non-admin should not learn that this route exists.
+  if (!(await isAdminUser(session.user.id))) notFound();
+
+  const games = await listGames();
+  const perGame = await Promise.all(GAME_SLUGS.map(async (slug) => ({ slug, decks: await listMetaDecks(slug) })));
+  const all = perGame.flatMap((g) => g.decks);
+  // Each row can hand the form its current list to edit.
+  const texts = Object.fromEntries(
+    await Promise.all(all.map(async (d) => {
+      const full = await getDeck(d.id, null);
+      return [d.id, full ? formatDecklist(full) : ""] as const;
+    }))
+  );
+
+  return (
+    <div className="flex flex-col gap-5">
+      <SectionHeading as="h1" title="Curate meta decks" caption={`${all.length} curated`} />
+      <Panel>
+        <CurationForm games={games.map((g) => ({ slug: g.slug, name: g.name }))} />
+      </Panel>
+      {all.length === 0 ? (
+        <EmptyState title="Nothing curated yet" body="Paste a decklist above, or use scripts/import-deck.mts." />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {perGame.filter((g) => g.decks.length > 0).map((g) => (
+            <div key={g.slug} className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">
+                {games.find((x) => x.slug === g.slug)?.name ?? g.slug}
+              </span>
+              {g.decks.map((d) => <MetaDeckRow key={d.id} deck={d} decklist={texts[d.id] ?? ""} />)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+`MetaDeckRow.tsx` (client): a `Panel` with the deck's name, tier, card count and game; an "Edit" `Button`
+(`size="sm"`) that dispatches a `CustomEvent("hitstreak:edit-deck", { detail })` on `window` carrying
+`{ id, gameSlug, name, archetype, tier, format, sourceNote, decklist }`, which `CurationForm` listens for
+and loads (a plain event keeps the two siblings decoupled without lifting state into the server page); and
+a "Delete" `Button` guarded by `window.confirm(\`Delete "${name}"?\`)` calling `deleteMetaDeckAction`,
+then `router.refresh()`. Errors render with `role="alert"`.
+
+- [ ] **Step 6: `CurationForm.tsx`** (client) — the paste → resolve → fix-up → save flow:
+
+- State: `gameSlug`, `name`, `archetype`, `tier` (`"" | "1".."4"`), `format`, `sourceNote`, `text`,
+  `editingId: number | null`, `resolutions: Resolution[] | null`, `picks: Record<number, number>`
+  (resolution index → chosen cardId), `busy`, `error`, `notice`.
+- Game `Pill`s; `Input`s for name/archetype/format/source; tier as `Pill`s (`—`, 1, 2, 3, 4); a
+  `<textarea>` for the list carrying the same field classes as `Input` (`components/ui/Input.tsx` is the
+  one place those live — reuse the string by exporting it, or wrap the textarea in a small local component
+  with the same classes and say why in a comment).
+- **Resolve**: `resolveDecklistAction(gameSlug, text)` → `setResolutions(data)`, `setPicks({})`.
+- **Fix-up list**: one row per resolution. Resolved (`cardId != null` or picked) shows `×qty name` and a
+  ✓-toned caption; unresolved shows the raw line, its `candidates` as `Pill`s (clicking sets `picks[i]`),
+  and — when there are no candidates or none fit — a `SearchField` + `useCardSearch(q, true, gameSlug)`
+  whose hits are `CardRow`s that also set `picks[i]`. A row's zone is shown when the game has more than
+  one zone.
+- **Save** is disabled until every resolution has a cardId (its own or a pick). It calls
+  `saveMetaDeckAction({ id: editingId ?? undefined, gameSlug, name, archetype, tier, format, sourceNote, lines })`
+  where `lines` merges the resolutions by `(cardId, zone)` summing quantities — reuse `mergeResolved` by
+  first applying the picks (`resolutions.map((r, i) => picks[i] ? { ...r, cardId: picks[i] } : r)`), so the
+  client and the CLI share one merge. On success: `setNotice("Saved")`, clear the form (or keep the
+  metadata when editing), `router.refresh()`.
+- Listens for the `hitstreak:edit-deck` event in a `useEffect` (add/remove listener; no state set during
+  render) and loads the payload into the fields, setting `editingId`. A "Stop editing" `Button` clears it.
+
+`tests/ui/curation-form.test.tsx` (mock `./actions` and `next/navigation`; stub `fetch` for the search):
+pasting a list and clicking Resolve calls `resolveDecklistAction("pokemon", text)` and renders one row per
+line; an unresolved row shows its candidates and Save stays disabled; clicking a candidate enables Save;
+Save calls `saveMetaDeckAction` with the merged lines (two lines of the same card summed) and the metadata
+from the fields; an action error renders an alert and Save stays available; switching the game pill before
+resolving passes the new slug; the `hitstreak:edit-deck` event fills the fields and sets the id that Save
+sends.
+
+- [ ] **Step 7: the way in.** On `app/(app)/decks/page.tsx`, the `SectionHeading`'s `trailing` already
+  holds "My decks"; add an admin-only "Curate" `Button href="/admin/decks"` beside it — the page is a
+  Server Component, so gate it on `await isAdminUser(session.user.id)` and render nothing for everyone
+  else. Add a page-level test to `tests/ui/deck-pages.test.tsx`: `/admin/decks` renders for an admin, is
+  `notFound` for a signed-in non-admin, and the "Curate" link appears on `/decks` only for an admin.
+
+- [ ] **Step 8: docs.** README "Curating meta decks locally" gains a sentence: the same flow is available
+  in the app at `/admin/decks` for a user with `isAdmin = 1`, and the CLI remains the scriptable path.
+
+- [ ] **Step 9:** `npm test`, `npm run typecheck`, `npm run lint` all green. **Commit** —
+  `feat(decks): admin meta-deck curation — paste, resolve, fix up, save`
+
+---
 
 ### Task 9: Docs, spec amendments, deviations, final review, merge (outline)
 
