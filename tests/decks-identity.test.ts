@@ -29,10 +29,19 @@ describe("baseName", () => {
     expect(baseName("Drifloon - 005 (Cosmos Holo)")).toBe("Drifloon");
     expect(baseName("Haunter  - 027")).toBe("Haunter"); // double space before the dash, as in the catalog
   });
+  it("strips set-code-prefixed numbers (Mega Evolution basic energies)", () => {
+    expect(baseName("Basic Grass Energy - MEE 001")).toBe("Basic Grass Energy");
+    expect(baseName("Basic Metal Energy - MEE 008 (Cosmos Holo)")).toBe("Basic Metal Energy");
+    expect(identityKey("pokemon", { name: "Basic Grass Energy - MEE 001", attrs: {} })).toBe(identityKey("pokemon", { name: "Basic Grass Energy", attrs: {} }));
+  });
   it("leaves names alone when the dash is not followed by a printing number", () => {
     expect(baseName("Code Card - Scarlet & Violet Booster Box")).toBe("Code Card - Scarlet & Violet Booster Box");
     expect(baseName("Code Card - 151 Booster Pack")).toBe("Code Card - 151 Booster Pack");
     expect(baseName("Detective Pikachu Special Case File - 3 Pack Booster Blister")).toBe("Detective Pikachu Special Case File - 3 Pack Booster Blister");
+    // a set-code-looking word followed by digits is still a product name when more words follow the number
+    expect(baseName("Code Card - XY 3 Pack Blister [Gallade]")).toBe("Code Card - XY 3 Pack Blister [Gallade]");
+    expect(baseName("Code Card - Fall 2018 Collector Chest")).toBe("Code Card - Fall 2018 Collector Chest");
+    expect(baseName("Elite Trainer Box - 151")).toBe("Elite Trainer Box"); // pre-existing: a bare trailing number strips
   });
   it("leaves hyphens, periods, colons, and apostrophes inside names intact", () => {
     expect(baseName("Ho-Oh ex")).toBe("Ho-Oh ex");
