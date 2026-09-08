@@ -4,7 +4,9 @@
 import { db } from "@/lib/db";
 
 export interface PrintingPrice { printingId: number; subtype: string; market: number | null; priceDate: string | null }
-export interface SearchHit { cardId: number; name: string; number: string | null; rarity: string | null; imageUrl: string | null; setName: string; gameSlug: string; printings: PrintingPrice[] }
+// `attrs` rides along because the deck builder needs a hit's card type to know which zone it belongs in
+// (lib/decks/zone.ts) and which rules apply to it (lib/decks/validate.ts).
+export interface SearchHit { cardId: number; name: string; number: string | null; rarity: string | null; imageUrl: string | null; setName: string; gameSlug: string; attrs: Record<string, string>; printings: PrintingPrice[] }
 
 const MIN_QUERY = 2;
 
@@ -15,7 +17,7 @@ export async function searchCards(q: string, opts: { gameSlug?: string; limit?: 
   const c = await db();
   const like = `%${query.replace(/[%_]/g, (m) => "\\" + m)}%`;
   const rows = (await c.execute({
-    sql: `SELECT ca.id, ca.name, ca.number, ca.rarity, ca.image_url, se.name AS set_name, g.slug AS game_slug
+    sql: `SELECT ca.id, ca.name, ca.number, ca.rarity, ca.image_url, ca.attrs, se.name AS set_name, g.slug AS game_slug
           FROM cards ca JOIN sets se ON se.id = ca.set_id JOIN games g ON g.id = se.game_id
           WHERE (ca.name LIKE ? ESCAPE '\\' OR ca.number LIKE ? ESCAPE '\\') AND (? IS NULL OR g.slug = ?)
           ORDER BY CASE WHEN ca.name LIKE ? ESCAPE '\\' THEN 0 ELSE 1 END, ca.name, se.release_date DESC
@@ -36,11 +38,15 @@ export async function searchCards(q: string, opts: { gameSlug?: string; limit?: 
     list.push({ printingId: Number(r.printing_id), subtype: String(r.subtype), market: r.market == null ? null : Number(r.market), priceDate: r.date == null ? null : String(r.date) });
     byCard.set(Number(r.card_id), list);
   }
-  return rows.map((r) => ({
-    cardId: Number(r.id), name: String(r.name), number: r.number == null ? null : String(r.number), rarity: r.rarity == null ? null : String(r.rarity),
-    imageUrl: r.image_url == null ? null : String(r.image_url), setName: String(r.set_name), gameSlug: String(r.game_slug),
-    printings: byCard.get(Number(r.id)) ?? [],
-  }));
+  return rows.map((r) => {
+    let attrs: Record<string, string> = {};
+    try { attrs = JSON.parse(String(r.attrs ?? "{}")); } catch { /* keep {} */ }
+    return {
+      cardId: Number(r.id), name: String(r.name), number: r.number == null ? null : String(r.number), rarity: r.rarity == null ? null : String(r.rarity),
+      imageUrl: r.image_url == null ? null : String(r.image_url), setName: String(r.set_name), gameSlug: String(r.game_slug), attrs,
+      printings: byCard.get(Number(r.id)) ?? [],
+    };
+  });
 }
 
 export interface Game { id: number; slug: string; name: string }

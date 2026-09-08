@@ -4,7 +4,7 @@ import { listGames } from "@/lib/catalog";
 import { listMetaDecks, getDeck } from "@/lib/decks/data";
 import { loadOwnedByKey, analyzeGap } from "@/lib/decks/gap";
 import { isGameSlug } from "@/lib/decks/types";
-import { SectionHeading, Pill, EmptyState } from "@/components/ui";
+import { SectionHeading, Pill, EmptyState, Button } from "@/components/ui";
 import DeckSummaryPanel from "./DeckSummaryPanel";
 
 export const metadata = { title: "Decks — Hitstreak" };
@@ -32,7 +32,12 @@ export default async function DecksPage({ searchParams }: PageProps<"/decks">) {
 
   return (
     <div className="flex flex-col gap-5">
-      <SectionHeading as="h1" title="Meta decks" caption={`${decks.length} curated for ${current.name}`} />
+      <SectionHeading
+        as="h1"
+        title="Meta decks"
+        caption={`${decks.length} curated for ${current.name}`}
+        trailing={<Button href="/decks/mine" variant="secondary" size="sm">My decks</Button>}
+      />
 
       <div className="flex flex-wrap gap-1.5">
         {games.map((g) => (

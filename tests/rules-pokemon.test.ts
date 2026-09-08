@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateDeck } from "@/lib/decks/validate";
+import { validateDeck, validationItems, RULE_TEXT } from "@/lib/decks/validate";
 import { card } from "./helpers/decks";
 import type { DeckCardInput } from "@/lib/decks/types";
 
@@ -113,5 +113,28 @@ describe("Pokémon deck rules", () => {
   it("reports every problem at once", () => {
     const d = [poke("Charmander", { cardId: 1, quantity: 5 })];
     expect(codes(d).sort()).toEqual(["copies", "size"]);
+  });
+});
+
+describe("validationItems", () => {
+  it("lists every rule as ok for a legal deck, in RULE_TEXT order", () => {
+    const items = validationItems({ gameSlug: "pokemon", cards: legal() });
+    expect(items.every((i) => i.ok)).toBe(true);
+    expect(items.map((i) => i.text)).toEqual(RULE_TEXT.pokemon.map((r) => r.text));
+  });
+  it("replaces a broken rule with its concrete errors and leaves the rest alone", () => {
+    const d = legal();
+    d[2].quantity = 5; // 5 Rare Candy → 61 cards
+    const items = validationItems({ gameSlug: "pokemon", cards: d });
+    expect(items.filter((i) => !i.ok).map((i) => i.text)).toEqual([
+      expect.stringContaining("61"),
+      expect.stringContaining("Rare Candy"),
+    ]);
+    // The failures sit where their rule sits: size first, copies third.
+    expect(items[0].ok).toBe(false);
+    expect(items[2].ok).toBe(false);
+    expect(items.filter((i) => i.ok).map((i) => i.text)).toEqual(
+      RULE_TEXT.pokemon.filter((r) => r.code !== "size" && r.code !== "copies").map((r) => r.text)
+    );
   });
 });

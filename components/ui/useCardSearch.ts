@@ -1,39 +1,50 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import type { PrintingPrice } from "@/lib/catalog";
+import type { PrintingPrice, SearchHit } from "@/lib/catalog";
 
-export interface CardHit { cardId: number; name: string; subtitle: string; imageUrl: string | null; printings: PrintingPrice[] }
+/** A search hit as the pickers want it: the raw catalog fields the deck builder reads (number, set,
+ *  rarity, attrs) plus the `subtitle` the card rows render. */
+export interface CardHit {
+  cardId: number; name: string; subtitle: string; imageUrl: string | null;
+  number: string | null; setName: string; rarity: string | null; attrs: Record<string, string>;
+  printings: PrintingPrice[];
+}
 
 const MIN_QUERY = 2;
 const DEBOUNCE_MS = 250;
 const MAX_RESULTS = 10;
 
-/** Debounced type-ahead against /api/search. Results are tagged with the query they answer, so a
- *  stale page is simply not returned (`hits` is [] until the current query has settled). */
-export function useCardSearch(query: string, enabled = true) {
+/** Debounced type-ahead against /api/search, optionally limited to one game. Results are tagged with
+ *  the query (and game) they answer, so a stale page is simply not returned (`hits` is [] until the
+ *  current query has settled). */
+export function useCardSearch(query: string, enabled = true, gameSlug?: string) {
   const q = query.trim();
   const [results, setResults] = useState<{ query: string; cards: CardHit[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // One tag for both inputs: switching game re-fetches instead of showing the other game's hits.
+  const tag = `${q}|${gameSlug ?? ""}`;
 
   useEffect(() => {
     if (!enabled || q.length < MIN_QUERY) return;
     let live = true;
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}${gameSlug ? `&game=${encodeURIComponent(gameSlug)}` : ""}`);
         if (!res.ok) throw new Error("search failed");
         const body = await res.json();
         if (!live) return;
-        const cards: CardHit[] = (body.hits ?? []).slice(0, MAX_RESULTS).map(
-          (h: { cardId: number; name: string; setName: string; number: string | null; imageUrl: string | null; printings: PrintingPrice[] }) => ({
-            cardId: h.cardId,
-            name: h.name,
-            subtitle: [h.setName, h.number].filter(Boolean).join(" · "),
-            imageUrl: h.imageUrl,
-            printings: h.printings,
-          })
-        );
-        setResults({ query: q, cards });
+        const cards: CardHit[] = (body.hits ?? []).slice(0, MAX_RESULTS).map((h: SearchHit) => ({
+          cardId: h.cardId,
+          name: h.name,
+          subtitle: [h.setName, h.number].filter(Boolean).join(" · "),
+          imageUrl: h.imageUrl,
+          number: h.number ?? null,
+          setName: h.setName,
+          rarity: h.rarity ?? null,
+          attrs: h.attrs ?? {},
+          printings: h.printings,
+        }));
+        setResults({ query: tag, cards });
         setError(null);
       } catch {
         if (live) setError("Could not search right now. Try again.");
@@ -43,11 +54,11 @@ export function useCardSearch(query: string, enabled = true) {
       live = false;
       clearTimeout(timer);
     };
-  }, [q, enabled]);
+  }, [q, enabled, gameSlug, tag]);
 
   // Stable, so a caller can fold it into its own memoised handlers (AddItemDialog's `close`).
   const reset = useCallback(() => setResults(null), []);
 
-  const settled = results?.query === q;
+  const settled = results?.query === tag;
   return { hits: settled ? results!.cards : [], settled, error, reset };
 }

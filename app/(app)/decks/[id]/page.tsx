@@ -9,6 +9,7 @@ import { describeRules } from "@/lib/decks/validate";
 import { ZONES, ZONE_LABEL } from "@/lib/decks/types";
 import { formatMoney } from "@/lib/format";
 import { SectionHeading, Panel, StatTile, TierBadge, ValidationList, CardRow } from "@/components/ui";
+import CopyDeckButton from "./CopyDeckButton";
 
 // Owned / missing / cost are per-user: never prerender or cache across users.
 export const dynamic = "force-dynamic";
@@ -59,6 +60,7 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
         <div className="flex flex-wrap items-center gap-3">
           <SectionHeading as="h1" title={deck.name} />
           {deck.tier != null && <TierBadge tier={deck.tier} />}
+          {deck.isMeta && <CopyDeckButton sourceId={deck.id} />}
         </div>
       </div>
 

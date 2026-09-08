@@ -4,7 +4,7 @@
 // Personal decks are scoped to their owner on every read and write.
 import { db } from "@/lib/db";
 import type { InStatement } from "@libsql/client";
-import { type GameSlug, type Zone, ZONES, isGameSlug } from "./types";
+import { type DeckCardInput, type GameSlug, type Zone, ZONES, isGameSlug } from "./types";
 
 export interface DeckSummary {
   id: number; gameSlug: GameSlug; gameName: string; name: string; archetype: string | null; tier: number | null;
@@ -80,6 +80,27 @@ export async function getDeck(id: number, userId: string | null): Promise<DeckDe
     };
   }).sort((a, b) => order.indexOf(a.zone) - order.indexOf(b.zone) || a.name.localeCompare(b.name));
   return { ...summary, cards };
+}
+
+/** The name/attrs/rarity a validator needs for the given lines, read from the catalog. Lines whose card
+ *  no longer exists are dropped; `saveDeckCards` rejects them separately. */
+export async function loadDeckCardInputs(lines: DeckLineInput[]): Promise<DeckCardInput[]> {
+  if (lines.length === 0) return [];
+  const c = await db();
+  const ids = [...new Set(lines.map((l) => l.cardId))];
+  const rows = (await c.execute({
+    sql: `SELECT id, name, rarity, attrs FROM cards WHERE id IN (${ids.map(() => "?").join(",")})`,
+    args: ids,
+  })).rows;
+  const byId = new Map(rows.map((r) => {
+    let attrs: Record<string, string> = {};
+    try { attrs = JSON.parse(String(r.attrs ?? "{}")); } catch { /* keep {} */ }
+    return [Number(r.id), { name: String(r.name), rarity: r.rarity == null ? null : String(r.rarity), attrs }];
+  }));
+  return lines.flatMap((l) => {
+    const card = byId.get(l.cardId);
+    return card ? [{ cardId: l.cardId, zone: l.zone, quantity: l.quantity, name: card.name, rarity: card.rarity, attrs: card.attrs }] : [];
+  });
 }
 
 async function gameIdFor(slug: string): Promise<number> {

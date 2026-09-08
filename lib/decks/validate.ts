@@ -30,7 +30,23 @@ export const RULE_TEXT: Record<GameSlug, Array<{ code: string; text: string }>> 
     { code: "rune", text: "Exactly 12 runes in your domains" }, { code: "battlefield", text: "Exactly 3 different Battlefields" }, { code: "zone", text: "Only units, spells and gear in the main deck" },
   ],
 };
-export function describeRules(input: DeckInput): Array<{ ok: boolean; text: string }> {
+/** One line of the ValidationList (`components/ui/ValidationList.tsx`'s `ValidationItem`). */
+type RuleItem = { ok: boolean; text: string };
+
+export function describeRules(input: DeckInput): RuleItem[] {
   const failed = new Set(validateDeck(input).errors.map((e) => e.code));
   return RULE_TEXT[input.gameSlug].map((r) => ({ ok: !failed.has(r.code), text: r.text }));
+}
+
+/** `describeRules` with the failures spelled out: the rule's own text when it holds, or one line per
+ *  concrete error when it doesn't ("Rare Candy: 5 copies (max 4)"). Rules stay in RULE_TEXT order, so a
+ *  rule that breaks is replaced in place by its errors — the builder's live legality panel. */
+export function validationItems(input: DeckInput): RuleItem[] {
+  const errors = validateDeck(input).errors;
+  // The annotation matters: without it the two branches infer `ok: true[]` / `ok: false[]`, and flatMap
+  // takes the first as the callback's whole return type.
+  return RULE_TEXT[input.gameSlug].flatMap((r): RuleItem[] => {
+    const hits = errors.filter((e) => e.code === r.code);
+    return hits.length === 0 ? [{ ok: true, text: r.text }] : hits.map((e) => ({ ok: false, text: e.message }));
+  });
 }

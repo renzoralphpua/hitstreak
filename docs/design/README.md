@@ -96,9 +96,10 @@ Mockup element → primitive (`components/ui/`):
 | 7D · 30D · 90D · 1Y · All row | `RangePills` |
 | Meta deck row (name, tier, You own x / N, $ to complete, bar) | `DeckSummaryPanel` (`app/(app)/decks/`; a `Link` around `Panel` + `TierBadge` + `ProgressBar`, like `SetPanel` on /sets) |
 
-**Group labels:** the uppercase tier labels on /decks and the Triggered / Watching labels on /alerts are the
-same ad-hoc `text-xs font-semibold uppercase tracking-[0.06em] text-muted` span — a `GroupLabel` primitive
-candidate (spec §13), not promoted yet.
+**Group labels:** the uppercase tier labels on /decks, the Triggered / Watching labels on /alerts and the
+deck builder's zone headings (`Main deck`, `Runes`, … each with the zone's card subtotal) are the same
+ad-hoc `text-xs font-semibold uppercase tracking-[0.06em] text-muted` span — a `GroupLabel` primitive
+candidate (spec §13, three sites now), not promoted yet.
 
 **Zero-change convention:** a 0 delta renders neutral (no arrow, dim text — neither gain nor accent);
 percentages that round to 0.0% are shown unsigned (no leading `+`/`-`).
