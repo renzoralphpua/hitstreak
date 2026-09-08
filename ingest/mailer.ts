@@ -47,6 +47,8 @@ export function alertEmail(i: AlertEmailInput): Mail {
     ``,
     `This alert will email you again only after the price crosses back over ${formatMoney(i.threshold)}. Manage alerts: ${new URL("/alerts", i.cardUrl).href}`,
   ].join("\n");
+  // `#6f665a` is the light-theme `--muted` token (docs/design/README.md) inlined: email clients cannot
+  // read CSS variables, so this is the one deliberate hex colour outside app/globals.css.
   const html = `<p><strong>${esc(i.cardName)}</strong> (${esc(where)}) ${verb} your <strong>${formatMoney(i.threshold)}</strong> line.</p>
 <p>Market price today: <strong>${formatMoney(i.market)}</strong>.</p>
 <p><a href="${esc(i.cardUrl)}">View the card</a></p>

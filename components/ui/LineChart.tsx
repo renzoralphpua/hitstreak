@@ -1,5 +1,5 @@
 // components/ui/LineChart.tsx
-import type { Point } from "@/lib/history";
+import type { Point } from "@/lib/ranges";
 import { cn } from "./cn";
 
 type Props = { points: Point[]; from: string; to: string; height?: number; label: string; className?: string };

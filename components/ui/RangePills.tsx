@@ -1,5 +1,5 @@
 // components/ui/RangePills.tsx
-import { RANGES, RANGE_LABEL, type Range } from "@/lib/history";
+import { RANGES, RANGE_LABEL, type Range } from "@/lib/ranges"; // db-free on purpose: this reaches client bundles via components/ui
 import { cn } from "./cn";
 import Pill from "./Pill";
 
