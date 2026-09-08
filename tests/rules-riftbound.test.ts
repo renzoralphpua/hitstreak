@@ -26,7 +26,7 @@ describe("Riftbound deck rules", () => {
     expect(codes([...legal(), legend({ cardId: 3 })])).toEqual(["legend"]);
     const notALegend = legal().map((c) => (c.zone === "legend" ? { ...c, attrs: { ...c.attrs, "Card Type": "Unit" } } : c));
     expect(codes(notALegend)).toEqual(["legend"]);
-    expect(validate(notALegend).errors[0].message).toMatch(/not a Legend/);
+    expect(validate(notALegend).errors[0]).toMatchObject({ cardId: 1, message: expect.stringMatching(/not a Legend/) });
   });
   it("requires one Chosen Champion that is a Champion Unit sharing the Legend's tag", () => {
     const none = legal().filter((c) => c.zone !== "champion");
@@ -125,6 +125,21 @@ describe("Riftbound deck rules — catalog shapes (verified 2026-09-08)", () => 
     expect(r.errors[0].cardId).toBe(10);
     const e = legal(); e[19] = unit("Unit 0", 10, 1, "Body", { zone: "battlefield" });
     expect(codes(e)).toEqual(["battlefield"]);
+  });
+  it("tokens are never deck cards, even when typed as a Battlefield, Rune, Legend or Champion Unit", () => {
+    // real catalog shapes: "Gear;Battlefield;Token", "Battlefield;Token", "Unit;Battlefield;Token"
+    const d = legal(); d[19] = bf("Bandle", 62, { attrs: { "Card Type": "Gear;Battlefield;Token" } });
+    const r = validate(d);
+    expect(r.errors.map((x) => x.code)).toEqual(["battlefield"]);
+    expect(r.errors[0]).toMatchObject({ cardId: 62, message: "Bandle is a token, not a Battlefield" });
+    const e = legal(); e[18] = bf("Targon", 61, { attrs: { "Card Type": "Unit;Battlefield;Token" } });
+    expect(codes(e)).toEqual(["battlefield"]);
+    const f = legal(); f[16] = { ...rune("Body", 51, 6), attrs: { "Card Type": "Rune;Token", Domain: "Body" } };
+    expect(codes(f)).toEqual(["rune"]);
+    const g = legal(); g[0] = legend({ attrs: { "Card Type": "Legend;Token", Tag: "Renekton", Domain: "Fury;Body" } });
+    expect(validate(g).errors.map((x) => x.code)).toEqual(["legend"]);
+    const h = legal(); h[1] = champion({ attrs: { "Card Type": "Champion Unit;Token", Tag: "Renekton;Shurima", Domain: "Fury" } });
+    expect(codes(h)).toEqual(["champion"]);
   });
   it("battlefields are colourless in the catalog (Domain `None` or missing) but obey domain identity when they carry one (Core Rules 103.4.b)", () => {
     const d = legal(); d[19] = bf("Bandle", 62, { attrs: { "Card Type": "Battlefield", Domain: "None" } });

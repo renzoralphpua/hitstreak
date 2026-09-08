@@ -8,8 +8,9 @@
 // main-deck card (Patched Porobot), anything with "Token" is not; one promo is typed "None" and sealed product /
 // a few alt arts carry no attrs at all. Every Legend has exactly one Tag (the champion, e.g. "Kha'Zix") and two
 // domains. Champion Units always carry a Tag but the champion is not always first ("Freljord;Ornn"); one has no
-// Domain (Ornn, Forge God) and is colourless. Signature cards are multi-tagged ("Equipment;Ornn") and carry the
-// Legend's full two-domain identity. Domain and Tag are Title-case with no stray whitespace — compared trimmed
+// Domain (Ornn, Forge God) and is colourless. Signature cards may be multi-tagged ("Equipment;Ornn"); they usually
+// carry both of the Legend's domains, sometimes one. Tokens exist in every shape ("Unit;Token", "Battlefield;Token",
+// "Gear;Battlefield;Token") and are never deck cards. Domain and Tag are Title-case with no stray whitespace — compared trimmed
 // and case-insensitively anyway. All 71 Battlefields are colourless (Domain "None" or missing); 103.4.b still
 // makes them "subject to Domain Identity if applicable", so a Battlefield that does carry a Domain is checked.
 // Alt arts ("Body Rune (R04a)", "Bandle Tree (Alternate Art)") are the same card by base name.
@@ -22,6 +23,9 @@ const MAIN_TYPES = ["Unit", "Champion Unit", "Spell", "Gear", "Signature Spell",
 
 const types = (c: DeckCardInput) => splitList(c.attrs["Card Type"]);
 const hasType = (c: DeckCardInput, t: string) => types(c).some((x) => x.toLowerCase() === t.toLowerCase());
+const isToken = (c: DeckCardInput) => hasType(c, "Token");
+/** True when the card is a real (non-token) card of type `t`. */
+const isA = (c: DeckCardInput, t: string) => hasType(c, t) && !isToken(c);
 const isSignature = (c: DeckCardInput) => types(c).some((t) => /^signature/i.test(t));
 const isMainType = (c: DeckCardInput) => {
   const ts = types(c);
@@ -30,6 +34,7 @@ const isMainType = (c: DeckCardInput) => {
 const domains = (c: DeckCardInput) => splitList(c.attrs.Domain).map((d) => d.toLowerCase()).filter((d) => d !== "none");
 const tags = (c: DeckCardInput) => splitList(c.attrs.Tag).map((t) => t.toLowerCase());
 const label = (c: DeckCardInput) => baseName(c.name);
+const notA = (c: DeckCardInput, t: string) => (isToken(c) ? `${label(c)} is a token, not a ${t}` : `${label(c)} is not a ${t}`);
 const count = (cs: DeckCardInput[]) => cs.reduce((n, c) => n + c.quantity, 0);
 
 export function validateRiftbound({ cards }: DeckInput): ValidationResult {
@@ -40,9 +45,11 @@ export function validateRiftbound({ cards }: DeckInput): ValidationResult {
   for (const c of cards) if (!ZONES.riftbound.includes(c.zone)) errors.push({ code: "zone", message: `${label(c)} is in a zone Riftbound decks don't use (${c.zone})`, cardId: c.cardId });
 
   const legendCount = count(legends);
-  const legend = legends.length === 1 && legendCount === 1 && hasType(legends[0], "Legend") ? legends[0] : null;
+  const legend = legends.length === 1 && legendCount === 1 && isA(legends[0], "Legend") ? legends[0] : null;
   if (!legend) {
-    errors.push({ code: "legend", message: legendCount === 0 ? "Pick a Legend" : legendCount === 1 ? `${label(legends[0])} is not a Legend card` : `Exactly one Legend card in the Legend slot (found ${legendCount})` });
+    if (legendCount === 0) errors.push({ code: "legend", message: "Pick a Legend" });
+    else if (legendCount === 1) errors.push({ code: "legend", message: notA(legends[0], "Legend card"), cardId: legends[0].cardId });
+    else errors.push({ code: "legend", message: `Exactly one Legend card in the Legend slot (found ${legendCount})` });
   }
   const identity = new Set(legend ? domains(legend) : []);
   const legendTags = new Set(legend ? tags(legend) : []);
@@ -51,7 +58,7 @@ export function validateRiftbound({ cards }: DeckInput): ValidationResult {
   const championCount = count(champions);
   const champion = champions.length === 1 && championCount === 1 ? champions[0] : null;
   if (!champion) errors.push({ code: "champion", message: championCount === 0 ? "Pick a Chosen Champion" : `Exactly one Chosen Champion (found ${championCount})` });
-  else if (!hasType(champion, "Champion Unit")) errors.push({ code: "champion", message: `${label(champion)} is not a Champion Unit`, cardId: champion.cardId });
+  else if (!isA(champion, "Champion Unit")) errors.push({ code: "champion", message: notA(champion, "Champion Unit"), cardId: champion.cardId });
   else if (legend && !isForLegend(champion)) errors.push({ code: "champion", message: `${label(champion)} is not ${label(legend)}'s champion`, cardId: champion.cardId });
 
   // The Chosen Champion is one of the main deck's 40 (Core Rules 103.2): it counts toward size and copies.
@@ -83,11 +90,12 @@ export function validateRiftbound({ cards }: DeckInput): ValidationResult {
     }
   }
 
-  for (const c of runes) if (!hasType(c, "Rune")) errors.push({ code: "rune", message: `${label(c)} is not a Rune`, cardId: c.cardId });
+  for (const c of runes) if (!isA(c, "Rune")) errors.push({ code: "rune", message: notA(c, "Rune"), cardId: c.cardId });
   const runeCount = count(runes);
   if (runeCount !== RUNES) errors.push({ code: "rune", message: `The rune deck must be exactly ${RUNES} runes (this one has ${runeCount})` });
 
-  for (const c of battlefields) if (!hasType(c, "Battlefield")) errors.push({ code: "battlefield", message: `${label(c)} is not a Battlefield`, cardId: c.cardId });
+  // Real catalog tokens are typed "Battlefield;Token" / "Gear;Battlefield;Token": the type alone doesn't make a Battlefield.
+  for (const c of battlefields) if (!isA(c, "Battlefield")) errors.push({ code: "battlefield", message: notA(c, "Battlefield"), cardId: c.cardId });
   const bfNames = battlefields.flatMap((c) => Array<string>(c.quantity).fill(label(c).toLowerCase()));
   const distinct = new Set(bfNames).size;
   if (bfNames.length !== BATTLEFIELDS || distinct !== bfNames.length) {
