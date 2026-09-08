@@ -2069,14 +2069,39 @@ differs from the plan above:
 - **Task 9's design-README item needed no edit** — Tasks 2 and 7 had already added the `LineChart`,
   `RangePills` and `CardRow tone="inverted"` rows and the `Button size="sm"` tap-target sentence.
 
+### Pre-merge review fixes (2026-09-08)
+
+The whole-branch review that closes Task 9 found these; fixed on this branch in
+`fix: pre-merge review — …` / `docs: pre-merge review — …` commits:
+
+- **Alerts are evaluated against `latest_prices`, not the run date's snapshot.** `loadAlerts` used the
+  same as-of-`date` subquery as `materializePortfolioHistory` — right for history, wrong for the alert
+  state machine, which is not order-aware. Re-running a failed night N (the workflow's `date` input)
+  after night N+1 had fired an alert would have re-armed it on N's older price, and night N+2 would
+  have emailed a duplicate; symmetrically an armed alert could fire on N's stale price and say
+  "Market price today: <N's price>". `latest_prices` equals the newest snapshot in the scheduled run
+  (the `ingest/prices.ts` invariant), so that path is unchanged; only an old-date re-run differs, where
+  the current price is the right answer and matches `/alerts`. `tests/nightly.test.ts` now mirrors the
+  invariant (it updates `latest_prices` alongside the snapshots it inserts) and adds the
+  historical-re-run case (fired stays fired, a freshly armed alert does not fire, history is still
+  valued as of the date).
+- **`lib/ranges.ts`** holds the db-free history exports (re-exported by `lib/history.ts`);
+  `RangePills` and `LineChart` import from it; `tests/ranges.test.ts` fails if anything under
+  `components/ui` imports `lib/db` or `lib/history`. Resolves the first "known item" below.
+- `ingest/mailer.ts` says why its one hex colour (`--muted`, light theme) is inlined.
+- `GroupLabel` and a 22px `SectionHeading` size are recorded as primitive candidates in spec §13
+  rather than built here — Phase 5 is where page patterns get promoted to primitives.
+- Commit `2c502a3`'s message names the design README, which it did not touch (Tasks 2 and 7 had
+  already made those edits). The branch is never force-pushed, so: drop "design README" from the
+  squash-merge message.
+
 ### Known items, deliberately left
 
 Also recorded in spec §13.
 
-- `lib/history.ts` statically imports `lib/db` (→ `@libsql/client`) and is reached from the client
-  bundle through `components/ui/index.ts` → `RangePills` (the `"use client"` gallery imports it;
-  `LineChart` only imports a type). Builds today via the package's browser export condition; split
-  the db-free exports into a db-free module before adding `"server-only"` to `lib/db.ts`.
+- ~~`lib/history.ts` statically imports `lib/db` and is reached from the client bundle through
+  `components/ui/index.ts` → `RangePills`~~ — resolved by `lib/ranges.ts` (pre-merge review, above);
+  `"server-only"` in `lib/db.ts` is still to do.
 - `listAlerts` issues two queries per alert for the 30-day change (`thirtyDayChange`) — ~200 at the
   100-alert cap. `createAlert`'s cap is COUNT-then-INSERT, not atomic.
 - `getSharedPortfolio` reads holdings twice (`getPortfolioSummary` re-reads them).
