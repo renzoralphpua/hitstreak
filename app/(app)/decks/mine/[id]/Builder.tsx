@@ -15,7 +15,7 @@ import { validationItems } from "@/lib/decks/validate";
 import { defaultZone, isSingleCardZone } from "@/lib/decks/zone";
 import { identityKey } from "@/lib/decks/identity";
 import { formatMoney } from "@/lib/format";
-import { Button, CardRow, Panel, SearchField, StatTile, ValidationList } from "@/components/ui";
+import { Button, CardRow, Panel, SearchField, SectionHeading, StatTile, ValidationList } from "@/components/ui";
 import { useCardSearch, type CardHit } from "@/components/ui/useCardSearch";
 import { saveDeckAction } from "../../actions";
 
@@ -121,18 +121,19 @@ export default function Builder({ deck, owned }: { deck: DeckDetail; owned: Reco
         ← My decks
       </Link>
 
-      <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="font-display text-[26px] leading-none text-ink">{deck.name}</h1>
-        <span className="text-[13px] text-dim">
-          {deck.gameName} · {deck.format ?? "no format"}
-        </span>
-        <div className="ml-auto flex items-center gap-3">
-          <span className="text-[13px] text-muted">{status}</span>
-          <Button size="sm" disabled={busy} onClick={save}>
-            Save deck
-          </Button>
-        </div>
-      </div>
+      <SectionHeading
+        as="h1"
+        title={deck.name}
+        caption={`${deck.gameName} · ${deck.format ?? "no format"}`}
+        trailing={
+          <>
+            <span className="text-muted">{status}</span>
+            <Button size="sm" disabled={busy} onClick={save}>
+              Save deck
+            </Button>
+          </>
+        }
+      />
       {error && (
         <p role="alert" className="text-[13px] text-accent">
           {error}
