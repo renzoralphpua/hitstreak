@@ -4,7 +4,7 @@
 // Personal decks are scoped to their owner on every read and write.
 import { db } from "@/lib/db";
 import type { InStatement } from "@libsql/client";
-import { type DeckCardInput, type GameSlug, type Zone, QTY_MAX, ZONES, isGameSlug } from "./types";
+import { type DeckCardInput, type GameSlug, type Zone, MAX_LINES, QTY_MAX, ZONES, isGameSlug } from "./types";
 
 export interface DeckSummary {
   id: number; gameSlug: GameSlug; gameName: string; name: string; archetype: string | null; tier: number | null;
@@ -18,7 +18,8 @@ export interface DeckDetail extends DeckSummary { cards: DeckLine[] }
 export interface DeckLineInput { cardId: number; zone: Zone; quantity: number }
 
 const NAME_MAX = 80;
-const MAX_LINES = 200; // distinct (card, zone) lines per deck; bounds the write batch before any DB work
+// MAX_LINES (the write batch's bound) lives in ./types — the curation action needs the same number to
+// bound a paste before it resolves it.
 function cleanName(name: string): string {
   const n = name.trim();
   if (n.length === 0 || n.length > NAME_MAX) throw new Error(`Deck name must be 1–${NAME_MAX} characters`);

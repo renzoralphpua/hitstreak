@@ -22,6 +22,19 @@ export function assertQuantity(n: unknown): number {
   return n;
 }
 
+/** An optional free-text column (archetype, format, a source note). Null/undefined pass through as
+ *  null; anything else must be a string, and it is trimmed, with an empty result folded back to null
+ *  so " " never becomes a stored blank. The cap is the point: without it a direct action call can put
+ *  a megabyte — or a non-string — into a column no form would ever fill past a few dozen characters. */
+export function assertOptionalText(v: unknown, max: number): string | null {
+  if (v == null) return null;
+  if (typeof v !== "string") throw new Error("That value must be text");
+  const t = v.trim();
+  if (t.length === 0) return null;
+  if (t.length > max) throw new Error(`That value must be at most ${max} characters`);
+  return t;
+}
+
 /** Re-checks the session (a client can call an action directly) and turns any thrown validation or
  *  ownership error into `{ ok: false, error }` so nothing is thrown to the client. */
 export async function withUser<T>(fn: (userId: string) => Promise<T>): Promise<ActionResult<T>> {

@@ -7,6 +7,11 @@ export const isGameSlug = (s: unknown): s is GameSlug => typeof s === "string" &
  *  it bounds the builder's steppers, the action layer's input check and `checkLines`' final word. */
 export const QTY_MAX = 99;
 
+/** Distinct (card, zone) lines a deck may hold. Same reason QTY_MAX lives here rather than in data.ts:
+ *  `checkLines` has the final word, but the curation action must bound a paste BEFORE resolving it —
+ *  every unresolved line costs up to two sequential catalog queries. */
+export const MAX_LINES = 200;
+
 export type Zone = "main" | "leader" | "legend" | "champion" | "rune" | "battlefield";
 /** Zones each game's decks use, in display order. */
 export const ZONES: Record<GameSlug, readonly Zone[]> = {

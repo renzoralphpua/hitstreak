@@ -5,6 +5,7 @@ import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import { seedDeckFixtures } from "./helpers/decks";
 import { listMetaDecks, getDeck, createDeck, saveDeckCards } from "@/lib/decks/data";
+import { MAX_LINES } from "@/lib/decks/types";
 
 // Same shape as tests/decks-actions.test.ts: the session and Next's cache are the only mocks.
 const { getSession, revalidatePath } = vi.hoisted(() => ({ getSession: vi.fn(), revalidatePath: vi.fn() }));
@@ -100,6 +101,19 @@ describe("resolveDecklistAction", () => {
     expect(await resolveDecklistAction("yugioh", "1 Blue-Eyes")).toEqual({ ok: false, error: "Unknown game" });
     expect(await resolveDecklistAction("pokemon", "1 Rare Candy\n".repeat(2000))).toEqual({ ok: false, error: "That list is too long" });
   });
+
+  it("refuses more lines than a deck can hold, before it queries the catalog for any of them", async () => {
+    signedIn(ADMIN);
+    // Well under TEXT_MAX characters (~13 bytes a line) but far past the line bound: the length guard
+    // alone would let this run two sequential catalog queries per line.
+    const over = "1 Rare Candy\n".repeat(MAX_LINES + 1);
+    expect(over.length).toBeLessThan(20_000);
+    expect(await resolveDecklistAction("pokemon", over)).toEqual({ ok: false, error: `A deck can have at most ${MAX_LINES} lines` });
+
+    const atTheLimit = await resolveDecklistAction("pokemon", "1 Rare Candy\n".repeat(MAX_LINES));
+    expect(atTheLimit.ok).toBe(true); // the bound itself is allowed
+    if (atTheLimit.ok) expect(atTheLimit.data).toHaveLength(MAX_LINES);
+  });
 });
 
 describe("saveMetaDeckAction", () => {
@@ -141,6 +155,33 @@ describe("saveMetaDeckAction", () => {
     expect(await saveMetaDeckAction({ gameSlug: "pokemon", name: "x", lines: [{ cardId: f.cards.charizardEx, zone: "rune" as never, quantity: 1 }] }))
       .toEqual({ ok: false, error: 'Zone "rune" is not used by this game' });
     expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("refuses an over-long or non-string archetype, format or source note", async () => {
+    signedIn(ADMIN);
+    const tooLong = "x".repeat(201);
+    const base = { gameSlug: "pokemon", name: "Bloated", lines: [] };
+    expect(await saveMetaDeckAction({ ...base, archetype: tooLong })).toEqual({ ok: false, error: "That value must be at most 200 characters" });
+    expect(await saveMetaDeckAction({ ...base, format: tooLong })).toEqual({ ok: false, error: "That value must be at most 200 characters" });
+    expect(await saveMetaDeckAction({ ...base, sourceNote: tooLong })).toEqual({ ok: false, error: "That value must be at most 200 characters" });
+    expect(await saveMetaDeckAction({ ...base, archetype: 7 as never })).toEqual({ ok: false, error: "That value must be text" });
+    expect(await saveMetaDeckAction({ ...base, format: { toString: () => "std" } as never })).toEqual({ ok: false, error: "That value must be text" });
+    expect(await saveMetaDeckAction({ ...base, sourceNote: ["a"] as never })).toEqual({ ok: false, error: "That value must be text" });
+    expect((await listMetaDecks("pokemon")).some((d) => d.name === "Bloated")).toBe(false); // nothing was written
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("trims the metadata fields and stores a blank one as null", async () => {
+    signedIn(ADMIN);
+    const created = await saveMetaDeckAction({
+      gameSlug: "pokemon", name: "Trimmed", archetype: "   ", format: "  standard  ", sourceNote: "\t\n",
+      lines: [{ cardId: f.cards.fireEnergy, zone: "main", quantity: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const id = created.data as number;
+    expect(await getDeck(id, null)).toMatchObject({ archetype: null, format: "standard", sourceNote: null });
+    expect(await deleteMetaDeckAction(id)).toEqual({ ok: true, data: undefined });
   });
 
   it("cannot overwrite a personal deck by passing its id", async () => {

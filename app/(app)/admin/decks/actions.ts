@@ -3,12 +3,13 @@
 // is signed in, so each body calls isAdminUser before touching a curated row. Failures come back as
 // { ok: false, error } like every other action module.
 import { revalidatePath } from "next/cache";
-import { withUser, assertId, assertQuantity } from "@/lib/action-utils";
-import { isGameSlug, ZONES, type GameSlug, type Zone } from "@/lib/decks/types";
+import { withUser, assertId, assertOptionalText, assertQuantity } from "@/lib/action-utils";
+import { isGameSlug, MAX_LINES, ZONES, type GameSlug, type Zone } from "@/lib/decks/types";
 import { parseDecklist, resolveDecklist, type Resolution } from "@/lib/decks/resolve";
 import * as D from "@/lib/decks/data";
 
 const TEXT_MAX = 20_000; // a decklist is a few hundred bytes; this is the "someone pasted a book" guard
+const META_TEXT_MAX = 200; // archetype / format / source note; the form's fields are far shorter
 
 async function assertAdmin(userId: string) {
   if (!(await D.isAdminUser(userId))) throw new Error("Admins only");
@@ -20,7 +21,12 @@ export async function resolveDecklistAction(gameSlug: string, text: string) {
     await assertAdmin(u);
     if (!isGameSlug(gameSlug)) throw new Error("Unknown game");
     if (typeof text !== "string" || text.length > TEXT_MAX) throw new Error("That list is too long");
-    return resolveDecklist(gameSlug, parseDecklist(text, gameSlug));
+    // TEXT_MAX bounds characters, not lines, and resolveDecklist runs up to two sequential queries per
+    // line: 20 KB of "1 x\n" is ~5,000 lines, i.e. ~10,000 round trips held open in one server action.
+    // The line count is the bound that matters, and it is the one checkLines would reject anyway.
+    const lines = parseDecklist(text, gameSlug);
+    if (lines.length > MAX_LINES) throw new Error(`A deck can have at most ${MAX_LINES} lines`);
+    return resolveDecklist(gameSlug, lines);
   });
 }
 
@@ -47,6 +53,11 @@ export async function saveMetaDeckAction(input: SaveMetaDeckInput) {
       ...input,
       id: input.id == null ? undefined : assertId(input.id),
       gameSlug,
+      // `name` is capped by cleanName and `tier` by its range check; these three would otherwise reach
+      // SQL exactly as the client sent them, string or not.
+      archetype: assertOptionalText(input.archetype, META_TEXT_MAX),
+      format: assertOptionalText(input.format, META_TEXT_MAX),
+      sourceNote: assertOptionalText(input.sourceNote, META_TEXT_MAX),
       lines: assertLines(gameSlug, input.lines ?? []),
     });
   });

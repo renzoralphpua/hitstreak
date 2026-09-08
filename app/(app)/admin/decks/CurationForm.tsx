@@ -5,7 +5,7 @@
 // action re-checks admin-ness, the game, every id and every quantity before anything is written.
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { mergeResolved, type Resolution } from "@/lib/decks/decklist";
+import { mergeResolved, type Candidate, type Resolution } from "@/lib/decks/decklist";
 import { ZONES, ZONE_LABEL, isGameSlug } from "@/lib/decks/types";
 import { Button, CardRow, Input, Pill, SearchField, Textarea } from "@/components/ui";
 import { useCardSearch, type CardHit } from "@/components/ui/useCardSearch";
@@ -13,8 +13,10 @@ import { resolveDecklistAction, saveMetaDeckAction } from "./actions";
 import { EDIT_EVENT, type EditDeckDetail } from "./edit-event";
 
 const TIERS = [1, 2, 3, 4] as const;
-/** resolution index → the card a human picked for it. */
-type Picks = Record<number, number>;
+/** resolution index → the card a human picked for it. The whole card, not just its id: a card picked
+ *  through the catalog search is not in the line's candidates, so the id alone leaves the row with
+ *  nothing to show but the pasted text. */
+type Picks = Record<number, Candidate>;
 
 const blank = { name: "", archetype: "", tier: "", format: "", sourceNote: "", text: "" };
 
@@ -80,7 +82,7 @@ export default function CurationForm({ games }: { games: Array<{ slug: string; n
   }
 
   /** A resolution's card: its own match, or the one a human picked for it. */
-  const cardIdOf = (r: Resolution, i: number) => picks[i] ?? r.cardId;
+  const cardIdOf = (r: Resolution, i: number) => picks[i]?.cardId ?? r.cardId;
   const ready = resolutions !== null && resolutions.length > 0 && resolutions.every((r, i) => cardIdOf(r, i) != null);
 
   async function save() {
@@ -129,7 +131,14 @@ export default function CurationForm({ games }: { games: Array<{ slug: string; n
           <Pill
             key={g.slug}
             selected={g.slug === gameSlug}
-            onClick={() => { setGameSlug(g.slug); clearResolved(); }}
+            // Switching game abandons an edit in progress: the loaded deck belongs to the old game, so
+            // Save would post a mismatched {id, gameSlug} and the server could only answer the
+            // misleading "Meta deck not found".
+            onClick={() => {
+              if (editingId != null && g.slug !== gameSlug) stopEditing();
+              else clearResolved();
+              setGameSlug(g.slug);
+            }}
           >
             {g.name}
           </Pill>
@@ -189,9 +198,10 @@ export default function CurationForm({ games }: { games: Array<{ slug: string; n
               key={`${i}-${r.line.raw}`}
               resolution={r}
               cardId={cardIdOf(r, i)}
+              pick={picks[i] ?? null}
               gameSlug={gameSlug}
               showZone={multiZone}
-              onPick={(cardId) => setPicks((p) => ({ ...p, [i]: cardId }))}
+              onPick={(card) => setPicks((p) => ({ ...p, [i]: card }))}
             />
           ))}
         </ul>
@@ -200,16 +210,23 @@ export default function CurationForm({ games }: { games: Array<{ slug: string; n
   );
 }
 
-/** One parsed line: resolved lines read back as `×qty name`, unresolved ones offer their candidates
- *  and, failing those, a catalog search. */
+/** One parsed line: resolved lines read back as `×qty name · set · number`, unresolved ones offer their
+ *  candidates and, failing those, a catalog search. A resolved row keeps a "Change" button — this screen
+ *  exists for human review, so a mis-pick has to be correctable without re-Resolving the whole list
+ *  (which would throw away every other pick). */
 function ResolutionRow({
-  resolution, cardId, gameSlug, showZone, onPick,
+  resolution, cardId, pick, gameSlug, showZone, onPick,
 }: {
-  resolution: Resolution; cardId: number | null; gameSlug: string; showZone: boolean; onPick: (cardId: number) => void;
+  resolution: Resolution; cardId: number | null; pick: Candidate | null; gameSlug: string; showZone: boolean;
+  onPick: (card: Candidate) => void;
 }) {
   const { line, candidates } = resolution;
-  const chosen = cardId == null ? null : candidates.find((c) => c.cardId === cardId) ?? null;
+  const [changing, setChanging] = useState(false);
+  // A search pick is not in `candidates`, so it has to carry its own name/set/number.
+  const chosen = pick ?? (cardId == null ? null : candidates.find((c) => c.cardId === cardId) ?? null);
   const zone = showZone && isGameSlug(gameSlug) ? ZONE_LABEL[line.zone] : null;
+  const picking = cardId == null || changing;
+  const choose = (c: Candidate) => { onPick(c); setChanging(false); };
 
   return (
     <li className="flex flex-col gap-2 px-3 py-2.5" data-resolved={cardId != null}>
@@ -220,19 +237,24 @@ function ResolutionRow({
         <span className={`text-xs ${cardId == null ? "text-accent" : "text-gain"}`}>
           {cardId == null ? "needs a card" : chosen ? `${chosen.setName} · ${chosen.number ?? "—"}` : "resolved"}
         </span>
+        {cardId != null && (
+          <Button variant="secondary" size="sm" onClick={() => setChanging((v) => !v)}>
+            {changing ? "Keep this card" : "Change"}
+          </Button>
+        )}
       </div>
-      {cardId == null && (
+      {picking && (
         <>
           {candidates.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {candidates.map((c) => (
-                <Pill key={c.cardId} onClick={() => onPick(c.cardId)}>
+                <Pill key={c.cardId} selected={c.cardId === cardId} onClick={() => choose(c)}>
                   {`${c.name} · ${c.setName} · ${c.number ?? "—"}`}
                 </Pill>
               ))}
             </div>
           )}
-          <CardPicker gameSlug={gameSlug} initialQuery={line.text} onPick={onPick} />
+          <CardPicker gameSlug={gameSlug} initialQuery={line.text} onPick={choose} />
         </>
       )}
     </li>
@@ -240,7 +262,7 @@ function ResolutionRow({
 }
 
 /** Catalog search for a line no candidate fits. Its own component so each open row owns one search. */
-function CardPicker({ gameSlug, initialQuery, onPick }: { gameSlug: string; initialQuery: string; onPick: (cardId: number) => void }) {
+function CardPicker({ gameSlug, initialQuery, onPick }: { gameSlug: string; initialQuery: string; onPick: (card: Candidate) => void }) {
   const [q, setQ] = useState("");
   const { hits, settled, error } = useCardSearch(q, true, gameSlug);
   return (
@@ -250,7 +272,12 @@ function CardPicker({ gameSlug, initialQuery, onPick }: { gameSlug: string; init
         <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
           {hits.map((h: CardHit) => (
             <li key={h.cardId}>
-              <CardRow name={h.name} subtitle={h.subtitle} imageUrl={h.imageUrl} onClick={() => onPick(h.cardId)} />
+              <CardRow
+                name={h.name}
+                subtitle={h.subtitle}
+                imageUrl={h.imageUrl}
+                onClick={() => onPick({ cardId: h.cardId, name: h.name, setName: h.setName, number: h.number })}
+              />
             </li>
           ))}
         </ul>

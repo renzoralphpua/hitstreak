@@ -135,6 +135,59 @@ describe("CurationForm — fix-up", () => {
     await waitFor(() => expect(saveBtn()).toBeEnabled());
   });
 
+  it("shows the card a catalog search picked, not just the pasted line", async () => {
+    resolveDecklist.mockResolvedValueOnce({ ok: true, data: [res({ text: "Nonesuch", quantity: 1 })] });
+    hits = [{ cardId: 77, name: "Nonesuch ex", setName: "Paldean Fates", number: "1/197", rarity: null, imageUrl: null, attrs: {}, printings: [] }];
+    render(<CurationForm games={GAMES} />);
+    type("Name", "Mystery");
+    paste("1 Nonesuch");
+    fireEvent.click(resolveBtn());
+    await waitFor(() => expect(rows()).toHaveLength(1));
+
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "nonesuch" } });
+    fireEvent.click(await screen.findByRole("button", { name: /Nonesuch ex/ }, { timeout: 3000 }));
+    await waitFor(() => expect(rows()[0]).toHaveAttribute("data-resolved", "true"));
+    // The pick is not one of the line's candidates, so the row can only name it if `picks` carried it.
+    expect(rows()[0]).toHaveTextContent("Nonesuch ex");
+    expect(rows()[0]).toHaveTextContent("Paldean Fates · 1/197");
+    expect(rows()[0]).not.toHaveTextContent("resolved");
+  });
+
+  it("Change reopens the picker and a second pick replaces only that row's card", async () => {
+    resolveDecklist.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        res({ text: "Charizard", quantity: 2, candidates: [candidate(21, "Charizard ex"), candidate(22, "Charizard VMAX")] }),
+        res({ text: "Pidgeot", quantity: 1, candidates: [candidate(31, "Pidgeot ex")] }),
+      ],
+    });
+    render(<CurationForm games={GAMES} />);
+    type("Name", "Zard pile");
+    paste("2 Charizard\n1 Pidgeot");
+    fireEvent.click(resolveBtn());
+    await waitFor(() => expect(rows()).toHaveLength(2));
+
+    fireEvent.click(within(rows()[0]).getByRole("button", { name: /Charizard ex/ }));
+    fireEvent.click(within(rows()[1]).getByRole("button", { name: /Pidgeot ex/ }));
+    await waitFor(() => expect(saveBtn()).toBeEnabled());
+    expect(within(rows()[0]).queryByRole("searchbox")).toBeNull(); // a settled row hides its picker
+
+    fireEvent.click(within(rows()[0]).getByRole("button", { name: "Change" }));
+    expect(within(rows()[0]).getByRole("searchbox")).toBeInTheDocument();
+    expect(within(rows()[1]).queryByRole("searchbox")).toBeNull(); // the other row is untouched
+    fireEvent.click(within(rows()[0]).getByRole("button", { name: /Charizard VMAX/ }));
+    await waitFor(() => expect(within(rows()[0]).queryByRole("searchbox")).toBeNull());
+    expect(rows()[0]).toHaveTextContent("Charizard VMAX");
+    expect(rows()[1]).toHaveTextContent("Pidgeot ex");
+
+    fireEvent.click(saveBtn());
+    await waitFor(() => expect(saveMetaDeck).toHaveBeenCalled());
+    expect(saveMetaDeck.mock.calls[0][0].lines).toEqual([
+      { cardId: 22, zone: "main", quantity: 2 }, // the second pick won
+      { cardId: 31, zone: "main", quantity: 1 },
+    ]);
+  });
+
   it("labels the zone when the game uses more than one", async () => {
     resolveDecklist.mockResolvedValueOnce({
       ok: true,
@@ -263,6 +316,30 @@ describe("CurationForm — editing an existing deck", () => {
     expect(saveMetaDeck.mock.calls[0][0]).toMatchObject({ id: 9, gameSlug: "one-piece", name: "Red Luffy", tier: 1 });
     // editing keeps the deck loaded rather than clearing the form
     expect(screen.getByLabelText("Name")).toHaveValue("Red Luffy");
+  });
+
+  it("switching game abandons the edit instead of posting a mismatched id", async () => {
+    render(<CurationForm games={GAMES} />);
+    fireEvent(window, new CustomEvent(EDIT_EVENT, { detail }));
+    await waitFor(() => expect(screen.getByLabelText("Name")).toHaveValue("Red Luffy"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Pokémon" }));
+    expect(screen.getByText("Curate a deck")).toBeInTheDocument();
+    expect(screen.queryByText("Editing deck #9")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toHaveValue("");
+    expect(screen.getByLabelText("Decklist")).toHaveValue("");
+
+    resolveDecklist.mockResolvedValueOnce({ ok: true, data: [res({ text: "Charizard ex", quantity: 3, cardId: 11 })] });
+    type("Name", "Fresh");
+    paste("3 Charizard ex");
+    fireEvent.click(resolveBtn());
+    await waitFor(() => expect(resolveDecklist).toHaveBeenCalledWith("pokemon", "3 Charizard ex"));
+    await waitFor(() => expect(rows()).toHaveLength(1));
+
+    fireEvent.click(saveBtn());
+    await waitFor(() => expect(saveMetaDeck).toHaveBeenCalled());
+    // Without the reset this would be { id: 9, gameSlug: "pokemon" } → "Meta deck not found".
+    expect(saveMetaDeck.mock.calls[0][0]).toMatchObject({ id: undefined, gameSlug: "pokemon", name: "Fresh" });
   });
 
   it("Stop editing clears the id and the fields", async () => {
