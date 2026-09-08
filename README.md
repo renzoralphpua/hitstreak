@@ -71,9 +71,11 @@ PowerShell: `$env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx ingest
 Until the admin screen ships, curated (meta) decks are loaded from a plain decklist text file with
 `scripts/import-deck.mts`: it parses the common shapes (`4 Charmander MEW 4`, `4x Charizard ex`,
 `Rare Candy x4`, One Piece `1 OP01-003 Monkey.D.Luffy`, section headers such as `Trainer:` / `Leader` /
-`Runes:` that set the zone), resolves each line against the catalog (exact name → the cheapest priced
-printing, One Piece by card number), and writes the deck through `upsertMetaDeck`. Unresolved lines are
-printed with candidates and nothing is written. The `--as` account must be an admin — flip your local
+`Runes:` that set the zone — One Piece `Character` / `Event` / `Stage` sections are all the main deck),
+resolves each line against the catalog (exact name → the cheapest priced printing; One Piece by card number,
+and a bare One Piece name only when it maps to a single card number), merges duplicate printings of one card
+into a single line (`3 Charmander MEW 4` + `1 Charmander PAF 7` → 4 Charmander), and writes the deck through
+`upsertMetaDeck`. Unresolved lines are printed with candidates and nothing is written. The `--as` account must be an admin — flip your local
 user once with `UPDATE "user" SET "isAdmin" = 1 WHERE email = 'dev@example.com'` — and `--id N`
 replaces an existing meta deck instead of creating one:
 

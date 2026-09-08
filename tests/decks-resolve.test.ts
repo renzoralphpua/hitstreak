@@ -4,7 +4,8 @@ const tmp = tmpDb("decks-resolve");
 import { closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import { seedDeckFixtures } from "./helpers/decks";
-import { parseDecklist, resolveDecklist } from "@/lib/decks/resolve";
+import { db } from "@/lib/db";
+import { mergeResolved, parseDecklist, resolveDecklist } from "@/lib/decks/resolve";
 
 let f: Awaited<ReturnType<typeof seedDeckFixtures>>;
 beforeAll(async () => { await seedMiniCatalog(); f = await seedDeckFixtures(); });
@@ -22,6 +23,12 @@ describe("parseDecklist", () => {
   it("maps One Piece and Riftbound section headers to zones", () => {
     expect(parseDecklist(`Leader\n1 OP01-003 Monkey.D.Luffy\nMain\n4 OP01-016 Nami`, "one-piece").map((l) => [l.zone, l.text])).toEqual([["leader", "OP01-003 Monkey.D.Luffy"], ["main", "OP01-016 Nami"]]);
     expect(parseDecklist(`Legend:\n1 Renekton, Butcher of the Sands\nChampion:\n1 Renekton, Rampager\nRunes:\n12 Body Rune\nBattlefields:\n1 Heisho, Shell of the World`, "riftbound").map((l) => l.zone)).toEqual(["legend", "champion", "rune", "battlefield"]);
+  });
+  it("treats One Piece Character / Event / Stage sections as the main deck", () => {
+    const text = `Leader\n1 OP01-003 Monkey.D.Luffy\nCharacter: 3\n4 OP01-016 Nami\nEvents (2)\n2 OP01-029 Gum-Gum Red Roc\nStage\n1 OP01-030 Thousand Sunny`;
+    expect(parseDecklist(text, "one-piece").map((l) => [l.zone, l.quantity, l.text])).toEqual([
+      ["leader", 1, "OP01-003 Monkey.D.Luffy"], ["main", 4, "OP01-016 Nami"], ["main", 2, "OP01-029 Gum-Gum Red Roc"], ["main", 1, "OP01-030 Thousand Sunny"],
+    ]);
   });
   it("defaults a bare line to quantity 1", () => {
     expect(parseDecklist("Heisho, Shell of the World", "riftbound")[0]).toMatchObject({ quantity: 1, text: "Heisho, Shell of the World" });
@@ -65,10 +72,52 @@ describe("resolveDecklist", () => {
     const [none] = await resolveDecklist("pokemon", parseDecklist("1 Definitely Not A Card", "pokemon"));
     expect(none).toMatchObject({ cardId: null, candidates: [] });
   });
+  it("refuses a bare One Piece name that spans more than one card Number, offering one candidate per Number", async () => {
+    // both fixture Namis share OP01-016 (regular + alt art) — a single Number, so the bare name still resolves
+    const [one] = await resolveDecklist("one-piece", parseDecklist("4 Nami", "one-piece"));
+    expect(one.cardId).toBe(f.cards.nami);
+    // a second, cheaper Nami under another Number makes the bare name ambiguous
+    const c = await db();
+    const ins = await c.execute({
+      sql: "INSERT INTO cards (set_id, tcgplayer_product_id, name, number, rarity, image_url, attrs) VALUES (?, 3099, 'Nami', 'OP10-013', 'C', NULL, ?) RETURNING id",
+      args: [f.sets.twoLegends, JSON.stringify({ CardType: "Character", Color: "Blue", Number: "OP10-013", Cost: "3" })],
+    });
+    const namiOp10 = Number(ins.rows[0].id);
+    const pr = await c.execute({ sql: "INSERT INTO printings (card_id, subtype) VALUES (?, 'Normal') RETURNING id", args: [namiOp10] });
+    await c.execute({ sql: "INSERT INTO latest_prices (printing_id, date, market) VALUES (?, '2026-09-07', 1.0)", args: [Number(pr.rows[0].id)] });
+
+    const [amb] = await resolveDecklist("one-piece", parseDecklist("4 Nami", "one-piece"));
+    expect(amb.cardId).toBeNull();
+    // one candidate per Number, cheapest first; the $40 alt art folds into OP01-016
+    expect(amb.candidates.map((x) => [x.cardId, x.number])).toEqual([[namiOp10, "OP10-013"], [f.cards.nami, "OP01-016"]]);
+    // the number path still resolves
+    const [byNum] = await resolveDecklist("one-piece", parseDecklist("4 OP10-013 Nami", "one-piece"));
+    expect(byNum.cardId).toBe(namiOp10);
+  });
   it("escapes LIKE wildcards in the line text", async () => {
     const [r] = await resolveDecklist("pokemon", parseDecklist("1 %", "pokemon"));
     expect(r).toMatchObject({ cardId: null, candidates: [] });
     const [u] = await resolveDecklist("pokemon", parseDecklist("1 Rare_Candy", "pokemon"));
     expect(u).toMatchObject({ cardId: null, candidates: [] });
+  });
+});
+
+describe("mergeResolved", () => {
+  it("sums quantities when several printings of one card land in the same zone", async () => {
+    const r = await resolveDecklist("pokemon", parseDecklist("3 Rare Candy SVI 191\n1 Rare Candy OBF 191\n2 Charizard ex", "pokemon"));
+    expect(r.map((x) => x.cardId)).toEqual([f.cards.rareCandySvi, f.cards.rareCandySvi, f.cards.charizardEx]);
+    expect(mergeResolved(r)).toEqual([
+      { cardId: f.cards.rareCandySvi, zone: "main", quantity: 4 },
+      { cardId: f.cards.charizardEx, zone: "main", quantity: 2 },
+    ]);
+  });
+  it("keeps the same card apart across zones and drops unresolved lines", () => {
+    const line = (text: string, zone: "main" | "leader", quantity: number) => ({ raw: text, text, zone, quantity });
+    expect(mergeResolved([
+      { line: line("Nami", "leader", 1), cardId: 7, candidates: [] },
+      { line: line("Nami", "main", 2), cardId: 7, candidates: [] },
+      { line: line("Nami", "main", 2), cardId: 7, candidates: [] },
+      { line: line("Mystery", "main", 4), cardId: null, candidates: [] },
+    ])).toEqual([{ cardId: 7, zone: "leader", quantity: 1 }, { cardId: 7, zone: "main", quantity: 4 }]);
   });
 });

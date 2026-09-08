@@ -4,6 +4,7 @@
 import { db } from "@/lib/db";
 import type { Row } from "@libsql/client";
 import { baseName } from "./identity";
+import type { DeckLineInput } from "./data";
 import type { GameSlug, Zone } from "./types";
 
 export interface ParsedLine { raw: string; quantity: number; text: string; zone: Zone }
@@ -11,11 +12,12 @@ export interface Candidate { cardId: number; name: string; setName: string; numb
 export interface Resolution { line: ParsedLine; cardId: number | null; candidates: Candidate[] }
 
 // A section header is the header word alone on its line, optionally followed by ":" / "(" and a count —
-// "Pokémon: 8", "Trainer: 4", "Energy (10)", "Leader", "Runes:". Anything longer ("Energy Retrieval") is a card.
+// "Pokémon: 8", "Trainer: 4", "Energy (10)", "Leader", "Runes:", One Piece "Character" / "Event" / "Stage".
+// Anything longer ("Energy Retrieval") is a card.
 const HEADER_TAIL = String.raw`\s*(?:[:：]\s*\d*|\(\s*\d*\s*\))?$`;
 const header = (words: string, zone: Zone): [RegExp, Zone] => [new RegExp(`^(?:${words})${HEADER_TAIL}`, "i"), zone];
 const HEADERS: Array<[RegExp, Zone]> = [
-  header("pok[eé]mon|trainers?|energy|main(?: deck)?|deck|cards", "main"),
+  header("pok[eé]mon|trainers?|energy|main(?: deck)?|deck|cards|characters?|events?|stages?", "main"),
   header("leader", "leader"), header("legend", "legend"), header("(?:chosen )?champion", "champion"),
   header("runes?", "rune"), header("battlefields?", "battlefield"),
 ];
@@ -46,7 +48,7 @@ export function parseDecklist(text: string, game: GameSlug): ParsedLine[] {
 const OP_NUMBER = /^([A-Z]{1,3}\d{2}-\d{3})\b\s*(.*)$/;
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (ch) => "\\" + ch);
 // One row per card with its cheapest priced printing, so ORDER BY market puts the reprint a buyer would pick first.
-const CARD_SELECT = `SELECT ca.id, ca.name, se.name AS set_name, ca.number,
+const CARD_SELECT = `SELECT ca.id, ca.name, se.name AS set_name, ca.number, json_extract(ca.attrs, '$.Number') AS op_number,
                             (SELECT MIN(lp.market) FROM printings p JOIN latest_prices lp ON lp.printing_id = p.id WHERE p.card_id = ca.id) AS market
                      FROM cards ca JOIN sets se ON se.id = ca.set_id JOIN games g ON g.id = se.game_id`;
 const CHEAPEST_FIRST = "ORDER BY market IS NULL, market, se.release_date DESC";
@@ -79,6 +81,17 @@ export async function resolveDecklist(game: GameSlug, lines: ParsedLine[]): Prom
         out.push({ line, cardId: null, candidates: rows.slice(0, CANDIDATES).map(toCandidate) });
         continue;
       }
+      // One Piece identity is attrs.Number, and one name spans several numbers ("Nami" is OP01-016 and OP10-013
+      // among others), so a bare name only resolves when every exact match shares one Number; otherwise the
+      // human picks — one candidate per Number, cheapest first (rows are already cheapest-first).
+      if (game === "one-piece") {
+        const perNumber = new Map<string, Row>();
+        for (const r of exact) { const k = String(r.op_number ?? "").toUpperCase(); if (!perNumber.has(k)) perNumber.set(k, r); }
+        if (perNumber.size > 1) {
+          out.push({ line, cardId: null, candidates: [...perNumber.values()].slice(0, CANDIDATES).map(toCandidate) });
+          continue;
+        }
+      }
     }
     if (exact.length === 0) {
       const fuzzy = (await c.execute({
@@ -94,3 +107,20 @@ export async function resolveDecklist(game: GameSlug, lines: ParsedLine[]): Prom
   return out;
 }
 const toCandidate = (r: Row): Candidate => ({ cardId: Number(r.id), name: String(r.name), setName: String(r.set_name), number: r.number == null ? null : String(r.number) });
+
+/**
+ * Resolved lines → deck lines, summing quantities per card and zone. Exports list one line per PRINTING
+ * ("3 Charmander MEW 4" + "1 Charmander PAF 7") and both resolve to the same card, which checkLines would
+ * otherwise reject as a duplicate. Unresolved lines (cardId null) are skipped — callers gate on them first.
+ */
+export function mergeResolved(resolved: Resolution[]): DeckLineInput[] {
+  const byKey = new Map<string, DeckLineInput>();
+  for (const r of resolved) {
+    if (r.cardId == null) continue;
+    const k = `${r.cardId}|${r.line.zone}`;
+    const cur = byKey.get(k);
+    if (cur) cur.quantity += r.line.quantity;
+    else byKey.set(k, { cardId: r.cardId, zone: r.line.zone, quantity: r.line.quantity });
+  }
+  return [...byKey.values()];
+}
