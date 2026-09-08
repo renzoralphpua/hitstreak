@@ -48,6 +48,8 @@ export function useCardSearch(query: string, enabled = true, gameSlug?: string) 
           printings: h.printings,
         }));
         setResults({ query: tag, cards });
+        // A retry of a query that failed before must not keep showing the old banner.
+        setFailed(null);
       } catch {
         if (live) setFailed(tag);
       }
