@@ -4,7 +4,7 @@
 // Personal decks are scoped to their owner on every read and write.
 import { db } from "@/lib/db";
 import type { InStatement } from "@libsql/client";
-import { type DeckCardInput, type GameSlug, type Zone, ZONES, isGameSlug } from "./types";
+import { type DeckCardInput, type GameSlug, type Zone, QTY_MAX, ZONES, isGameSlug } from "./types";
 
 export interface DeckSummary {
   id: number; gameSlug: GameSlug; gameName: string; name: string; archetype: string | null; tier: number | null;
@@ -18,7 +18,6 @@ export interface DeckDetail extends DeckSummary { cards: DeckLine[] }
 export interface DeckLineInput { cardId: number; zone: Zone; quantity: number }
 
 const NAME_MAX = 80;
-const QTY_MAX = 99;
 const MAX_LINES = 200; // distinct (card, zone) lines per deck; bounds the write batch before any DB work
 function cleanName(name: string): string {
   const n = name.trim();

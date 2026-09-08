@@ -5,14 +5,21 @@
 import { revalidatePath } from "next/cache";
 import { withUser, assertId } from "@/lib/action-utils";
 import { validateDeck } from "@/lib/decks/validate";
-import { isGameSlug, type GameSlug, type ValidationError, type Zone, ZONES } from "@/lib/decks/types";
+import { isGameSlug, QTY_MAX, type GameSlug, type ValidationError, type Zone, ZONES } from "@/lib/decks/types";
 import * as D from "@/lib/decks/data";
+
+/** Same rule as `checkLines` in lib/decks/data.ts, applied before anything reads the number: the
+ *  validators allocate per copy, so an unbounded quantity is a cheap way to burn the server. */
+function assertQuantity(n: unknown): number {
+  if (typeof n !== "number" || !Number.isInteger(n) || n <= 0 || n > QTY_MAX) throw new Error(`Quantity must be a whole number from 1 to ${QTY_MAX}`);
+  return n;
+}
 
 function assertLines(gameSlug: GameSlug, lines: D.DeckLineInput[]): D.DeckLineInput[] {
   const zones = ZONES[gameSlug] as readonly string[];
   return lines.map((l) => {
     if (!zones.includes(l.zone)) throw new Error(`Zone "${l.zone}" is not used by this game`);
-    return { cardId: assertId(l.cardId), zone: l.zone as Zone, quantity: assertId(l.quantity) };
+    return { cardId: assertId(l.cardId), zone: l.zone as Zone, quantity: assertQuantity(l.quantity) };
   });
 }
 
@@ -50,6 +57,8 @@ export async function saveDeckAction(id: number, lines: D.DeckLineInput[]) {
     if (!deck || deck.isMeta) throw new Error("Deck not found");
     const checked = assertLines(deck.gameSlug, lines);
     const cards = await D.loadDeckCardInputs(checked);
+    // loadDeckCardInputs drops lines whose card is gone, so this verdict can be optimistic — but
+    // saveDeckCards' checkLines rejects those same lines, so an optimistic verdict is never persisted.
     const { valid, errors } = validateDeck({ gameSlug: deck.gameSlug, cards });
     await D.saveDeckCards(u, deckId, checked, !valid);
     return { valid, errors };

@@ -139,6 +139,23 @@ describe("deck server actions", () => {
     expect((await getDeck(id, U1))?.cardCount).toBe(0);
   });
 
+  it("refuses a line quantity that isn't a whole number from 1 to 99, before the validator sees it", async () => {
+    const id = await newDeck(U1, "Bad quantities");
+    const r = await saveDeckAction(id, legal60()); // a legal starting point to check nothing is clobbered
+    expect(r.ok).toBe(true);
+
+    const refused = { ok: false, error: "Quantity must be a whole number from 1 to 99" };
+    for (const quantity of [0, -1, 1.5, 100, 2e7, NaN, "4" as never, null as never]) {
+      const lines = legal60();
+      lines[0].quantity = quantity;
+      expect(await saveDeckAction(id, lines)).toEqual(refused);
+    }
+    // Every attempt was refused whole: the deck still holds the 60 it was saved with.
+    const deck = await getDeck(id, U1);
+    expect(deck?.cardCount).toBe(60);
+    expect(deck?.isDraft).toBe(false);
+  });
+
   it("copies a curated deck into a new personal deck and leaves the source alone", async () => {
     signedIn(U1);
     const r = await copyDeckAction(metaId);

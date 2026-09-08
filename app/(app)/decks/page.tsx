@@ -25,10 +25,12 @@ export default async function DecksPage({ searchParams }: PageProps<"/decks">) {
   const current = games.find((g) => g.slug === gameSlug);
   if (!current) notFound();
 
-  const [decks, owned] = await Promise.all([listMetaDecks(gameSlug), loadOwnedByKey(session.user.id, gameSlug)]);
-  // Gap needs each deck's lines; curated lists are few, so one detail read per deck is fine here.
-  const gaps = await Promise.all(decks.map(async (d) => analyzeGap((await getDeck(d.id, null))!, owned)));
-  const tiers = [...new Set(decks.map((d) => d.tier))].sort((a, b) => (a ?? 99) - (b ?? 99));
+  const [metas, owned] = await Promise.all([listMetaDecks(gameSlug), loadOwnedByKey(session.user.id, gameSlug)]);
+  // Gap needs each deck's lines; curated lists are few, so one detail read per deck is fine here. A deck
+  // deleted between the list and its read comes back null and simply drops off the page.
+  const details = await Promise.all(metas.map((d) => getDeck(d.id, null)));
+  const decks = details.flatMap((detail, i) => (detail ? [{ summary: metas[i], gap: analyzeGap(detail, owned) }] : []));
+  const tiers = [...new Set(decks.map((d) => d.summary.tier))].sort((a, b) => (a ?? 99) - (b ?? 99));
 
   return (
     <div className="flex flex-col gap-5">
@@ -55,7 +57,7 @@ export default async function DecksPage({ searchParams }: PageProps<"/decks">) {
             {/* Same group label as AlertList — a §13 `GroupLabel` primitive candidate, not promoted yet. */}
             <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{tierLabel(t)}</span>
             <div className="grid gap-3 md:grid-cols-2">
-              {decks.map((d, i) => (d.tier === t ? <DeckSummaryPanel key={d.id} deck={d} gap={gaps[i]} /> : null))}
+              {decks.map((d) => (d.summary.tier === t ? <DeckSummaryPanel key={d.summary.id} deck={d.summary} gap={d.gap} /> : null))}
             </div>
           </div>
         ))

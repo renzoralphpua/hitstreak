@@ -3,6 +3,10 @@ export const GAME_SLUGS = ["pokemon", "one-piece", "riftbound"] as const;
 export type GameSlug = (typeof GAME_SLUGS)[number];
 export const isGameSlug = (s: unknown): s is GameSlug => typeof s === "string" && (GAME_SLUGS as readonly string[]).includes(s);
 
+/** Copies allowed on one deck line. Lives here, not in data.ts, so the client bundle can have it too:
+ *  it bounds the builder's steppers, the action layer's input check and `checkLines`' final word. */
+export const QTY_MAX = 99;
+
 export type Zone = "main" | "leader" | "legend" | "champion" | "rune" | "battlefield";
 /** Zones each game's decks use, in display order. */
 export const ZONES: Record<GameSlug, readonly Zone[]> = {

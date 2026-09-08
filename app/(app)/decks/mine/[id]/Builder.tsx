@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { DeckDetail, DeckLine } from "@/lib/decks/data";
 import type { PrintingPrice } from "@/lib/catalog";
-import { ZONES, ZONE_LABEL, type Zone, type ValidationResult } from "@/lib/decks/types";
+import { QTY_MAX, ZONES, ZONE_LABEL, type Zone, type ValidationResult } from "@/lib/decks/types";
 import { analyzeGap, type GapLine } from "@/lib/decks/gap-math";
 import { validationItems } from "@/lib/decks/validate";
 import { defaultZone, isSingleCardZone } from "@/lib/decks/zone";
@@ -18,8 +18,6 @@ import { formatMoney } from "@/lib/format";
 import { Button, CardRow, Panel, SearchField, SectionHeading, StatTile, ValidationList } from "@/components/ui";
 import { useCardSearch, type CardHit } from "@/components/ui/useCardSearch";
 import { saveDeckAction } from "../../actions";
-
-const QTY_MAX = 99; // matches lib/decks/data.ts
 
 /** "clean" = as loaded, "dirty" = edited since the last save, otherwise the server's own verdict. */
 type Saved = "clean" | "dirty" | ValidationResult;
@@ -62,10 +60,12 @@ export default function Builder({ deck, owned }: { deck: DeckDetail; owned: Reco
     setSaved("dirty");
   };
 
-  /** A search hit joins the zone its type says it belongs in; a second copy bumps the line it is
-   *  already on, except in the one-card zones, where it replaces what is there. */
+  /** A search hit joins the zone its type says it belongs in, given what the deck already holds (a
+   *  second Riftbound Champion Unit goes to the main deck rather than replacing the Chosen Champion);
+   *  a second copy bumps the line it is already on, except in the one-card zones, where it replaces
+   *  what is there. */
   function add(hit: CardHit) {
-    const zone = defaultZone(deck.gameSlug, hit);
+    const zone = defaultZone(deck.gameSlug, hit, lines);
     if (isSingleCardZone(zone)) {
       edit([...lines.filter((l) => l.zone !== zone), lineFromHit(hit, zone)]);
       return;

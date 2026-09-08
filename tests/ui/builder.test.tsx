@@ -87,6 +87,27 @@ describe("Builder", () => {
     expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
   });
 
+  it("puts a second Champion Unit in the main deck instead of replacing the Chosen Champion", async () => {
+    hits = [hit({ cardId: 98, name: "Renekton, Rampager", attrs: { "Card Type": "Champion Unit", Tag: "Renekton", Domain: "Fury" } })];
+    render(<Builder deck={RIFTBOUND} owned={{}} />);
+    search("renekton, r");
+    const row = await screen.findByRole("button", { name: /Renekton, Rampager/ });
+    fireEvent.click(row);
+    await waitFor(() => expect(groupLabels().map((el) => el.textContent)).toEqual(["Legend1", "Chosen champion1", "Main deck3", "Runes11"]));
+
+    // The rules count extra copies inside the 40, so the second copy joins the main deck.
+    fireEvent.click(row);
+    await waitFor(() => expect(groupLabels().map((el) => el.textContent)).toEqual(["Legend1", "Chosen champion1", "Main deck4", "Runes11"]));
+    const group = (label: string) => screen.getByText(label).closest("div")!.parentElement!;
+    expect(within(group("Chosen champion")).getByText("Renekton, Rampager")).toBeInTheDocument();
+    expect(within(group("Main deck")).getByText("Renekton, Rampager")).toBeInTheDocument();
+
+    // A third bumps that main-deck line rather than starting another one.
+    fireEvent.click(row);
+    await waitFor(() => expect(groupLabels().map((el) => el.textContent)).toEqual(["Legend1", "Chosen champion1", "Main deck5", "Runes11"]));
+    expect(within(group("Main deck")).getAllByText("Renekton, Rampager")).toHaveLength(1);
+  });
+
   it("passes the game to the search endpoint and shows what the user owns of a hit", async () => {
     hits = [hit({ cardId: 99, name: "Fury Rune", attrs: { "Card Type": "Rune" } })];
     render(<Builder deck={RIFTBOUND} owned={{ "name:fury rune": 2 }} />);

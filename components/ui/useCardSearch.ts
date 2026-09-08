@@ -20,7 +20,10 @@ const MAX_RESULTS = 10;
 export function useCardSearch(query: string, enabled = true, gameSlug?: string) {
   const q = query.trim();
   const [results, setResults] = useState<{ query: string; cards: CardHit[] } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Tagged like `results`, and for the same reason: a failure belongs to the query that failed, so it
+  // stops being shown the moment the inputs move — including back under MIN_QUERY, which fetches
+  // nothing and so would otherwise leave the message on screen for good.
+  const [failed, setFailed] = useState<string | null>(null);
   // One tag for both inputs: switching game re-fetches instead of showing the other game's hits.
   const tag = `${q}|${gameSlug ?? ""}`;
 
@@ -45,9 +48,8 @@ export function useCardSearch(query: string, enabled = true, gameSlug?: string) 
           printings: h.printings,
         }));
         setResults({ query: tag, cards });
-        setError(null);
       } catch {
-        if (live) setError("Could not search right now. Try again.");
+        if (live) setFailed(tag);
       }
     }, DEBOUNCE_MS);
     return () => {
@@ -57,8 +59,9 @@ export function useCardSearch(query: string, enabled = true, gameSlug?: string) 
   }, [q, enabled, gameSlug, tag]);
 
   // Stable, so a caller can fold it into its own memoised handlers (AddItemDialog's `close`).
-  const reset = useCallback(() => setResults(null), []);
+  const reset = useCallback(() => { setResults(null); setFailed(null); }, []);
 
   const settled = results?.query === tag;
+  const error = failed === tag ? "Could not search right now. Try again." : null;
   return { hits: settled ? results!.cards : [], settled, error, reset };
 }

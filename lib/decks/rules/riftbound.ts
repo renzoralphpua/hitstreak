@@ -96,10 +96,16 @@ export function validateRiftbound({ cards }: DeckInput): ValidationResult {
 
   // Real catalog tokens are typed "Battlefield;Token" / "Gear;Battlefield;Token": the type alone doesn't make a Battlefield.
   for (const c of battlefields) if (!isA(c, "Battlefield")) errors.push({ code: "battlefield", message: notA(c, "Battlefield"), cardId: c.cardId });
-  const bfNames = battlefields.flatMap((c) => Array<string>(c.quantity).fill(label(c).toLowerCase()));
-  const distinct = new Set(bfNames).size;
-  if (bfNames.length !== BATTLEFIELDS || distinct !== bfNames.length) {
-    errors.push({ code: "battlefield", message: `Exactly ${BATTLEFIELDS} different Battlefields (found ${bfNames.length}${distinct !== bfNames.length ? ", with a duplicate" : ""})` });
+  // Counted, not expanded into one entry per copy: quantity is caller-supplied and an array of it would be too.
+  const bfByName = new Map<string, number>();
+  for (const c of battlefields) {
+    const k = label(c).toLowerCase();
+    bfByName.set(k, (bfByName.get(k) ?? 0) + c.quantity);
+  }
+  const bfTotal = count(battlefields);
+  const distinct = bfByName.size;
+  if (bfTotal !== BATTLEFIELDS || distinct !== bfTotal) {
+    errors.push({ code: "battlefield", message: `Exactly ${BATTLEFIELDS} different Battlefields (found ${bfTotal}${distinct !== bfTotal ? ", with a duplicate" : ""})` });
   }
 
   return { valid: errors.length === 0, errors };

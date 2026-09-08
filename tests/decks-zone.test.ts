@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { defaultZone, isSingleCardZone, SINGLE_CARD_ZONES } from "@/lib/decks/zone";
+import type { Zone } from "@/lib/decks/types";
 
 const attrs = (a: Record<string, string>) => ({ attrs: a });
+const inZones = (...zones: Zone[]) => zones.map((zone) => ({ zone }));
 
 describe("defaultZone", () => {
   it("puts every Pokémon card in the main deck", () => {
@@ -25,6 +27,16 @@ describe("defaultZone", () => {
     // A token still lands where its type says; the validator rejects it there.
     expect(defaultZone("riftbound", attrs({ "Card Type": "Gear;Battlefield;Token" }))).toBe("battlefield");
     expect(defaultZone("riftbound", attrs({}))).toBe("main");
+  });
+
+  it("sends a Champion Unit to the main deck once the Chosen Champion slot is taken", () => {
+    const champ = attrs({ "Card Type": "Champion Unit", Tag: "Renekton", Domain: "Fury" });
+    // The rules count extra copies inside the 40 (tests/rules-riftbound.test.ts), so they must land somewhere.
+    expect(defaultZone("riftbound", champ, inZones("legend", "main"))).toBe("champion");
+    expect(defaultZone("riftbound", champ, inZones("legend", "champion", "main"))).toBe("main");
+    // Only the champion slot behaves this way: the Legend slot still replaces.
+    expect(defaultZone("riftbound", attrs({ "Card Type": "Legend" }), inZones("legend"))).toBe("legend");
+    expect(defaultZone("riftbound", attrs({ "Card Type": "Rune" }), inZones("champion"))).toBe("rune");
   });
 });
 
