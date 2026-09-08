@@ -4,7 +4,7 @@ const tmp = tmpDb("decks-data");
 import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import { seedDeckFixtures } from "./helpers/decks";
-import { listMetaDecks, listMyDecks, getDeck, createDeck, renameDeck, deleteDeck, saveDeckCards, upsertMetaDeck, isAdminUser } from "@/lib/decks/data";
+import { listMetaDecks, listMyDecks, getDeck, createDeck, renameDeck, deleteDeck, saveDeckCards, upsertMetaDeck, deleteMetaDeck, isAdminUser } from "@/lib/decks/data";
 
 let f: Awaited<ReturnType<typeof seedDeckFixtures>>;
 const ADMIN = "admin_1", U1 = "user_1", U2 = "user_2";
@@ -124,5 +124,37 @@ describe("personal decks", () => {
     expect(await renameDeck(U1, meta.id, "x")).toBe(false);
     await expect(saveDeckCards(U1, meta.id, [], false)).rejects.toThrow(/not found/i);
     expect(await deleteDeck(ADMIN, meta.id)).toBe(false); // meta decks are not deleted through the personal path either
+  });
+});
+
+describe("deleteMetaDeck", () => {
+  const lines = () => [{ cardId: f.cards.charizardEx, zone: "main" as const, quantity: 2 }, { cardId: f.cards.fireEnergy, zone: "main" as const, quantity: 3 }];
+  const lineCount = async (id: number) =>
+    Number((await (await db()).execute({ sql: "SELECT COUNT(*) AS n FROM deck_cards WHERE deck_id = ?", args: [id] })).rows[0].n);
+
+  it("refuses a non-admin and leaves the deck alone", async () => {
+    const id = await upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "Doomed", lines: lines() });
+    await expect(deleteMetaDeck(U1, id)).rejects.toThrow(/admin/i);
+    await expect(deleteMetaDeck(U2, id)).rejects.toThrow(/admin/i); // not even a row in "user"
+    expect(await getDeck(id, null)).not.toBeNull();
+    expect(await lineCount(id)).toBe(2);
+    expect(await deleteMetaDeck(ADMIN, id)).toBe(true);
+  });
+
+  it("removes a curated deck and its lines for an admin", async () => {
+    const id = await upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "Also doomed", lines: lines() });
+    expect(await lineCount(id)).toBe(2);
+    expect(await deleteMetaDeck(ADMIN, id)).toBe(true);
+    expect(await getDeck(id, null)).toBeNull();
+    expect(await lineCount(id)).toBe(0);
+  });
+
+  it("does not reach a personal deck or a missing id", async () => {
+    const personal = await createDeck(U1, { gameSlug: "pokemon", name: "Mine, thanks" });
+    await saveDeckCards(U1, personal, [{ cardId: f.cards.fireEnergy, zone: "main", quantity: 4 }], true);
+    expect(await deleteMetaDeck(ADMIN, personal)).toBe(false);
+    expect((await getDeck(personal, U1))?.cards.map((l) => [l.cardId, l.quantity])).toEqual([[f.cards.fireEnergy, 4]]);
+    expect(await deleteMetaDeck(ADMIN, 999999)).toBe(false);
+    expect(await deleteDeck(U1, personal)).toBe(true);
   });
 });

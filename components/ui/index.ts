@@ -10,6 +10,7 @@ export { default as ValidationList } from "./ValidationList";
 export type { ValidationItem } from "./ValidationList";
 export { default as SearchField } from "./SearchField";
 export { default as Input } from "./Input";
+export { default as Textarea } from "./Textarea";
 export { default as CardTile } from "./CardTile";
 export { default as CardRow } from "./CardRow";
 export { default as TopNav } from "./TopNav";

@@ -3,17 +3,10 @@
 // re-checked, ids are validated before SQL, failures come back as { ok: false, error }. The deck is
 // validated HERE, from the catalog's own attrs — the client's copy is never trusted.
 import { revalidatePath } from "next/cache";
-import { withUser, assertId } from "@/lib/action-utils";
+import { withUser, assertId, assertQuantity } from "@/lib/action-utils";
 import { validateDeck } from "@/lib/decks/validate";
-import { isGameSlug, QTY_MAX, type GameSlug, type ValidationError, type Zone, ZONES } from "@/lib/decks/types";
+import { isGameSlug, type GameSlug, type ValidationError, type Zone, ZONES } from "@/lib/decks/types";
 import * as D from "@/lib/decks/data";
-
-/** Same rule as `checkLines` in lib/decks/data.ts, applied before anything reads the number: the
- *  validators allocate per copy, so an unbounded quantity is a cheap way to burn the server. */
-function assertQuantity(n: unknown): number {
-  if (typeof n !== "number" || !Number.isInteger(n) || n <= 0 || n > QTY_MAX) throw new Error(`Quantity must be a whole number from 1 to ${QTY_MAX}`);
-  return n;
-}
 
 function assertLines(gameSlug: GameSlug, lines: D.DeckLineInput[]): D.DeckLineInput[] {
   const zones = ZONES[gameSlug] as readonly string[];

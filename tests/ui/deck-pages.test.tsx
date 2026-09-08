@@ -26,6 +26,7 @@ import DecksPage from "@/app/(app)/decks/page";
 import DeckDetailPage, { generateMetadata } from "@/app/(app)/decks/[id]/page";
 import MyDecksPage from "@/app/(app)/decks/mine/page";
 import BuilderPage, { generateMetadata as builderMetadata } from "@/app/(app)/decks/mine/[id]/page";
+import AdminDecksPage from "@/app/(app)/admin/decks/page";
 
 const ADMIN = "admin_1", U = "user_1", U2 = "user_2";
 let f: Awaited<ReturnType<typeof seedDeckFixtures>>;
@@ -39,7 +40,11 @@ beforeAll(async () => {
   await seedMiniCatalog();
   f = await seedDeckFixtures();
   const c = await db();
-  await c.execute({ sql: `INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt, isAdmin) VALUES (?, 'Admin', 'admin@example.com', 0, '2026-09-01', '2026-09-01', 1)`, args: [ADMIN] });
+  // U is a real, signed-in, NON-admin: the /admin/decks tests below depend on isAdmin = 0, not on a missing row.
+  await c.execute({
+    sql: `INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt, isAdmin) VALUES (?, 'Admin', 'admin@example.com', 0, '2026-09-01', '2026-09-01', 1), (?, 'User', 'u1@example.com', 0, '2026-09-01', '2026-09-01', 0)`,
+    args: [ADMIN, U],
+  });
   zardId = await upsertMetaDeck(ADMIN, {
     gameSlug: "pokemon", name: "Charizard ex / Pidgeot", archetype: "Charizard ex", tier: 1, format: "standard", sourceNote: "Regional top cuts, Aug 30",
     lines: [{ cardId: f.cards.charizardEx, zone: "main", quantity: 3 }, { cardId: f.cards.rareCandyObf, zone: "main", quantity: 4 }, { cardId: f.cards.fireEnergy, zone: "main", quantity: 10 }],
@@ -83,6 +88,16 @@ describe("/decks", () => {
     expect(energy).toHaveAttribute("href", `/decks/${energyId}`);
     expect(energy).toHaveTextContent("Complete");
     expect(within(energy).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+  });
+
+  it("offers the Curate link to an admin and to nobody else", async () => {
+    render(await browser("pokemon"));
+    expect(screen.queryByRole("link", { name: "Curate" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "My decks" })).toBeInTheDocument();
+
+    getSession.mockResolvedValueOnce({ user: { id: ADMIN } });
+    render(await browser("pokemon"));
+    expect(screen.getAllByRole("link", { name: "Curate" })[0]).toHaveAttribute("href", "/admin/decks");
   });
 
   it("shows the empty state for a game with no curated decks", async () => {
@@ -208,5 +223,35 @@ describe("/decks/mine/[id]", () => {
   it("redirects to sign-in without a session", async () => {
     getSession.mockResolvedValueOnce(null);
     await expect(builder(String(mineId))).rejects.toThrow("NEXT_REDIRECT:/sign-in");
+  });
+});
+
+describe("/admin/decks", () => {
+  it("is not found for a signed-in non-admin, whatever the route looks like from outside", async () => {
+    await expect(AdminDecksPage()).rejects.toThrow("NEXT_NOT_FOUND"); // the default session is U, not an admin
+  });
+
+  it("redirects to sign-in without a session", async () => {
+    getSession.mockResolvedValueOnce(null);
+    await expect(AdminDecksPage()).rejects.toThrow("NEXT_REDIRECT:/sign-in");
+  });
+
+  it("renders the curation form and every curated deck for an admin", async () => {
+    getSession.mockResolvedValueOnce({ user: { id: ADMIN } });
+    render(await AdminDecksPage());
+    expect(screen.getByRole("heading", { level: 1, name: "Curate meta decks" })).toBeInTheDocument();
+    expect(screen.getByText("3 curated")).toBeInTheDocument();
+    expect(screen.getByText("Curate a deck")).toBeInTheDocument();
+    expect(screen.getByLabelText("Decklist")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resolve" })).toBeInTheDocument();
+
+    // One row per curated deck, each with Edit and Delete; the personal deck is not curation's business.
+    for (const name of ["Charizard ex / Pidgeot", "Candy Toolbox", "Energy Pile"]) {
+      expect(screen.getByText(name)).toBeInTheDocument();
+    }
+    expect(screen.queryByText("Zard on a budget")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "Delete" })).toHaveLength(3);
+    expect(screen.getByText("Pokémon", { selector: "span.uppercase" })).toBeInTheDocument(); // the game group label
   });
 });

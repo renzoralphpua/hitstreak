@@ -3,6 +3,7 @@
 // exports a type and a synchronous function, which that directive forbids, so the action files
 // import from here instead.
 import { getSession } from "@/lib/session";
+import { QTY_MAX } from "@/lib/decks/types";
 
 export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -10,6 +11,14 @@ export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; 
  *  that isn't a positive integer (NaN, a string, a float, null) is rejected before it reaches SQL. */
 export function assertId(n: unknown): number {
   if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) throw new Error("Invalid id");
+  return n;
+}
+
+/** Same rule as `checkLines` in lib/decks/data.ts, applied before anything reads the number: the
+ *  validators allocate per copy, so an unbounded quantity is a cheap way to burn the server. Shared
+ *  by the builder's save and the curation screen so both bound the input the same way. */
+export function assertQuantity(n: unknown): number {
+  if (typeof n !== "number" || !Number.isInteger(n) || n <= 0 || n > QTY_MAX) throw new Error(`Quantity must be a whole number from 1 to ${QTY_MAX}`);
   return n;
 }
 

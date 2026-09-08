@@ -76,6 +76,7 @@ Mockup element → primitive (`components/ui/`):
 | Filter chips | `Pill` |
 | Primary/secondary actions | `Button` (pass `href` for a navigational one — same skin, renders a link) |
 | Text fields | `Input` (optional `label`) |
+| Multi-line text fields | `Textarea` (same field skin as `Input`, optional `label`) |
 | Panels | `Panel` |
 | Serif section titles | `SectionHeading` |
 | Paid/Gain tiles | `StatTile` |

@@ -9,18 +9,21 @@ import * as ranges from "@/lib/ranges";
 import * as history from "@/lib/history";
 import * as gap from "@/lib/decks/gap";
 import * as gapMath from "@/lib/decks/gap-math";
+import * as resolve from "@/lib/decks/resolve";
+import * as decklist from "@/lib/decks/decklist";
 
 const root = path.resolve(import.meta.dirname, "..");
 const read = (rel: string) => readFileSync(path.join(root, rel), "utf8");
 // `from "@/lib/db"`, `from "@/lib/history"`, `from "./db"`, `from "../lib/history"` …
 const REACHES_DB = /from\s+["'](?:@\/lib\/|(?:\.\.?\/)+(?:lib\/)?)(?:db|history)["']/;
 // The two deck modules that do reach the database: `from "@/lib/decks/data"`, `from "./gap"`, …
-const REACHES_DECK_DB = /from\s+["'](?:@\/lib\/decks\/|(?:\.\.?\/)+(?:lib\/)?decks\/|\.\/)(?:data|gap)["']/;
+const REACHES_DECK_DB = /from\s+["'](?:@\/lib\/decks\/|(?:\.\.?\/)+(?:lib\/)?decks\/|\.\/)(?:data|gap|resolve)["']/;
 // A type-only import is erased at compile time and never reaches the bundle, so it can't drag lib/db in
 // (gap-math type-imports DeckLine from ./data). Drop those lines before the source-level match.
 const withoutTypeImports = (src: string) => src.replace(/^\s*import\s+type\b[^;]*;?\s*$/gm, "");
-// What the builder ("use client") imports, directly or through its own imports.
-const BUILDER_MODULES = ["lib/decks/gap-math.ts", "lib/decks/validate.ts", "lib/decks/zone.ts", "lib/decks/identity.ts"];
+// What the builder ("use client") imports, directly or through its own imports, plus lib/decks/decklist
+// which the admin curation form imports for mergeResolved.
+const BUILDER_MODULES = ["lib/decks/gap-math.ts", "lib/decks/validate.ts", "lib/decks/zone.ts", "lib/decks/identity.ts", "lib/decks/decklist.ts"];
 
 describe("db-free client boundary", () => {
   it("lib/ranges.ts imports neither lib/db nor lib/history", () => {
@@ -40,6 +43,11 @@ describe("db-free client boundary", () => {
   });
   it("lib/decks/gap re-exports the gap arithmetic unchanged", () => {
     expect(gap.analyzeGap).toBe(gapMath.analyzeGap);
+  });
+  it("lib/decks/resolve re-exports the text-only decklist helpers unchanged", () => {
+    expect(resolve.parseDecklist).toBe(decklist.parseDecklist);
+    expect(resolve.formatDecklist).toBe(decklist.formatDecklist);
+    expect(resolve.mergeResolved).toBe(decklist.mergeResolved);
   });
   it("lib/history re-exports the range vocabulary unchanged", () => {
     expect(history.RANGES).toBe(ranges.RANGES);

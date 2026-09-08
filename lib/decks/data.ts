@@ -193,6 +193,22 @@ export async function upsertMetaDeck(adminUserId: string, input: MetaDeckInput):
   }
 }
 
+/** Admin only. Removes a curated deck and its lines. Personal decks are untouched (deleteDeck owns those). */
+export async function deleteMetaDeck(adminUserId: string, id: number): Promise<boolean> {
+  if (!(await isAdminUser(adminUserId))) throw new Error("Only an admin can curate meta decks");
+  const c = await db();
+  const found = await c.execute({ sql: "SELECT 1 FROM decks WHERE id = ? AND owner_user_id IS NULL", args: [id] });
+  if (found.rows.length === 0) return false;
+  await c.batch(
+    [
+      { sql: "DELETE FROM deck_cards WHERE deck_id = ?", args: [id] },
+      { sql: "DELETE FROM decks WHERE id = ? AND owner_user_id IS NULL", args: [id] },
+    ],
+    "write"
+  );
+  return true;
+}
+
 export async function createDeck(userId: string, input: { gameSlug: GameSlug; name: string }): Promise<number> {
   const gameId = await gameIdFor(input.gameSlug);
   const c = await db();

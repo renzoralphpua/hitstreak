@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { listGames } from "@/lib/catalog";
-import { listMetaDecks, getDeck } from "@/lib/decks/data";
+import { listMetaDecks, getDeck, isAdminUser } from "@/lib/decks/data";
 import { loadOwnedByKey, analyzeGap } from "@/lib/decks/gap";
 import { isGameSlug } from "@/lib/decks/types";
 import { SectionHeading, Pill, EmptyState, Button } from "@/components/ui";
@@ -25,7 +25,11 @@ export default async function DecksPage({ searchParams }: PageProps<"/decks">) {
   const current = games.find((g) => g.slug === gameSlug);
   if (!current) notFound();
 
-  const [metas, owned] = await Promise.all([listMetaDecks(gameSlug), loadOwnedByKey(session.user.id, gameSlug)]);
+  const [metas, owned, isAdmin] = await Promise.all([
+    listMetaDecks(gameSlug),
+    loadOwnedByKey(session.user.id, gameSlug),
+    isAdminUser(session.user.id),
+  ]);
   // Gap needs each deck's lines; curated lists are few, so one detail read per deck is fine here. A deck
   // deleted between the list and its read comes back null and simply drops off the page.
   const details = await Promise.all(metas.map((d) => getDeck(d.id, null)));
@@ -38,7 +42,13 @@ export default async function DecksPage({ searchParams }: PageProps<"/decks">) {
         as="h1"
         title="Meta decks"
         caption={`${decks.length} curated for ${current.name}`}
-        trailing={<Button href="/decks/mine" variant="secondary" size="sm">My decks</Button>}
+        trailing={
+          <>
+            {/* Admin-only, and rendered nowhere else: /admin/decks answers a non-admin with notFound(). */}
+            {isAdmin && <Button href="/admin/decks" variant="secondary" size="sm">Curate</Button>}
+            <Button href="/decks/mine" variant="secondary" size="sm">My decks</Button>
+          </>
+        }
       />
 
       <div className="flex flex-wrap gap-1.5">

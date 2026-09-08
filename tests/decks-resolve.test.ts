@@ -5,7 +5,7 @@ import { closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import { seedDeckFixtures } from "./helpers/decks";
 import { db } from "@/lib/db";
-import { mergeResolved, parseDecklist, resolveDecklist } from "@/lib/decks/resolve";
+import { formatDecklist, mergeResolved, parseDecklist, resolveDecklist } from "@/lib/decks/resolve";
 
 let f: Awaited<ReturnType<typeof seedDeckFixtures>>;
 beforeAll(async () => { await seedMiniCatalog(); f = await seedDeckFixtures(); });
@@ -128,5 +128,63 @@ describe("mergeResolved", () => {
       { line: line("Nami", "main", 2), cardId: 7, candidates: [] },
       { line: line("Mystery", "main", 4), cardId: null, candidates: [] },
     ])).toEqual([{ cardId: 7, zone: "leader", quantity: 1 }, { cardId: 7, zone: "main", quantity: 4 }]);
+  });
+});
+
+describe("formatDecklist", () => {
+  it("writes a single-zone game with no headers", () => {
+    const text = formatDecklist({
+      gameSlug: "pokemon",
+      cards: [{ zone: "main", quantity: 4, name: "Rare Candy - 191/198" }, { zone: "main", quantity: 3, name: "Charizard ex" }],
+    });
+    expect(text.split("\n")).toEqual(["4 Rare Candy - 191/198", "3 Charizard ex"]);
+  });
+
+  it("round-trips a Pokémon deck back to the same lines", async () => {
+    const cards = [
+      { zone: "main" as const, quantity: 4, name: "Rare Candy - 191/198" },
+      { zone: "main" as const, quantity: 3, name: "Charizard ex" },
+      { zone: "main" as const, quantity: 10, name: "Basic Fire Energy" },
+    ];
+    const text = formatDecklist({ gameSlug: "pokemon", cards });
+    const back = mergeResolved(await resolveDecklist("pokemon", parseDecklist(text, "pokemon")));
+    expect(back).toEqual([
+      { cardId: f.cards.rareCandySvi, zone: "main", quantity: 4 },
+      { cardId: f.cards.charizardEx, zone: "main", quantity: 3 },
+      { cardId: f.cards.fireEnergy, zone: "main", quantity: 10 },
+    ]);
+  });
+
+  it("emits zone headers the parser reads back for a multi-zone game", async () => {
+    const text = formatDecklist({
+      gameSlug: "one-piece",
+      cards: [{ zone: "main", quantity: 4, name: "Nami" }, { zone: "leader", quantity: 1, name: "Monkey.D.Luffy" }],
+    });
+    expect(text.split("\n")).toEqual(["Leader:", "1 Monkey.D.Luffy", "", "Main:", "4 Nami"]);
+    expect(mergeResolved(await resolveDecklist("one-piece", parseDecklist(text, "one-piece")))).toEqual([
+      { cardId: f.cards.luffyLeader, zone: "leader", quantity: 1 },
+      { cardId: f.cards.nami, zone: "main", quantity: 4 },
+    ]);
+  });
+
+  it("skips zones the deck does not use and keeps the game's zone order", () => {
+    const text = formatDecklist({
+      gameSlug: "riftbound",
+      cards: [
+        { zone: "battlefield", quantity: 1, name: "Heisho, Shell of the World" },
+        { zone: "legend", quantity: 1, name: "Renekton, Butcher of the Sands" },
+        { zone: "rune", quantity: 12, name: "Body Rune" },
+      ],
+    });
+    expect(text.split("\n")).toEqual([
+      "Legend:", "1 Renekton, Butcher of the Sands", "",
+      "Runes:", "12 Body Rune", "",
+      "Battlefields:", "1 Heisho, Shell of the World",
+    ]);
+    expect(parseDecklist(text, "riftbound").map((l) => [l.zone, l.quantity, l.text])).toEqual([
+      ["legend", 1, "Renekton, Butcher of the Sands"],
+      ["rune", 12, "Body Rune"],
+      ["battlefield", 1, "Heisho, Shell of the World"],
+    ]);
   });
 });

@@ -68,7 +68,12 @@ PowerShell: `$env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx ingest
 
 ### Curating meta decks locally
 
-Until the admin screen ships, curated (meta) decks are loaded from a plain decklist text file with
+The same flow is available in the app at `/admin/decks` for a user with `"user".isAdmin = 1` — paste a
+list, resolve it, pick a card for anything ambiguous, fill in the metadata, save — and that screen can
+also edit and delete curated decks. Every action there re-checks admin-ness, and a non-admin gets a 404
+rather than a redirect. The CLI below remains the scriptable path.
+
+Curated (meta) decks can also be loaded from a plain decklist text file with
 `scripts/import-deck.mts`: it parses the common shapes (`4 Charmander MEW 4`, `4x Charizard ex`,
 `Rare Candy x4`, One Piece `1 OP01-003 Monkey.D.Luffy`, section headers such as `Trainer:` / `Leader` /
 `Runes:` that set the zone — One Piece `Character` / `Event` / `Stage` sections are all the main deck),

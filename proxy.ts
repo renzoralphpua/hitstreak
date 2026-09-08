@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
-const PROTECTED = ["/portfolios", "/sets", "/cards", "/decks", "/alerts", "/dev"];
+const PROTECTED = ["/portfolios", "/sets", "/cards", "/decks", "/alerts", "/admin", "/dev"];
 
 /** Optimistic redirect only (cookie presence, not validity). The real check is
  *  getSession() in app/(app)/layout.tsx — never rely on this alone. */

@@ -14,6 +14,7 @@ import {
   ValidationList,
   SearchField,
   Input,
+  Textarea,
   CardTile,
   CardRow,
   TopNav,
@@ -197,6 +198,14 @@ export default function Gallery() {
           <div className="flex max-w-sm flex-col gap-3">
             <Input label="Email" type="email" placeholder="you@example.com" />
             <Input aria-label="Binder name" placeholder="New binder…" />
+          </div>
+        </Variants>
+      </Section>
+
+      <Section name="Textarea">
+        <Variants>
+          <div className="flex max-w-sm flex-col gap-3">
+            <Textarea label="Decklist" rows={4} placeholder={"4 Charmander\n3 Charizard ex"} />
           </div>
         </Variants>
       </Section>

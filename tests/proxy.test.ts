@@ -28,6 +28,11 @@ describe("proxy (optimistic auth redirect)", () => {
     const res = await proxy(req("/s/abcdefghijklmnopqrstuv"));
     expect(res.headers.get("location")).toBeNull();
   });
+  it("redirects unauthenticated /admin/decks (the real admin check is in the page)", async () => {
+    const res = await proxy(req("/admin/decks"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://localhost:3000/sign-in?next=%2Fadmin%2Fdecks");
+  });
   it("preserves the query string in the next param", async () => {
     const res = await proxy(req("/cards?q=pika"));
     expect(res.status).toBe(307);
