@@ -86,15 +86,18 @@ Mockup element → primitive (`components/ui/`):
 | Search pill | `SearchField` |
 | Binder-grid cards | `CardTile` |
 | List rows | `CardRow` |
+| Triggered alert row | `CardRow tone="inverted"` (the ink chip; the `right` slot inherits its colour) |
 | Top bar | `TopNav` |
 | Phone tab bar | `BottomTabBar` |
 | Theme toggle | `ThemeToggle` |
 | Nothing-here panels | `EmptyState` |
 | Serif money values | `MoneyDisplay` |
+| Value / price chart | `LineChart` |
+| 7D · 30D · 90D · 1Y · All row | `RangePills` |
 
 **Zero-change convention:** a 0 delta renders neutral (no arrow, dim text — neither gain nor accent);
 percentages that round to 0.0% are shown unsigned (no leading `+`/`-`).
 
 **Tap targets:** anything tappable is at least 44px high on a phone. `Button` and `Input` are 44px
-everywhere (`min-h-11`); `Pill` is `min-h-11 md:min-h-8` — a thumb target on phones, the compact
-32px chip of the mockups from `md` up.
+everywhere (`min-h-11`); `Button size="sm"` and `Pill` are `min-h-11 md:min-h-8` — a thumb target
+on phones, the compact 32px control of the mockups from `md` up.

@@ -4,10 +4,29 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
 import { getPortfolio, getPortfolioHoldings, getPortfolioSummary } from "@/lib/portfolios";
+import { getShareLink } from "@/lib/share";
+import {
+  parseRange,
+  rangeStart,
+  chartFrom,
+  seriesStats,
+  withLivePoint,
+  getPortfolioHistory,
+  RANGE_CAPTION,
+} from "@/lib/history";
 import { formatMoney } from "@/lib/format";
-import { SectionHeading, StatTile, PriceDelta, MoneyDisplay, EmptyState } from "@/components/ui";
+import {
+  SectionHeading,
+  StatTile,
+  PriceDelta,
+  MoneyDisplay,
+  EmptyState,
+  LineChart,
+  RangePills,
+} from "@/components/ui";
 import HoldingsTable from "./HoldingsTable";
 import AddItemDialog from "./AddItemDialog";
+import SharePanel from "./SharePanel";
 
 // Per-user data valued from latest_prices: never prerender or cache across users.
 export const dynamic = "force-dynamic";
@@ -32,13 +51,21 @@ export async function generateMetadata({ params }: Params) {
   return { title: `${portfolio.name} — Hitstreak` };
 }
 
-export default async function PortfolioDetailPage({ params }: Params) {
+export default async function PortfolioDetailPage({ params, searchParams }: PageProps<"/portfolios/[id]">) {
   const { id } = await params;
   const { userId, portfolioId, portfolio } = await load(id);
-  const [holdings, summary] = await Promise.all([
+  const { range: rawRange } = await searchParams;
+  const range = parseRange(rawRange);
+  const today = new Date().toISOString().slice(0, 10);
+  const from = rangeStart(range, today);
+  const [holdings, summary, shareLink] = await Promise.all([
     getPortfolioHoldings(userId, portfolioId),
     getPortfolioSummary(userId, portfolioId),
+    getShareLink(userId, portfolioId),
   ]);
+  // portfolio_history is materialized nightly; tonight's live value is the final point until then.
+  const history = withLivePoint(await getPortfolioHistory(userId, portfolioId, from, today), today, summary.value);
+  const stats = seriesStats(history);
   const gainSign = summary.gain >= 0 ? "+" : "−";
 
   return (
@@ -60,6 +87,19 @@ export default async function PortfolioDetailPage({ params }: Params) {
           ratio={summary.cost > 0 ? summary.gain / summary.cost : null}
           caption="vs. paid"
         />
+        {stats?.change && (
+          <PriceDelta amount={stats.change.amount} ratio={stats.change.ratio} caption={RANGE_CAPTION[range]} />
+        )}
+        <div className="flex flex-col gap-2">
+          <LineChart
+            points={history}
+            from={chartFrom(range, from, history, today)}
+            to={today}
+            height={120}
+            label={`${portfolio.name} value, ${RANGE_CAPTION[range]}`}
+          />
+          <RangePills current={range} hrefFor={(r) => `/portfolios/${portfolioId}?range=${r}`} />
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <StatTile label="Paid" value={formatMoney(summary.cost)} />
@@ -80,6 +120,8 @@ export default async function PortfolioDetailPage({ params }: Params) {
         )}
 
         {holdings.length > 0 && <AddItemDialog portfolioId={portfolioId} />}
+
+        <SharePanel portfolioId={portfolioId} link={shareLink} />
       </div>
 
       <div className="flex flex-col gap-4">

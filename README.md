@@ -17,19 +17,27 @@ Phase 2b complete: binders with live valuation from `latest_prices`; the add-car
 search; the set browser with completion tracking and tap-to-own; card detail with printings and 30-day
 change; `/decks` and `/alerts` placeholders so the nav does not 404.
 
-Phase 3 next: price history charts, portfolio history, share links, alerts (see
-`docs/superpowers/plans/`).
+Phase 3 complete: price-history charts on the card page (range + printing pills) and the binder page
+(value chart with a 7D · 30D · 90D · 1Y · All row); `ingest/nightly.ts` as a second step of the daily
+ingest job (materializes `portfolio_history`, evaluates price alerts, emails crossings via Resend);
+read-only binder share links (`/s/[token]`, on/off/regenerate); the alerts page (Triggered / Watching,
+create, delete); and a sign-up gate (`SIGNUP_ALLOWLIST`). `npm test`: 287 tests in 46 files.
+
+Phase 4 next: decks — meta browser, gap analysis, builder, per-game validators, admin curation (the
+spec's §11 maps steps to phases; plans live in `docs/superpowers/plans/`).
 
 ### Screens
 
 - `/` — landing (anonymous); signed-in visitors are redirected to `/portfolios`
 - `/sign-in`, `/sign-up` — email + password
 - `/portfolios` — binder list with value, gain, and create/rename/delete
-- `/portfolios/[id]` — holdings valued from latest prices, add-card dialog, quantity edits
+- `/portfolios/[id]` — holdings valued from latest prices, value-history chart (`?range=`), add-card dialog, quantity edits, share-link panel
 - `/sets` — game pills and each set's completion bar
 - `/sets/[id]` — the set's cards as owned/missing tiles; tap a tile to add one copy
-- `/cards/[id]` — art, market price, 30-day change, printings table, add to a binder
-- `/decks`, `/alerts` — Phase 4 / Phase 3 placeholders
+- `/cards/[id]` — art, market price, 30-day change, price-history chart (`?range=` + `?p=` printing pills), printings table, "in your binders", add to a binder, set-alert shortcut
+- `/alerts` — Triggered / Watching lists, new-alert form (search → printing → direction → price; `?printing=` preselects one), delete
+- `/s/[token]` — public read-only binder view (no sign-in, market value only, `noindex`); unknown or disabled tokens 404
+- `/decks` — Phase 4 placeholder
 - `/dev/ui` — primitives gallery (dev only)
 - `/api/auth/[...all]` — Better Auth route handler (sign-in, sign-up, sign-out, session)
 - `GET /api/search?q=&game=` — type-ahead card search for the add-card dialog (session-checked)
@@ -52,6 +60,7 @@ Local ingestion run against a file database (bash):
 
 ```bash
 TURSO_DATABASE_URL=file:hitstreak.local.db npx tsx ingest/daily.ts
+TURSO_DATABASE_URL=file:hitstreak.local.db APP_URL=http://localhost:3000 npx tsx ingest/nightly.ts
 TURSO_DATABASE_URL=file:hitstreak.local.db npx tsx scripts/db-counts.mts
 ```
 
@@ -60,11 +69,18 @@ PowerShell: `$env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx ingest
 ## Ingestion
 
 - `ingest/daily.ts [YYYY-MM-DD]` — daily sync (GitHub Actions "Daily price ingest", 21:00 UTC): catalog upsert + write-on-change prices. Pass a date to re-run a failed night under its own date. Exits 1 if any game or group failed; prints a final `DAILY_SUMMARY {json}` line.
+- `ingest/nightly.ts [YYYY-MM-DD]` — second step of the same "Daily price ingest" job, right after `ingest/daily.ts` (and even when that step failed part-way — whatever prices landed are worth valuing). Materializes `portfolio_history` for the date (one row per binder: Σ quantity × the market price in force on that date) and evaluates every price alert against the current price (`latest_prices`, not the date's snapshot — so re-running an older night cannot re-arm a fired alert or fire one on a stale price), emailing crossings via Resend. Idempotent per date. Prints a final `NIGHTLY_SUMMARY {json}` line. Exits 2 when Resend is configured but `APP_URL` (or `BETTER_AUTH_URL`) is not — the emails need an origin for their links; without Resend the URL is unused and history still materializes. Exits 1 if an email failed, or, in CI, if a crossing is pending while Resend is unconfigured, so the gap is noticed rather than only logged.
 - `ingest/backfill.ts <from> <to>` — one-time archive replay from 2024-02-08 (GitHub Actions "Historical price backfill", manual). Run oldest-first in chunks; see the Turso write-budget note in the Phase 1 plan before dispatching.
 - Raw tcgcsv responses are archived to R2 under `raw/tcgplayer/<date>/<category>/` BEFORE processing; an archive failure aborts the affected group for the day (or the whole game if the groups listing itself fails to archive); the run exits non-zero either way.
 
 Env vars: see `.env.example`. CI secrets: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`,
-`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
+`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `RESEND_API_KEY`,
+`ALERT_FROM_EMAIL`, `APP_URL`.
+
+`RESEND_API_KEY` / `ALERT_FROM_EMAIL` can come later — until both are set, alerts are logged instead of
+emailed (a pending crossing still makes the CI job red so it does not go unnoticed) and `portfolio_history`
+accumulates regardless. Set `APP_URL` together with the Resend secrets: once Resend is configured the
+nightly step exits 2 without it, because the emails need an origin for their links.
 
 ## UI development
 
@@ -87,6 +103,13 @@ Required env vars: `BETTER_AUTH_SECRET` (generate with `openssl rand -base64 32`
 For local dev, `.env.local` needs `TURSO_DATABASE_URL=file:hitstreak.local.db` plus those two — see
 `.env.example`. `.env.local` and `hitstreak.local.db*` are gitignored; never commit them.
 
+`SIGNUP_ALLOWLIST` gates registration. Blank or unset = anyone can sign up (local dev, the very first
+deploy). Set to a comma-separated list of emails = only those addresses may register; everyone else gets
+a 403 "Sign-ups are invite-only right now." from the Better Auth `hooks.before` on `/sign-up/email`
+(`lib/signup-gate.ts`, `lib/auth.ts`), and the sign-up page shows an invite-only note. Matching is
+trimmed and case-insensitive. The list is read once at server start, so changing it on Vercel needs a
+redeploy, not just a new value.
+
 Local test user: sign yourself up once (the convention is `dev@example.com`) and use that account for
 manual checks. It lives only in your own `hitstreak.local.db` — there are no seeded accounts in the
 repo, and nothing in CI or on Vercel knows about it.
@@ -107,6 +130,13 @@ applies to previews too, not just the production environment.
 - `@libsql/kysely-libsql` normally pulls its own `@libsql/client@^0.8`; the override dedupes that to the
   root `@libsql/client@^0.18.0` since we construct and pass in our own client (see `lib/auth.ts`) rather
   than letting the dialect create one.
+
+## Before going public
+
+- Set `SIGNUP_ALLOWLIST` on Vercel (Build + Runtime) so registration is closed before the domain is reachable.
+- Verify a sending domain in Resend and set `RESEND_API_KEY` + `ALERT_FROM_EMAIL` as GitHub Actions secrets so alerts email instead of logging.
+- Set `APP_URL` as a GitHub Actions secret alongside the Resend secrets — the nightly step refuses to send emails without an origin for their links (see Ingestion).
+- Consider email verification (`requireEmailVerification` + the Resend sender) and a rate limit on `/s/[token]` — both are open follow-ups in spec §13.
 
 ## Design docs
 

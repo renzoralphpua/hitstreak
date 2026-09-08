@@ -69,7 +69,8 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                     <Button
                       variant="secondary"
                       aria-label={`Remove one ${h.cardName}`}
-                      className="min-h-8 px-2.5 py-1"
+                      size="sm"
+                      className="px-2.5"
                       disabled={busy || h.quantity <= 1}
                       onClick={() => setQuantity(h, h.quantity - 1)}
                     >
@@ -79,7 +80,8 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                     <Button
                       variant="secondary"
                       aria-label={`Add one ${h.cardName}`}
-                      className="min-h-8 px-2.5 py-1"
+                      size="sm"
+                      className="px-2.5"
                       disabled={busy}
                       onClick={() => setQuantity(h, h.quantity + 1)}
                     >
@@ -88,7 +90,8 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                     <Button
                       variant="secondary"
                       aria-label={`Remove ${h.cardName} from binder`}
-                      className="ml-1 min-h-8 px-2.5 py-1 text-[13px] font-normal"
+                      size="sm"
+                      className="ml-1 text-[13px] font-normal"
                       disabled={busy}
                       onClick={() => remove(h)}
                     >

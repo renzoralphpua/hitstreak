@@ -12,6 +12,11 @@ afterAll(() => {
   tmp.clean();
 });
 
+// Sign-up / sign-in hash or verify the password with scrypt, which is CPU-bound. Under the
+// full suite's one-worker-per-file load that can exceed vitest's 5s default, so the
+// password-touching tests get a generous explicit timeout.
+const SCRYPT = { timeout: 20_000 };
+
 describe("Better Auth on libSQL", () => {
   it("creates the auth tables via the self-initializing schema", async () => {
     const c = await db();
@@ -20,7 +25,7 @@ describe("Better Auth on libSQL", () => {
     for (const t of ["user", "session", "account", "verification"]) expect(names).toContain(t);
   });
 
-  it("signs up, signs in, and resolves the session from the cookie", async () => {
+  it("signs up, signs in, and resolves the session from the cookie", SCRYPT, async () => {
     await db(); // schema first — lib/auth creates its own client against the same file
     const { auth } = await import("@/lib/auth");
     const email = "renzo@example.com";
@@ -44,7 +49,7 @@ describe("Better Auth on libSQL", () => {
     expect((session?.user as { isAdmin?: boolean }).isAdmin).toBe(false);
   });
 
-  it("does not let a client grant itself admin via the sign-up body", async () => {
+  it("does not let a client grant itself admin via the sign-up body", SCRYPT, async () => {
     const { auth } = await import("@/lib/auth");
     const signUp = await auth.api.signUpEmail({
       body: { email: "sneaky@example.com", password: "correct horse battery", name: "Sneaky", isAdmin: true } as never,
@@ -58,7 +63,7 @@ describe("Better Auth on libSQL", () => {
     expect((session?.user as { isAdmin?: boolean }).isAdmin).toBe(false);
   });
 
-  it("rejects a wrong password", async () => {
+  it("rejects a wrong password", SCRYPT, async () => {
     const { auth } = await import("@/lib/auth");
     const res = await auth.api.signInEmail({
       body: { email: "renzo@example.com", password: "nope" },

@@ -4,9 +4,29 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
 import { getCardDetail } from "@/lib/catalog";
-import { listPortfolios } from "@/lib/portfolios";
-import { formatDelta, formatMoney, formatPercent } from "@/lib/format";
-import { SectionHeading, Panel, MoneyDisplay, PriceDelta, EmptyState } from "@/components/ui";
+import { getCardHolders, listPortfolios } from "@/lib/portfolios";
+import {
+  parseRange,
+  rangeStart,
+  chartFrom,
+  seriesStats,
+  getPrintingHistory,
+  RANGE_CAPTION,
+  type Range,
+  type Point,
+} from "@/lib/history";
+import { formatMoney } from "@/lib/format";
+import {
+  SectionHeading,
+  Panel,
+  MoneyDisplay,
+  PriceDelta,
+  EmptyState,
+  LineChart,
+  RangePills,
+  Pill,
+  Button,
+} from "@/components/ui";
 import AddToBinder from "./AddToBinder";
 
 // "You own" counts are per-user: never prerender or cache across users.
@@ -36,23 +56,36 @@ const MAX_ATTRS = 8;
 // Number and rarity already appear in the caption line.
 const SKIP_ATTRS = new Set(["number", "rarity"]);
 
-export default async function CardDetailPage({ params }: Params) {
+export default async function CardDetailPage({ params, searchParams }: PageProps<"/cards/[id]">) {
   const { id } = await params;
   const { userId, detail } = await load(id);
   const { card, printings } = detail;
-  const portfolios = await listPortfolios(userId);
 
   // The headline price is the card's most valuable printing (the one people mean by "the card").
+  // Null for the ~4% of cards with no printings yet (printings are created by the price ingest).
   const primary =
     printings.reduce<(typeof printings)[number] | null>(
       (best, p) => (p.market != null && (best?.market == null || p.market > best.market) ? p : best),
       null
     ) ?? printings[0] ?? null;
 
+  const { range: rawRange, p: rawP } = await searchParams;
+  const range = parseRange(rawRange);
+  const today = new Date().toISOString().slice(0, 10);
+  const from = rangeStart(range, today);
+  const requested = typeof rawP === "string" ? parseRouteId(rawP) : null;
+  // PrintingPrice | null: `?p=` when it names one of this card's printings, else the headline one.
+  const chartPrinting = printings.find((x) => x.printingId === requested) ?? primary;
+  const [portfolios, history, holders] = await Promise.all([
+    listPortfolios(userId),
+    chartPrinting ? getPrintingHistory(chartPrinting.printingId, from, today) : Promise.resolve<Point[]>([]),
+    getCardHolders(userId, card.id),
+  ]);
+  const stats = seriesStats(history);
+  const hrefFor = (r: Range, printingId: number) =>
+    `/cards/${card.id}?range=${r}${printingId === primary?.printingId ? "" : `&p=${printingId}`}`;
+
   const change = primary?.change30d ?? null;
-  const changeText = change
-    ? `30-day change: ${formatDelta(change.amount)} (${formatPercent(change.ratio)})`
-    : "Not enough history yet.";
 
   const attrs = Object.entries(card.attrs)
     .filter(([k, v]) => !SKIP_ATTRS.has(k.toLowerCase()) && String(v).trim() !== "")
@@ -128,9 +161,66 @@ export default async function CardDetailPage({ params }: Params) {
           </div>
         </Panel>
 
-        <Panel className="flex flex-col gap-2.5">
-          <span className="font-semibold text-ink">Price history</span>
-          <EmptyState title="Charts arrive in Phase 3" body={changeText} />
+        <div className="flex flex-wrap items-center gap-3 text-[13px]">
+          {holders.length === 0 ? (
+            <span className="text-dim">Not in any of your binders yet.</span>
+          ) : (
+            <span className="text-muted">
+              In your binders:{" "}
+              {holders.map((h, i) => (
+                <span key={h.portfolioId}>
+                  {i > 0 && ", "}
+                  <Link href={`/portfolios/${h.portfolioId}`} className="text-ink">
+                    {h.name}
+                  </Link>
+                  <span className="num text-dim"> ×{h.quantity}</span>
+                </span>
+              ))}
+            </span>
+          )}
+          {primary && (
+            <Button href={`/alerts?printing=${primary.printingId}`} variant="secondary" size="sm" className="ml-auto">
+              Set a price alert
+            </Button>
+          )}
+        </div>
+
+        <Panel className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-semibold text-ink">Price history</span>
+            {stats && (
+              <span className="num ml-auto text-xs text-dim">
+                Low {formatMoney(stats.low)} · High {formatMoney(stats.high)}
+              </span>
+            )}
+          </div>
+          {chartPrinting ? (
+            <>
+              {printings.length > 1 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {printings.map((p) => (
+                    <Pill
+                      key={p.printingId}
+                      href={hrefFor(range, p.printingId)}
+                      selected={p.printingId === chartPrinting.printingId}
+                      scroll={false}
+                    >
+                      {p.subtype}
+                    </Pill>
+                  ))}
+                </div>
+              )}
+              <LineChart
+                points={history}
+                from={chartFrom(range, from, history, today)}
+                to={today}
+                label={`${card.name} (${chartPrinting.subtype}) market price, ${RANGE_CAPTION[range]}`}
+              />
+              <RangePills current={range} hrefFor={(r) => hrefFor(r, chartPrinting.printingId)} />
+            </>
+          ) : (
+            <EmptyState title="No price history yet" body="This card has no priced printings." />
+          )}
         </Panel>
 
         {attrs.length > 0 && (

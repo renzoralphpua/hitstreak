@@ -102,3 +102,38 @@ export const PORTFOLIO_SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_items_portfolio ON collection_items(portfolio_id);
   CREATE INDEX IF NOT EXISTS idx_items_printing ON collection_items(printing_id);
 `;
+
+// Phase 3: materialized binder value, share links, price alerts. FKs are documentation (unenforced
+// in SQLite); lib/portfolios.ts deletePortfolio clears the two portfolio-scoped tables itself.
+export const HISTORY_SCHEMA_SQL = `
+  -- One row per binder per day, written by ingest/nightly.ts (value as of that day's prices).
+  CREATE TABLE IF NOT EXISTS portfolio_history (
+    portfolio_id INTEGER NOT NULL REFERENCES portfolios(id),
+    date TEXT NOT NULL,             -- YYYY-MM-DD
+    total_value REAL NOT NULL,      -- dollars; unpriced copies contribute nothing
+    PRIMARY KEY (portfolio_id, date)
+  );
+
+  -- One link per binder. Disabled links 404; regenerating replaces the token.
+  CREATE TABLE IF NOT EXISTS share_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    portfolio_id INTEGER NOT NULL UNIQUE REFERENCES portfolios(id),
+    token TEXT NOT NULL UNIQUE,     -- 16 random bytes, base64url (22 chars)
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS price_alerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    printing_id INTEGER NOT NULL REFERENCES printings(id),
+    direction TEXT NOT NULL CHECK (direction IN ('above', 'below')),
+    threshold REAL NOT NULL CHECK (threshold > 0),   -- dollars
+    armed INTEGER NOT NULL DEFAULT 1,  -- 1 = emails on the next crossing; 0 = fired, waiting to re-arm
+    last_fired_at TEXT,                -- ISO timestamp of the last email
+    last_fired_price REAL,             -- the market price that triggered it
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_alerts_user ON price_alerts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_alerts_printing ON price_alerts(printing_id);
+`;

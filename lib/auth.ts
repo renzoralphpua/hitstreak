@@ -1,14 +1,19 @@
 import { betterAuth } from "better-auth";
+import { createAuthMiddleware, APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
 import { createClient } from "@libsql/client";
 import { db } from "./db";
+import { parseAllowlist, signupAllowed } from "./signup-gate";
 
 // Better Auth gets its own libSQL client on the same database. Its tables are created by
 // our self-initializing schema (lib/schema.ts AUTH_SCHEMA_SQL), so there is no migrate step.
 const url = process.env.TURSO_DATABASE_URL;
 if (!url) throw new Error("TURSO_DATABASE_URL is not set");
 const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+
+// Read once at module load: SIGNUP_ALLOWLIST is deploy-time config, not per-request state.
+const allowlist = parseAllowlist(process.env.SIGNUP_ALLOWLIST);
 
 /**
  * Kysely calls `Driver.init()` once, lazily, before the first connection is acquired.
@@ -43,6 +48,15 @@ export const auth = betterAuth({
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
     ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
   ],
+  hooks: {
+    // Registration gate. Sign-in, sign-out and session calls are untouched.
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-up/email") return;
+      if (!signupAllowed(ctx.body?.email, allowlist)) {
+        throw new APIError("FORBIDDEN", { message: "Sign-ups are invite-only right now." });
+      }
+    }),
+  },
   plugins: [nextCookies()],
 });
 
