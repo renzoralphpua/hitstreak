@@ -17,7 +17,7 @@
 
 **Conventions:** as Phase 3. `userId` first on every user-scoped function; meta decks are readable by any signed-in user, writable only when `"user".isAdmin = 1`; personal decks readable/writable by their owner only. Money stays `REAL` dollars. Tests use `tmpDb()` + `seedMiniCatalog()` (+ a new `seedDeckFixtures()` for Riftbound and deck-shaped cards). Component tests are `tests/ui/*.test.tsx` with `// @vitest-environment jsdom`. Verify each task with `npm test`, `npm run typecheck`, `npm run lint`; commit after each green task on branch `phase-4/decks`.
 
-**This run executes Tasks 1–6 only** (Renzo, 2026-09-08). Tasks 7–9 are outlined at the end and get full step detail when they are picked up.
+**Executed in runs:** Tasks 1–6 (2026-09-08), then Task 7 (2026-09-08). Tasks 8–9 are outlined at the end and get full step detail when they are picked up.
 
 **Deferred (do NOT build here):** automated meta scraping, deck sharing, deck price history, wishlists, Phase 5 items (purchase tracking, sealed first-class, UX pass).
 
@@ -1491,9 +1491,373 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
 
 ---
 
-### Task 7: Deck builder (outline — not in this run)
+### Task 7: Deck builder
 
-`/decks/mine` (list + New deck), `/decks/mine/[id]` builder: zone tabs per `ZONES[game]`, `useCardSearch` add (default zone by card type — Leader/Legend/Rune/Battlefield auto-route), quantity steppers, live `describeRules` → `ValidationList`, save as valid or draft (`saveDeckCards(…, isDraft = !valid)`), "Copy to my decks" from a meta deck, "Open in builder". Actions in `app/(app)/decks/actions.ts` via `withUser`/`assertId`. Mockup `Builder.dc.html`.
+**Files:** create `lib/decks/gap-math.ts`, `lib/decks/zone.ts`, `tests/decks-zone.test.ts`, `app/(app)/decks/actions.ts`, `tests/decks-actions.test.ts`, `app/(app)/decks/mine/page.tsx`, `app/(app)/decks/mine/NewDeckForm.tsx`, `app/(app)/decks/mine/DeckActions.tsx`, `app/(app)/decks/mine/[id]/page.tsx`, `app/(app)/decks/mine/[id]/Builder.tsx`, `app/(app)/decks/[id]/CopyDeckButton.tsx`, `tests/ui/new-deck-form.test.tsx`, `tests/ui/builder.test.tsx`; modify `lib/decks/gap.ts`, `lib/decks/validate.ts`, `lib/decks/data.ts`, `lib/catalog.ts`, `components/ui/useCardSearch.ts`, `app/(app)/decks/page.tsx`, `app/(app)/decks/[id]/page.tsx`, `tests/ranges.test.ts`, `tests/catalog-read.test.ts`, `docs/design/README.md`
+
+The builder validates **live in the browser**, so everything it imports must be db-free. Three enabling
+changes come first (Steps 1–3), then the actions, then the screens.
+
+- [ ] **Step 1: db-free gap math.** Move `GapLine`, `GapAnalysis` and `analyzeGap` out of `lib/decks/gap.ts`
+  into a new `lib/decks/gap-math.ts` (it may import only `./identity`, `./types` and `import type` from
+  `./data`), and relax the deck parameter so the builder can pass its live lines:
+
+```ts
+// lib/decks/gap-math.ts
+// Pure gap arithmetic, split out of lib/decks/gap.ts so the builder ("use client") can reuse it without
+// dragging lib/db into the client bundle (same reason as lib/ranges.ts).
+import { identityKey } from "./identity";
+import type { GameSlug } from "./types";
+import type { DeckLine } from "./data";
+
+export interface GapLine extends DeckLine { key: string; owned: number; missing: number; missingCost: number | null }
+export interface GapAnalysis { lines: GapLine[]; total: number; owned: number; missing: number; missingCost: number; unpricedMissing: number }
+
+/** Allocate `owned` copies to the deck's lines in order; price missing copies at the line's market.
+ *  Takes the structural minimum, not a whole DeckDetail, so the builder can pass unsaved lines. */
+export function analyzeGap(deck: { gameSlug: GameSlug; cards: DeckLine[] }, owned: Map<string, number>): GapAnalysis {
+  // …body moved verbatim from gap.ts…
+}
+```
+
+`lib/decks/gap.ts` keeps `loadOwnedByKey` and adds `export * from "./gap-math";` so every existing
+import site (`app/(app)/decks/page.tsx`, `[id]/page.tsx`, `tests/decks-gap.test.ts`) is unchanged.
+Extend `tests/ranges.test.ts`'s guard: add `lib/decks/gap-math.ts`, `lib/decks/validate.ts`,
+`lib/decks/zone.ts` and `lib/decks/identity.ts` to the "must not reach lib/db" list, and assert
+`gap.analyzeGap === gapMath.analyzeGap`. The `REACHES_DB` regex there matches `db|history`; add
+`decks/data|decks/gap` as alternatives **only** for the new files (`gap-math` legitimately
+`import type`s from `./data`, which is erased at compile time — the guard must therefore ignore
+`import type` lines: match `/^import\s+(?!type\b)/m`-anchored imports, or simply strip lines starting
+with `import type` before testing).
+
+- [ ] **Step 2: default zone** — `lib/decks/zone.ts`:
+
+```ts
+// lib/decks/zone.ts
+// Where a card lands when you add it in the builder, and which zones hold exactly one card.
+// Pure (no db): the builder runs this on every search hit.
+import { splitList } from "./identity";
+import type { GameSlug, Zone } from "./types";
+
+/** Zones that hold a single card: adding a second replaces the first. */
+export const SINGLE_CARD_ZONES: readonly Zone[] = ["leader", "legend", "champion"];
+export const isSingleCardZone = (z: Zone) => SINGLE_CARD_ZONES.includes(z);
+
+/** The zone a card belongs in, read from its type. Anything unrecognised goes to the main deck, where
+ *  the validator will flag it — better a visible wrong row than a silently dropped card. */
+export function defaultZone(game: GameSlug, card: { attrs: Record<string, string> }): Zone {
+  if (game === "one-piece") return (card.attrs.CardType ?? "").trim() === "Leader" ? "leader" : "main";
+  if (game === "riftbound") {
+    const types = splitList(card.attrs["Card Type"]);
+    if (types.includes("Legend")) return "legend";
+    if (types.includes("Rune")) return "rune";
+    if (types.includes("Battlefield")) return "battlefield";
+    if (types.includes("Champion Unit")) return "champion";
+  }
+  return "main";
+}
+```
+
+`tests/decks-zone.test.ts`: Pokémon anything → `main`; One Piece `CardType: "Leader"` → `leader`,
+`"Character"` → `main`, missing → `main`; Riftbound `"Legend"` → `legend`, `"Rune"` → `rune`,
+`"Battlefield"` → `battlefield`, `"Champion Unit"` → `champion`, `"Unit"` → `main`,
+`"Gear;Battlefield;Token"` → `battlefield` (the validator rejects the token separately), `{}` → `main`;
+`isSingleCardZone` true for leader/legend/champion, false for main/rune/battlefield.
+
+- [ ] **Step 3: search carries `attrs`, and can be filtered by game.**
+  - `lib/catalog.ts`: add `attrs: Record<string, string>` to `SearchHit`, select `ca.attrs` in
+    `searchCards`, and parse it exactly as `getCardDetail` does (`try { JSON.parse(String(r.attrs ?? "{}")) } catch { {} }`).
+    Add one assertion to `tests/catalog-read.test.ts`'s search test that a hit carries its `attrs`.
+  - `components/ui/useCardSearch.ts`: `CardHit` gains `number: string | null`, `setName: string`,
+    `rarity: string | null`, `attrs: Record<string, string>`; the hook takes a third argument
+    `gameSlug?: string` and appends `&game=${encodeURIComponent(gameSlug)}` when set (include it in the
+    effect's dependency list and in the `results.query` tag — key the tag as `${q}|${gameSlug ?? ""}`
+    so switching game re-fetches instead of showing another game's hits). `AddItemDialog` keeps working
+    unchanged (it reads only the fields it already used).
+
+- [ ] **Step 4: `loadDeckCardInputs`** in `lib/decks/data.ts` — the server must validate a save without
+  trusting the client's copy of `attrs`:
+
+```ts
+/** The name/attrs/rarity a validator needs for the given lines, read from the catalog. Lines whose card
+ *  no longer exists are dropped; `saveDeckCards` rejects them separately. */
+export async function loadDeckCardInputs(lines: DeckLineInput[]): Promise<DeckCardInput[]> {
+  if (lines.length === 0) return [];
+  const c = await db();
+  const ids = [...new Set(lines.map((l) => l.cardId))];
+  const rows = (await c.execute({
+    sql: `SELECT id, name, rarity, attrs FROM cards WHERE id IN (${ids.map(() => "?").join(",")})`,
+    args: ids,
+  })).rows;
+  const byId = new Map(rows.map((r) => {
+    let attrs: Record<string, string> = {};
+    try { attrs = JSON.parse(String(r.attrs ?? "{}")); } catch { /* keep {} */ }
+    return [Number(r.id), { name: String(r.name), rarity: r.rarity == null ? null : String(r.rarity), attrs }];
+  }));
+  return lines.flatMap((l) => {
+    const c = byId.get(l.cardId);
+    return c ? [{ cardId: l.cardId, zone: l.zone, quantity: l.quantity, name: c.name, rarity: c.rarity, attrs: c.attrs }] : [];
+  });
+}
+```
+
+(`DeckCardInput` is imported from `./types`.)
+
+- [ ] **Step 5: `validationItems`** in `lib/decks/validate.ts`, so the builder's `ValidationList` shows the
+  mockup's specific messages while still listing rules that pass:
+
+```ts
+/** One line per rule: the rule's text when it holds, or one line per concrete error when it doesn't
+ *  ("Rare Candy: 5 copies (max 4)"). Rules with no error come first in RULE_TEXT order. */
+export function validationItems(input: DeckInput): Array<{ ok: boolean; text: string }> {
+  const errors = validateDeck(input).errors;
+  return RULE_TEXT[input.gameSlug].flatMap((r) => {
+    const hits = errors.filter((e) => e.code === r.code);
+    return hits.length === 0 ? [{ ok: true, text: r.text }] : hits.map((e) => ({ ok: false, text: e.message }));
+  });
+}
+```
+
+Test in a new `describe` inside `tests/rules-pokemon.test.ts`: a legal deck gives six `ok: true` items in
+`RULE_TEXT` order; a 61-card deck with 5 Rare Candy gives `ok: false` items whose text contains "61" and
+"Rare Candy", and the untouched rules stay `ok: true`.
+
+- [ ] **Step 6: server actions** — `app/(app)/decks/actions.ts`:
+
+```ts
+"use server";
+// Mutations for personal decks. Same contract as the portfolio and alert actions: the session is
+// re-checked, ids are validated before SQL, failures come back as { ok: false, error }. The deck is
+// validated HERE, from the catalog's own attrs — the client's copy is never trusted.
+import { revalidatePath } from "next/cache";
+import { withUser, assertId } from "@/lib/action-utils";
+import { validateDeck } from "@/lib/decks/validate";
+import { isGameSlug, type GameSlug, type ValidationError, type Zone, ZONES } from "@/lib/decks/types";
+import * as D from "@/lib/decks/data";
+
+function assertLines(gameSlug: GameSlug, lines: D.DeckLineInput[]): D.DeckLineInput[] {
+  const zones = ZONES[gameSlug] as readonly string[];
+  return lines.map((l) => {
+    if (!zones.includes(l.zone)) throw new Error(`Zone "${l.zone}" is not used by this game`);
+    return { cardId: assertId(l.cardId), zone: l.zone as Zone, quantity: assertId(l.quantity) };
+  });
+}
+
+export async function createDeckAction(gameSlug: string, name: string) {
+  const r = await withUser(async (u) => {
+    if (!isGameSlug(gameSlug)) throw new Error("Unknown game");
+    return D.createDeck(u, { gameSlug, name });
+  });
+  if (r.ok) revalidatePath("/decks/mine");
+  return r;
+}
+
+export async function renameDeckAction(id: number, name: string) {
+  const r = await withUser(async (u) => {
+    if (!(await D.renameDeck(u, assertId(id), name))) throw new Error("Deck not found");
+  });
+  if (r.ok) { revalidatePath("/decks/mine"); revalidatePath(`/decks/mine/${id}`); }
+  return r;
+}
+
+export async function deleteDeckAction(id: number) {
+  const r = await withUser(async (u) => {
+    if (!(await D.deleteDeck(u, assertId(id)))) throw new Error("Deck not found");
+  });
+  if (r.ok) revalidatePath("/decks/mine");
+  return r;
+}
+
+/** Replaces the deck's lines and records whether it is legal. Returns the authoritative verdict. */
+export async function saveDeckAction(id: number, lines: D.DeckLineInput[]) {
+  const r = await withUser<{ valid: boolean; errors: ValidationError[] }>(async (u) => {
+    const deckId = assertId(id);
+    const deck = await D.getDeck(deckId, u);
+    if (!deck || deck.isMeta) throw new Error("Deck not found");
+    const checked = assertLines(deck.gameSlug, lines);
+    const cards = await D.loadDeckCardInputs(checked);
+    const { valid, errors } = validateDeck({ gameSlug: deck.gameSlug, cards });
+    await D.saveDeckCards(u, deckId, checked, !valid);
+    return { valid, errors };
+  });
+  if (r.ok) { revalidatePath(`/decks/mine/${id}`); revalidatePath("/decks/mine"); }
+  return r;
+}
+
+/** Copies a meta deck (or one of your own) into a new personal deck; returns the new deck's id. */
+export async function copyDeckAction(sourceId: number) {
+  const r = await withUser(async (u) => {
+    const source = await D.getDeck(assertId(sourceId), u);
+    if (!source) throw new Error("Deck not found");
+    const newId = await D.createDeck(u, { gameSlug: source.gameSlug, name: `${source.name} (copy)`.slice(0, 80) });
+    const lines = source.cards.map((l) => ({ cardId: l.cardId, zone: l.zone, quantity: l.quantity }));
+    const cards = await D.loadDeckCardInputs(lines);
+    const { valid } = validateDeck({ gameSlug: source.gameSlug, cards });
+    await D.saveDeckCards(u, newId, lines, !valid);
+    return newId;
+  });
+  if (r.ok) revalidatePath("/decks/mine");
+  return r;
+}
+```
+
+`tests/decks-actions.test.ts` (mock `@/lib/session` and `next/cache` exactly as `tests/actions.test.ts`
+does): no session → every action `{ ok: false, error: "Not signed in" }`; bad ids → `"Invalid id"`;
+create with an unknown game → `"Unknown game"`; create + rename + delete round-trip for the owner, and
+each refused for another user with `"Deck not found"`; `saveDeckAction` on a **meta** deck →
+`"Deck not found"` (a user must not edit curated lists); a save of a legal Pokémon 60 → `{ valid: true }`
+and `is_draft = 0` in the row; a save of 59 → `valid: false`, errors mention 59, `is_draft = 1`;
+a save whose lines claim a wrong zone → `{ ok: false }`; `copyDeckAction` on a meta deck creates a deck
+named `"… (copy)"` owned by the caller with the same lines, leaves the source untouched, and returns the
+new id; `copyDeckAction` on someone else's personal deck → `"Deck not found"`.
+
+- [ ] **Step 7: my-decks list** — `app/(app)/decks/mine/page.tsx` (Server Component):
+
+```tsx
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
+import { listGames } from "@/lib/catalog";
+import { listMyDecks } from "@/lib/decks/data";
+import { SectionHeading, Panel, Button, EmptyState } from "@/components/ui";
+import NewDeckForm from "./NewDeckForm";
+import DeckActions from "./DeckActions";
+
+export const metadata = { title: "My decks — Hitstreak" };
+export const dynamic = "force-dynamic";
+
+export default async function MyDecksPage() {
+  const session = await getSession();
+  if (!session) redirect("/sign-in");
+  const [decks, games] = await Promise.all([listMyDecks(session.user.id), listGames()]);
+  return (
+    <div className="flex flex-col gap-5">
+      <SectionHeading
+        as="h1"
+        title="My decks"
+        caption={`${decks.length} deck${decks.length === 1 ? "" : "s"}`}
+        trailing={<Button href="/decks" variant="secondary" size="sm">Meta decks</Button>}
+      />
+      {decks.length === 0 ? (
+        <EmptyState title="No decks yet" body="Start one below, or copy a meta deck from the browser." />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {decks.map((d) => (
+            <Panel key={d.id} className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <Link href={`/decks/mine/${d.id}`} className="font-semibold text-ink">{d.name}</Link>
+                <span className="text-[13px] text-dim">{d.gameName}</span>
+              </div>
+              <div className="flex items-baseline justify-between text-[13px]">
+                <span className="num text-muted">{d.cardCount} card{d.cardCount === 1 ? "" : "s"}</span>
+                <span className={d.isDraft ? "text-accent" : "text-gain"}>{d.isDraft ? "Draft" : "Legal"}</span>
+              </div>
+              <DeckActions id={d.id} name={d.name} />
+            </Panel>
+          ))}
+        </div>
+      )}
+      <Panel><NewDeckForm games={games.map((g) => ({ slug: g.slug, name: g.name }))} /></Panel>
+    </div>
+  );
+}
+```
+
+`NewDeckForm.tsx` (client): game `Pill`s (default the first), an `Input` for the name, a `Button`
+"Create deck"; on success `router.push(\`/decks/mine/${id}\`)`. `DeckActions.tsx` (client): a "Rename"
+toggle that swaps in an `Input` + Save (like `PortfolioForm`'s `RenameToggle`), and a "Delete" `Button`
+guarded by `window.confirm(\`Delete "${name}"?\`)`; both `router.refresh()` on success and render
+`role="alert"` text on failure. Both use `size="sm"`.
+
+`tests/ui/new-deck-form.test.tsx`: renders one pill per game with the first selected; typing a name and
+clicking Create calls `createDeckAction("pokemon", "Zard")` and pushes `/decks/mine/12`; a second pill
+switches the game passed to the action; an action error renders an alert and does not navigate; Create
+is disabled while the name is blank.
+
+- [ ] **Step 8: the builder** — `app/(app)/decks/mine/[id]/page.tsx` (server: loads and gates) plus
+  `Builder.tsx` (client: all interaction).
+
+```tsx
+// app/(app)/decks/mine/[id]/page.tsx
+import { cache } from "react";
+import { notFound, redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
+import { parseRouteId } from "@/lib/route-id";
+import { getDeck } from "@/lib/decks/data";
+import { loadOwnedByKey } from "@/lib/decks/gap";
+import Builder from "./Builder";
+
+export const dynamic = "force-dynamic";
+
+const load = cache(async (id: string) => {
+  const deckId = parseRouteId(id);
+  if (deckId == null) notFound();
+  const session = await getSession();
+  if (!session) redirect("/sign-in");
+  const deck = await getDeck(deckId, session.user.id);
+  // Curated decks are read-only: copy one first (see /decks/[id]).
+  if (!deck || deck.isMeta) notFound();
+  return { userId: session.user.id, deck };
+});
+
+export async function generateMetadata({ params }: PageProps<"/decks/mine/[id]">) {
+  const { id } = await params;
+  const { deck } = await load(id);
+  return { title: `${deck.name} — Hitstreak` };
+}
+
+export default async function BuilderPage({ params }: PageProps<"/decks/mine/[id]">) {
+  const { id } = await params;
+  const { userId, deck } = await load(id);
+  const owned = await loadOwnedByKey(userId, deck.gameSlug);
+  return <Builder deck={deck} owned={Object.fromEntries(owned)} />;
+}
+```
+
+`Builder.tsx` — `"use client"`, props `{ deck: DeckDetail; owned: Record<string, number> }`:
+
+- State: `lines: DeckLine[]` (seeded from `deck.cards`), `q`, `busy`, `error`, `saved: "clean" | "dirty" | ValidationResult`.
+- Search: `const { hits, settled, error: searchError } = useCardSearch(q, true, deck.gameSlug)`.
+  Each hit row is a `CardRow` with `subtitle` = `${setName} · ${number ?? "—"} · own ${ownedOf(hit)} · ${formatMoney(cheapest(hit.printings))}` and an `onClick` that adds it.
+- `add(hit)`: `zone = defaultZone(deck.gameSlug, hit)`; build the line from the hit
+  (`market` = cheapest non-null `printings[].market`); if `isSingleCardZone(zone)` replace whatever is in
+  that zone; else bump the existing `(cardId, zone)` line's quantity (cap 99) or append it.
+- `setQuantity(line, n)`: `n <= 0` removes the line; single-card zones stay at 1.
+- Layout: three columns from `md` up (`md:grid-cols-[280px_minmax(0,1fr)_300px]`), stacked on phones —
+  search, deck, legality. The deck column groups lines by `ZONES[deck.gameSlug]`, each group headed by
+  `ZONE_LABEL[zone]` and its subtotal (the uppercase group label, same as the browser page), rows showing
+  `×N`, name, set · number, `own N` (gain when covered, accent when short) and the line's market.
+- Legality panel: `<ValidationList items={validationItems({ gameSlug: deck.gameSlug, cards: lines.map(toCardInput) })} />`
+  where `toCardInput` maps a line to `{ cardId, name, zone, quantity, attrs, rarity }`.
+- Cost panel: `analyzeGap({ gameSlug: deck.gameSlug, cards: lines }, new Map(Object.entries(owned)))` →
+  three `StatTile`s (Cards, You own `owned / total`, Cost to complete).
+- Save: a `Button` in the header calls `saveDeckAction(deck.id, lines.map(({cardId, zone, quantity}) => ({cardId, zone, quantity})))`;
+  on `{ ok: true }` store the returned verdict and show "Saved · legal" or "Saved as draft" (the client's
+  own live validation is advisory; the server's verdict is what the header reports), then `router.refresh()`.
+  On `{ ok: false }` render the error with `role="alert"`. The button is disabled while `busy`.
+- A "← My decks" back link, the deck name as `SectionHeading`, and `{game} · {format ?? "no format"}` as caption.
+
+`tests/ui/builder.test.tsx` (mock `@/app/(app)/decks/actions`, `next/navigation`, and `fetch` for the
+search, as `tests/ui/add-item-dialog.test.tsx` does): renders the existing lines grouped by zone with
+subtotals; searching and clicking a hit adds it to the right zone (a Riftbound `Rune` hit lands under
+Runes, a One Piece `Leader` hit replaces the leader slot); `+` bumps and `−` at 1 removes; the legality
+list shows a failing rule's concrete message and flips to `ok` when the deck is fixed; Save calls
+`saveDeckAction` with the current lines and shows "Saved as draft" when the server says
+`valid: false`; an action error renders an alert and does not clear the dirty state.
+
+- [ ] **Step 9: the two links.**
+  - `app/(app)/decks/page.tsx`: pass `trailing={<Button href="/decks/mine" variant="secondary" size="sm">My decks</Button>}` to the `SectionHeading`.
+  - `app/(app)/decks/[id]/page.tsx`: render `<CopyDeckButton sourceId={deck.id} />` next to the heading when
+    `deck.isMeta`. `CopyDeckButton.tsx` (client) calls `copyDeckAction(sourceId)` and pushes
+    `/decks/mine/${id}` on success, with `role="alert"` on failure — this is the mockup's
+    "Copy to my decks" and "Open in builder" in one control.
+  - `docs/design/README.md` "Implemented as": add `Deck builder zone group → the shared uppercase group
+    label (GroupLabel candidate, §13)` only if a new pattern appears; otherwise leave it.
+
+- [ ] **Step 10:** `npm test`, `npm run typecheck`, `npm run lint` all green. **Commit** —
+  `feat(decks): personal deck builder with live legality, my-decks list, copy from a meta deck`
+
+---
 
 ### Task 8: Admin curation (outline — not in this run)
 
