@@ -4,11 +4,19 @@
 // same card by name; One Piece alt arts share attrs.Number, so number is the identity there.
 import type { GameSlug } from "./types";
 
-/** Strips " - 123/456…" suffixes and trailing parentheticals, collapses whitespace. */
+// " - <number>[/<denominator>]" and whatever follows it. Number shapes seen in the catalog: "191/198",
+// "TG05/TG30", "GG01/GG70", "SV040/SV122", "226/S-P", "S1/S4", and slash-less promos "054", "003 [Staff]".
+// The number must lead with an (optionally letter-prefixed) digit run, and only a parenthetical, a bracket,
+// or another " - …" segment ("097/162 - 2024 (Sakuya O.)") may follow it — so product names such as
+// "Code Card - Scarlet & Violet Booster Box" or "Code Card - 151 Booster Pack" are left alone.
+const PRINTING_SUFFIX = /\s+-\s+[A-Za-z]*\d+[A-Za-z]?(?:\/[A-Za-z0-9-]+)?(?:\s*[(\[].*|\s+-\s.*)?$/;
+const TRAILING_PARENS = /(\s*\([^)]*\))+\s*$/; // "(Alternate Art)", "(Secret)", "(OP17-119) (Alt)"
+
+/** Strips " - 123/456…" printing suffixes and trailing parentheticals, collapses whitespace. */
 export function baseName(name: string): string {
   return name
-    .replace(/\s+-\s+[A-Za-z]*\d+[A-Za-z]?\/\d+.*$/, "")   // " - 266/182", " - 191/193 (Cosmos Holo)"
-    .replace(/(\s*\([^)]*\))+\s*$/, "")                    // "(Alternate Art)", "(Secret)", "(OP17-119) (Alt)"
+    .replace(PRINTING_SUFFIX, "")
+    .replace(TRAILING_PARENS, "")
     .replace(/\s+/g, " ")
     .trim();
 }

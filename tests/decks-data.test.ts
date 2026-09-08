@@ -43,6 +43,35 @@ describe("meta decks", () => {
     await expect(upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "x", lines: [{ cardId: f.cards.charizardEx, zone: "main", quantity: 0 }] })).rejects.toThrow(/quantity/i);
     await expect(upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "  ", lines: [] })).rejects.toThrow(/name/i);
   });
+  it("rejects the same card twice in one zone, a tier outside 1–4, and more than 200 lines", async () => {
+    const twice = [{ cardId: f.cards.charizardEx, zone: "main" as const, quantity: 1 }, { cardId: f.cards.charizardEx, zone: "main" as const, quantity: 2 }];
+    await expect(upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "x", lines: twice })).rejects.toThrow(/twice/i);
+    await expect(upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "x", tier: 0, lines: [] })).rejects.toThrow(/tier/i);
+    await expect(upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "x", tier: 5, lines: [] })).rejects.toThrow(/tier/i);
+    await expect(upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "x", tier: 1.5, lines: [] })).rejects.toThrow(/tier/i);
+    // 201 lines with card ids that do not exist: the cap must trip before the card lookup ("Card not found")
+    const tooMany = Array.from({ length: 201 }, (_, i) => ({ cardId: 900000 + i, zone: "main" as const, quantity: 1 }));
+    await expect(upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "x", lines: tooMany })).rejects.toThrow(/at most 200 lines/i);
+    expect(await listMetaDecks("pokemon")).toHaveLength(1); // nothing above was written
+  });
+  it("prices a line at the cheapest printing", async () => {
+    const meta = (await listMetaDecks("pokemon"))[0];
+    expect((await getDeck(meta.id, null))?.cards[0]).toMatchObject({ cardId: f.cards.charizardEx, market: 18.9 });
+    const c = await db();
+    const p = await c.execute({ sql: "INSERT INTO printings (card_id, subtype) VALUES (?, 'Reverse Holofoil') RETURNING id", args: [f.cards.charizardEx] });
+    await c.execute({ sql: "INSERT INTO latest_prices (printing_id, date, market) VALUES (?, '2026-09-07', 42.5)", args: [Number(p.rows[0].id)] });
+    expect((await getDeck(meta.id, null))?.cards[0].market).toBe(18.9); // MIN across the two printings
+  });
+  it("replace-by-id only reaches this game's meta decks", async () => {
+    const meta = (await listMetaDecks("pokemon"))[0];
+    const personal = await createDeck(U1, { gameSlug: "pokemon", name: "Mine" });
+    await saveDeckCards(U1, personal, [{ cardId: f.cards.fireEnergy, zone: "main", quantity: 10 }], false);
+    await expect(upsertMetaDeck(ADMIN, { id: personal, gameSlug: "pokemon", name: "hijack", lines: [] })).rejects.toThrow(/meta deck not found/i);
+    await expect(upsertMetaDeck(ADMIN, { id: meta.id, gameSlug: "one-piece", name: "wrong game", lines: [] })).rejects.toThrow(/meta deck not found/i);
+    expect((await getDeck(personal, U1))?.cards.map((l) => [l.cardId, l.quantity])).toEqual([[f.cards.fireEnergy, 10]]); // untouched
+    expect((await getDeck(meta.id, null))?.name).toBe("Charizard ex / Pidgeot");
+    expect(await deleteDeck(U1, personal)).toBe(true);
+  });
 });
 
 describe("personal decks", () => {
@@ -52,7 +81,10 @@ describe("personal decks", () => {
     expect((await listMyDecks(U1)).map((d) => [d.id, d.isDraft, d.cardCount])).toEqual([[id, true, 5]]);
     expect(await listMyDecks(U2)).toEqual([]);
     expect(await getDeck(id, U2)).toBeNull();
-    expect((await getDeck(id, U1))?.cards).toHaveLength(2);
+    const mine = await getDeck(id, U1);
+    expect(mine?.cards).toHaveLength(2);
+    expect(mine?.cards.map((l) => l.zone)).toEqual(["leader", "main"]); // ZONES["one-piece"] display order
+    expect(mine?.isDraft).toBe(true);
     const meta = (await listMetaDecks("pokemon"))[0];
     expect(await getDeck(meta.id, U2)).not.toBeNull();
     expect(await getDeck(meta.id, null)).not.toBeNull(); // meta decks need no user

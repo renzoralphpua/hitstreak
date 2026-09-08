@@ -1,7 +1,9 @@
 // lib/decks/data.ts
-// Decks. Meta decks (owner_user_id IS NULL) are readable by any signed-in user and written only by
-// admins (upsertMetaDeck); personal decks are scoped to their owner on every read and write.
+// Decks. Meta decks (owner_user_id IS NULL) are readable by anyone the caller admits — getDeck(id, null)
+// returns them — and written only by admins (upsertMetaDeck); the route/action layer owns the sign-in gate.
+// Personal decks are scoped to their owner on every read and write.
 import { db } from "@/lib/db";
+import type { InStatement } from "@libsql/client";
 import { type GameSlug, type Zone, ZONES, isGameSlug } from "./types";
 
 export interface DeckSummary {
@@ -17,6 +19,7 @@ export interface DeckLineInput { cardId: number; zone: Zone; quantity: number }
 
 const NAME_MAX = 80;
 const QTY_MAX = 99;
+const MAX_LINES = 200; // distinct (card, zone) lines per deck; bounds the write batch before any DB work
 function cleanName(name: string): string {
   const n = name.trim();
   if (n.length === 0 || n.length > NAME_MAX) throw new Error(`Deck name must be 1–${NAME_MAX} characters`);
@@ -87,8 +90,9 @@ async function gameIdFor(slug: string): Promise<number> {
   return Number(r.rows[0].id);
 }
 
-/** Every line's card must exist, belong to the deck's game, use one of the game's zones, and carry a sane quantity. */
+/** Every line's card must exist, belong to the deck's game, use one of the game's zones, and carry a sane quantity; at most MAX_LINES lines. */
 async function checkLines(gameSlug: GameSlug, gameId: number, lines: DeckLineInput[]): Promise<void> {
+  if (lines.length > MAX_LINES) throw new Error(`A deck can have at most ${MAX_LINES} lines`);
   const zones = ZONES[gameSlug] as readonly string[];
   const seen = new Set<string>();
   for (const l of lines) {
@@ -110,16 +114,21 @@ async function checkLines(gameSlug: GameSlug, gameId: number, lines: DeckLineInp
   }
 }
 
-async function replaceLines(deckId: number, lines: DeckLineInput[]): Promise<void> {
+/** Statements that swap a deck's lines wholesale and bump updated_at (and is_draft when given); run them in one write batch. */
+function lineStatements(deckId: number, lines: DeckLineInput[], isDraft?: boolean): InStatement[] {
+  return [
+    { sql: "DELETE FROM deck_cards WHERE deck_id = ?", args: [deckId] },
+    ...lines.map((l) => ({ sql: "INSERT INTO deck_cards (deck_id, card_id, zone, quantity) VALUES (?, ?, ?, ?)", args: [deckId, l.cardId, l.zone, l.quantity] })),
+    isDraft === undefined
+      ? { sql: "UPDATE decks SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?", args: [deckId] }
+      : { sql: "UPDATE decks SET is_draft = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?", args: [isDraft ? 1 : 0, deckId] },
+  ];
+}
+
+/** Replaces a deck's lines atomically; `before` statements (e.g. a metadata UPDATE) join the same batch. */
+async function replaceLines(deckId: number, lines: DeckLineInput[], opts: { isDraft?: boolean; before?: InStatement[] } = {}): Promise<void> {
   const c = await db();
-  await c.batch(
-    [
-      { sql: "DELETE FROM deck_cards WHERE deck_id = ?", args: [deckId] },
-      ...lines.map((l) => ({ sql: "INSERT INTO deck_cards (deck_id, card_id, zone, quantity) VALUES (?, ?, ?, ?)", args: [deckId, l.cardId, l.zone, l.quantity] })),
-      { sql: "UPDATE decks SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?", args: [deckId] },
-    ],
-    "write"
-  );
+  await c.batch([...(opts.before ?? []), ...lineStatements(deckId, lines, opts.isDraft)], "write");
 }
 
 export interface MetaDeckInput { id?: number; gameSlug: GameSlug; name: string; archetype?: string | null; tier?: number | null; format?: string | null; sourceNote?: string | null; lines: DeckLineInput[] }
@@ -132,20 +141,26 @@ export async function upsertMetaDeck(adminUserId: string, input: MetaDeckInput):
   const gameId = await gameIdFor(input.gameSlug);
   await checkLines(input.gameSlug, gameId, input.lines);
   const c = await db();
-  let id = input.id;
-  if (id != null) {
-    const r = await c.execute({
-      sql: "UPDATE decks SET name = ?, archetype = ?, tier = ?, format = ?, source_note = ? WHERE id = ? AND owner_user_id IS NULL AND game_id = ?",
-      args: [name, input.archetype ?? null, input.tier ?? null, input.format ?? null, input.sourceNote ?? null, id, gameId],
+  const meta = [input.archetype ?? null, input.tier ?? null, input.format ?? null, input.sourceNote ?? null];
+  if (input.id != null) {
+    // Confirm the target is this game's meta deck before any write: the batch below would otherwise swap the lines of
+    // a personal deck (or another game's deck) whose id was passed. Metadata UPDATE and line swap then commit together.
+    const own = await c.execute({ sql: "SELECT 1 FROM decks WHERE id = ? AND owner_user_id IS NULL AND game_id = ?", args: [input.id, gameId] });
+    if (own.rows.length !== 1) throw new Error("Meta deck not found");
+    await replaceLines(input.id, input.lines, {
+      before: [{
+        sql: "UPDATE decks SET name = ?, archetype = ?, tier = ?, format = ?, source_note = ? WHERE id = ? AND owner_user_id IS NULL AND game_id = ?",
+        args: [name, ...meta, input.id, gameId],
+      }],
     });
-    if (r.rowsAffected !== 1) throw new Error("Meta deck not found");
-  } else {
-    const r = await c.execute({
-      sql: "INSERT INTO decks (game_id, owner_user_id, name, archetype, tier, format, source_note) VALUES (?, NULL, ?, ?, ?, ?, ?) RETURNING id",
-      args: [gameId, name, input.archetype ?? null, input.tier ?? null, input.format ?? null, input.sourceNote ?? null],
-    });
-    id = Number(r.rows[0].id);
+    return input.id;
   }
+  // INSERT … RETURNING id must run first (the lines need the id); the new deck is invisible until it has lines anyway.
+  const r = await c.execute({
+    sql: "INSERT INTO decks (game_id, owner_user_id, name, archetype, tier, format, source_note) VALUES (?, NULL, ?, ?, ?, ?, ?) RETURNING id",
+    args: [gameId, name, ...meta],
+  });
+  const id = Number(r.rows[0].id);
   await replaceLines(id, input.lines);
   return id;
 }
@@ -169,8 +184,7 @@ export async function saveDeckCards(userId: string, id: number, lines: DeckLineI
   const d = (await c.execute({ sql: "SELECT d.game_id, g.slug FROM decks d JOIN games g ON g.id = d.game_id WHERE d.id = ? AND d.owner_user_id = ?", args: [id, userId] })).rows[0];
   if (!d) throw new Error("Deck not found");
   await checkLines(String(d.slug) as GameSlug, Number(d.game_id), lines);
-  await replaceLines(id, lines);
-  await c.execute({ sql: "UPDATE decks SET is_draft = ? WHERE id = ?", args: [isDraft ? 1 : 0, id] });
+  await replaceLines(id, lines, { isDraft }); // lines + is_draft commit in one batch
 }
 
 export async function deleteDeck(userId: string, id: number): Promise<boolean> {

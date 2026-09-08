@@ -14,8 +14,13 @@ export const card = (over: Partial<DeckCardInput> & { name: string }): DeckCardI
 
 const PRICE_DATE = "2026-09-07";
 
+type CardKey =
+  | "charizardEx" | "rareCandyObf" | "rareCandySvi" | "fireEnergy"
+  | "nami" | "namiAlt" | "luffyLeader"
+  | "renektonLegend" | "renektonChampion" | "bodyRune" | "heisho";
+
 interface CardSpec {
-  key: string;
+  key: CardKey;
   set: "prismatic" | "twoLegends" | "origins" | "obsidian";
   productId: number;
   name: string;
@@ -39,11 +44,6 @@ const CARDS: CardSpec[] = [
   { key: "bodyRune", set: "origins", productId: 3010, name: "Body Rune", number: "R04", rarity: "Common", attrs: { "Card Type": "Rune", Domain: "Body" }, subtype: "Normal", market: 0.5 },
   { key: "heisho", set: "origins", productId: 3011, name: "Heisho, Shell of the World", number: "158/166", rarity: "Uncommon", attrs: { "Card Type": "Battlefield" }, subtype: "Normal", market: 1.2 },
 ];
-
-type CardKey =
-  | "charizardEx" | "rareCandyObf" | "rareCandySvi" | "fireEnergy"
-  | "nami" | "namiAlt" | "luffyLeader"
-  | "renektonLegend" | "renektonChampion" | "bodyRune" | "heisho";
 
 async function idOf(c: Client, sql: string, args: (string | number)[]): Promise<number> {
   const r = await c.execute({ sql, args });
@@ -74,8 +74,8 @@ export async function seedDeckFixtures() {
     );
     const printingId = await idOf(c, "INSERT INTO printings (card_id, subtype) VALUES (?, ?) RETURNING id", [cardId, s.subtype]);
     await c.execute({ sql: "INSERT INTO latest_prices (printing_id, date, market) VALUES (?, ?, ?)", args: [printingId, PRICE_DATE, s.market] });
-    cards[s.key as CardKey] = cardId;
-    printings[s.key as CardKey] = printingId;
+    cards[s.key] = cardId;
+    printings[s.key] = printingId;
   }
 
   return {
