@@ -6,7 +6,7 @@
 // The --as user must have "user".isAdmin = 1 (flip it once locally: UPDATE "user" SET "isAdmin" = 1 WHERE email = '…').
 // Unresolved lines are printed with candidates and nothing is written. Lines that resolve to the same card in
 // the same zone (one export line per printing) are merged into one deck line.
-// Exit codes: 2 usage / unknown --as user, 1 unresolved lines or a failed write.
+// Exit codes: 2 usage / unknown --as user, 1 unresolved lines or any other failure (missing file, refused write).
 import { readFileSync } from "node:fs";
 import { db, closeDb } from "@/lib/db";
 import { mergeResolved, parseDecklist, resolveDecklist } from "@/lib/decks/resolve";

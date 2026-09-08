@@ -12,7 +12,7 @@ export const metadata = { title: "Decks — Hitstreak" };
 export const dynamic = "force-dynamic";
 
 const DEFAULT_GAME = "pokemon";
-const TIER_LABEL = (t: number | null) => (t == null ? "Other" : `Tier ${t}`);
+const tierLabel = (t: number | null) => (t == null ? "Other" : `Tier ${t}`);
 
 export default async function DecksPage({ searchParams }: PageProps<"/decks">) {
   const { game } = await searchParams;
@@ -48,7 +48,7 @@ export default async function DecksPage({ searchParams }: PageProps<"/decks">) {
         tiers.map((t) => (
           <div key={String(t)} className="flex flex-col gap-2.5">
             {/* Same group label as AlertList — a §13 `GroupLabel` primitive candidate, not promoted yet. */}
-            <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{TIER_LABEL(t)}</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{tierLabel(t)}</span>
             <div className="grid gap-3 md:grid-cols-2">
               {decks.map((d, i) => (d.tier === t ? <DeckSummaryPanel key={d.id} deck={d} gap={gaps[i]} /> : null))}
             </div>

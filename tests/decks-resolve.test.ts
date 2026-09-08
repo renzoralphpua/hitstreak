@@ -93,6 +93,15 @@ describe("resolveDecklist", () => {
     // the number path still resolves
     const [byNum] = await resolveDecklist("one-piece", parseDecklist("4 OP10-013 Nami", "one-piece"));
     expect(byNum.cardId).toBe(namiOp10);
+    // leave the shared catalog as the fixtures made it, so later tests never see a third Nami
+    await c.batch(
+      [
+        { sql: "DELETE FROM latest_prices WHERE printing_id = ?", args: [Number(pr.rows[0].id)] },
+        { sql: "DELETE FROM printings WHERE card_id = ?", args: [namiOp10] },
+        { sql: "DELETE FROM cards WHERE id = ?", args: [namiOp10] },
+      ],
+      "write"
+    );
   });
   it("escapes LIKE wildcards in the line text", async () => {
     const [r] = await resolveDecklist("pokemon", parseDecklist("1 %", "pokemon"));

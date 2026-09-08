@@ -76,7 +76,7 @@ describe("/decks", () => {
     expect(within(energy).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
   });
 
-  it("defaults to Pokémon for an unknown ?game and shows the empty state for a game with no decks", async () => {
+  it("shows the empty state for a game with no curated decks", async () => {
     render(await browser("riftbound"));
     expect(screen.getByText("0 curated for Riftbound")).toBeInTheDocument();
     expect(screen.getByText("No curated decks yet")).toBeInTheDocument();

@@ -102,7 +102,7 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
             </ul>
           )}
           <details className="text-[13px]">
-            <summary className="cursor-pointer text-muted hover:text-ink">Show full list ({gap.total})</summary>
+            <summary className="flex min-h-11 cursor-pointer items-center text-muted hover:text-ink md:min-h-8">Show full list ({gap.total})</summary>
             <div className="mt-2 flex flex-col gap-3">
               {ZONES[deck.gameSlug].map((z) => {
                 const lines = gap.lines.filter((l) => l.zone === z);
