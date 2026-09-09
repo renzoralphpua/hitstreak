@@ -28,7 +28,7 @@ Riftbound, the last written against Riot Core Rules §103 — see spec §8); gap
 priced cost-to-complete) matched by a per-game identity key; a decklist parser/resolver shared by the app
 and `scripts/import-deck.mts`; the curated meta browser (`/decks`) and deck detail; the personal deck
 builder with live legality and live gap; and the admin curation screen (`/admin/decks`).
-`npm test`: 467 tests in 62 files.
+`npm test`: 469 tests in 62 files.
 
 Phase 5 next: the polish pass, purchase tracking, and first-class sealed products (the spec's §11 maps
 steps to phases; plans live in `docs/superpowers/plans/`).
@@ -88,13 +88,8 @@ decks. Every action re-checks admin-ness against the database, and a non-admin g
 redirect. It does not preview legality: a curated list is stored as given, and `/decks/[id]` is where
 any rule breach shows.
 
-**On the command line:** the scriptable path, for bulk or repeatable imports.
-*(Known issue, spec §13: `scripts/import-deck.mts` currently fails at import — it still reads
-`parseDecklist` / `mergeResolved` from `lib/decks/resolve`, and tsx's strict-ESM path for a `.mts` entry
-point does not follow `export *` re-exports. Point those imports at `lib/decks/decklist` to run it.)*
-
-Curated decks are loaded from a plain decklist text file with
-`scripts/import-deck.mts`: it parses the common shapes (`4 Charmander MEW 4`, `4x Charizard ex`,
+**On the command line:** the scriptable path, for bulk or repeatable imports. Curated decks are loaded
+from a plain decklist text file with `scripts/import-deck.mts`: it parses the common shapes (`4 Charmander MEW 4`, `4x Charizard ex`,
 `Rare Candy x4`, One Piece `1 OP01-003 Monkey.D.Luffy`, section headers such as `Trainer:` / `Leader` /
 `Runes:` that set the zone — One Piece `Character` / `Event` / `Stage` sections are all the main deck),
 resolves each line against the catalog (exact name → the cheapest priced printing; One Piece by card number,

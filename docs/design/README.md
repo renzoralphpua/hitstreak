@@ -97,14 +97,17 @@ Mockup element → primitive (`components/ui/`):
 | 7D · 30D · 90D · 1Y · All row | `RangePills` |
 | Meta deck row (name, tier, You own x / N, $ to complete, bar) | `DeckSummaryPanel` (`app/(app)/decks/`; a `Link` around `Panel` + `TierBadge` + `ProgressBar`, like `SetPanel` on /sets) |
 
-**Group labels:** the uppercase tier labels on /decks, the Triggered / Watching labels on /alerts and the
-deck builder's zone headings (`Main deck`, `Runes`, … each with the zone's card subtotal) are the same
-ad-hoc `text-xs font-semibold uppercase tracking-[0.06em] text-muted` span — a `GroupLabel` primitive
-candidate (spec §13, three sites now), not promoted yet.
+**Group labels:** the uppercase tier labels on /decks, the Triggered / Watching labels on /alerts, the
+deck builder's zone headings (`Main deck`, `Runes`, … each with the zone's card subtotal) and the
+per-game headings on /admin/decks are the same ad-hoc
+`text-xs font-semibold uppercase tracking-[0.06em] text-muted` span — a `GroupLabel` primitive
+candidate (spec §13, four sites now), not promoted yet.
 
 **Zero-change convention:** a 0 delta renders neutral (no arrow, dim text — neither gain nor accent);
 percentages that round to 0.0% are shown unsigned (no leading `+`/`-`).
 
 **Tap targets:** anything tappable is at least 44px high on a phone. `Button` and `Input` are 44px
 everywhere (`min-h-11`); `Button size="sm"` and `Pill` are `min-h-11 md:min-h-8` — a thumb target
-on phones, the compact 32px control of the mockups from `md` up.
+on phones, the compact 32px control of the mockups from `md` up. Width counts too: an icon-width
+override such as the `−` / `+` steppers' `px-2.5` wins over `size="sm"`'s `px-3` in `twMerge`, so those
+buttons carry `min-w-11 md:min-w-0` beside it (same modifier trick as the heights).

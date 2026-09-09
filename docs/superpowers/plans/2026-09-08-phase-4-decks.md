@@ -17,7 +17,7 @@
 
 **Conventions:** as Phase 3. `userId` first on every user-scoped function; meta decks are readable by any signed-in user, writable only when `"user".isAdmin = 1`; personal decks readable/writable by their owner only. Money stays `REAL` dollars. Tests use `tmpDb()` + `seedMiniCatalog()` (+ a new `seedDeckFixtures()` for Riftbound and deck-shaped cards). Component tests are `tests/ui/*.test.tsx` with `// @vitest-environment jsdom`. Verify each task with `npm test`, `npm run typecheck`, `npm run lint`; commit after each green task on branch `phase-4/decks`.
 
-**Executed in runs:** Tasks 1–6 (2026-09-08), Task 7 (2026-09-08), Task 8 (2026-09-09). Task 9 is outlined at the end and gets full step detail when it is picked up.
+**Executed in runs:** Tasks 1–6 (2026-09-08), Task 7 (2026-09-08), Task 8 (2026-09-09), Task 9 (2026-09-09).
 
 **Deferred (do NOT build here):** automated meta scraping, deck sharing, deck price history, wishlists, Phase 5 items (purchase tracking, sealed first-class, UX pass).
 
@@ -35,8 +35,11 @@ lib/decks/rules/one-piece.ts          validateOnePiece
 lib/decks/rules/riftbound.ts          validateRiftbound
 lib/decks/validate.ts                 validateDeck (dispatch by game) + describeRules (ValidationList items)
 lib/decks/data.ts                     listMetaDecks, listMyDecks, getDeck, createDeck, renameDeck, deleteDeck, saveDeckCards, upsertMetaDeck, isAdminUser
-lib/decks/gap.ts                      loadOwnedByKey, analyzeGap (pure), summarizeGap
-lib/decks/resolve.ts                  parseDecklist, resolveDecklist
+lib/decks/gap.ts                      loadOwnedByKey (db) + re-exports gap-math
+lib/decks/gap-math.ts                 analyzeGap + GapLine/GapAnalysis (pure, db-free — the client bundle needs them)
+lib/decks/zone.ts                     isSingleCardZone, defaultZone (pure)
+lib/decks/resolve.ts                  resolveDecklist (db) + re-exports decklist
+lib/decks/decklist.ts                 parseDecklist, formatDecklist, mergeResolved (pure, db-free)
 scripts/import-deck.mts               local CLI: file → parse → resolve → upsertMetaDeck (reports unresolved lines)
 tests/helpers/decks.ts                seedDeckFixtures(): riftbound game + deck-shaped cards for all three games; card() fixture builder
 tests/decks-identity.test.ts, decks-data.test.ts, rules-pokemon.test.ts, rules-one-piece.test.ts, rules-riftbound.test.ts,
@@ -2105,9 +2108,11 @@ sends.
 
 ---
 
-### Task 9: Docs, spec amendments, deviations, final review, merge (outline)
+### Task 9: Docs, spec amendments, deviations, final review, merge
 
 README (Screens: `/decks`, `/decks/[id]`, curation CLI), spec §8 amendment (Pokémon Standard legality not validated — no marks in data; Riftbound rules as verified; One Piece colour = share-one), §13 follow-ups, plan checkboxes + deviations, whole-branch review, merge.
+
+**Executed 2026-09-09 from that outline as an inline brief — no written step list, so there are no checkboxes here.** It shipped as `32134c4` (README + spec §8/§13 + this plan's deviations) and `92095b0` (the `scripts/import-deck.mts` leaf-module import fix and its guard test), with the whole-branch review and its fixes following.
 
 ## Self-review notes
 
@@ -2117,8 +2122,8 @@ README (Screens: `/decks`, `/decks/[id]`, curation CLI), spec §8 amendment (Pok
 
 ## Executed 2026-09-09 — deviations
 
-Shipped on `phase-4/decks` across Tasks 1–9 (`6d2ee93` … the Task 9 docs commit); `npm test` is
-467 tests in 62 files. Where the code differs from the plan above:
+Shipped on `phase-4/decks` across Tasks 1–9 (`6d2ee93` … the Task 9 docs commit `32134c4`, then the
+pre-merge review's fixes); `npm test` is 469 tests in 62 files. Where the code differs from the plan above:
 
 - **Deck fixtures derive their ids.** `tests/helpers/decks.ts` inserts every row with `RETURNING id`
   (or looks it up by its TCGplayer key) and hands back `games` / `sets` / `cards` / `printings` maps
@@ -2196,8 +2201,8 @@ Shipped on `phase-4/decks` across Tasks 1–9 (`6d2ee93` … the Task 9 docs com
 - **Task 8 split `lib/decks/decklist.ts` out of `resolve.ts`.** `parseDecklist` / `formatDecklist` /
   `mergeResolved` and the line types are db-free and the curation form (`"use client"`) needs the merge,
   so they moved to a leaf module re-exported by `resolve.ts` — the same shape as `gap.ts` → `gap-math.ts`
-  and `lib/history.ts` → `lib/ranges.ts`. **This broke `scripts/import-deck.mts`**, which still imports
-  those names from `@/lib/decks/resolve`; see the known items below.
+  and `lib/history.ts` → `lib/ranges.ts`. **This broke `scripts/import-deck.mts`**, which still imported
+  those names from `@/lib/decks/resolve`; fixed in Task 9 — see the CLI bullet below.
 - **Two primitives and two shared helpers came out of Task 8.** A `Textarea` primitive was added and
   `h-11` was lifted out of `Input`'s shared `field` string so both can use the same skin; `assertQuantity`
   and `assertOptionalText` were lifted into `lib/action-utils.ts` for both action modules.
@@ -2205,6 +2210,13 @@ Shipped on `phase-4/decks` across Tasks 1–9 (`6d2ee93` … the Task 9 docs com
   a Server Component page, so the hand-off is a `hitstreak:edit-deck` window event whose name and payload
   type live in `app/(app)/admin/decks/edit-event.ts` — neither island imports the other and the page stays
   a Server Component.
+- **The CLI's leaf-module import, and a guard test for it** *(Task 9, `92095b0`)*. Task 8's split left
+  `scripts/import-deck.mts` importing `parseDecklist` / `mergeResolved` from `@/lib/decks/resolve`, and
+  tsx's strict-ESM path for a `.mts` entry point does not see `export *` re-exports: the script died with
+  "does not provide an export named 'mergeResolved'" before it ran. Product code, the bundler and
+  `npx tsx -e` all resolve those re-exports fine — which is why nothing caught it. The imports now name
+  `@/lib/decks/decklist`, and `tests/ranges.test.ts` gained a "scripts/*.mts import the pure decklist
+  helpers from the leaf module" case that fails if any `scripts/*.mts` reaches through a re-export again.
 - **The curation paste is bounded before it is resolved.** `resolveDecklistAction` caps the raw text at
   20 KB *and* the parsed line count at `MAX_LINES`: 20 KB of `"1 x"` lines is ~5,000 lines and up to
   ~10,000 sequential catalog queries held open in one server action. `assertOptionalText` caps archetype,
@@ -2214,14 +2226,6 @@ Shipped on `phase-4/decks` across Tasks 1–9 (`6d2ee93` … the Task 9 docs com
 
 Also recorded in spec §13.
 
-- **`scripts/import-deck.mts` is broken as shipped.** Task 8's `decklist.ts` split left the CLI importing
-  `parseDecklist` / `mergeResolved` from `@/lib/decks/resolve`, and tsx's strict-ESM path for a `.mts`
-  entry point does not see `export *` re-exports: the script dies with "does not provide an export named
-  'mergeResolved'" before it runs. Product code, the bundler and `npx tsx -e` all resolve those re-exports
-  fine, and `tests/ranges.test.ts` asserts they are the same function objects — which is why nothing
-  caught it. The fix is a one-line import change to `@/lib/decks/decklist`; it is a code change, so it is
-  left to the branch review rather than made in the docs commit. The in-app `/admin/decks` screen, which
-  is the same flow, is unaffected.
 - The resolver picks the cheapest printing, so World Championship replica sets win: "Rare Candy" resolves
   to `Rare Candy - 2025 (Riley McKay)` (World Championship Decks, $0.11) ahead of every playable printing,
   and the same `MIN(market)` drives cost-to-complete.
@@ -2242,7 +2246,10 @@ Also recorded in spec §13.
 - `GroupLabel` (the uppercase `tracking-[0.06em]` group label) now has four sites — the alerts list, the
   decks browser, the builder's zone headers and the admin list. Promote it in Phase 5.
 - `withUser` returns `e.message` verbatim, so a malformed direct action call can echo a raw `TypeError` to
-  the caller. Every such surface is admin-only today.
+  the caller. Task 7 put that on non-admin surfaces too: `saveDeckAction`, `copyDeckAction`,
+  `renameDeckAction` and `deleteDeckAction` are reachable by any signed-in user. The action layer's own
+  `assert*` helpers return sentences, so it only bites a call that bypasses the UI; a message allowlist
+  in `withUser` would close it.
 - 45 Riftbound champions (78 Champion Unit printings — Gangplank, Illaoi, Riven, Sona, Kayle, Morgana and
   39 more) have no Legend in the catalog yet, so those champions cannot currently form a legal deck. The
   validator is right; the card pool is incomplete.
