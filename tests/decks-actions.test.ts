@@ -5,6 +5,7 @@ import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import { seedDeckFixtures } from "./helpers/decks";
 import { listMyDecks, getDeck, upsertMetaDeck, type DeckLineInput } from "@/lib/decks/data";
+import { MAX_LINES } from "@/lib/decks/types";
 
 // The session and Next's cache are the two things a server action reaches for that a plain
 // node test can't provide. Importing actions.ts here is fine: "use server" is inert in vitest.
@@ -151,6 +152,30 @@ describe("deck server actions", () => {
       expect(await saveDeckAction(id, lines)).toEqual(refused);
     }
     // Every attempt was refused whole: the deck still holds the 60 it was saved with.
+    const deck = await getDeck(id, U1);
+    expect(deck?.cardCount).toBe(60);
+    expect(deck?.isDraft).toBe(false);
+  });
+
+  it("refuses more than MAX_LINES lines before it reads the catalog", async () => {
+    const id = await newDeck(U1, "Too many lines");
+    expect((await saveDeckAction(id, legal60())).ok).toBe(true); // a legal starting point
+
+    // A server action is public RPC: an unbounded `lines` array would otherwise reach
+    // loadDeckCardInputs as one placeholder per distinct card before checkLines caps it.
+    const tooMany: DeckLineInput[] = Array.from({ length: MAX_LINES + 1 }, (_, i) => ({ cardId: i + 1, zone: "main", quantity: 1 }));
+    const execute = vi.spyOn(await db(), "execute");
+    try {
+      expect(await saveDeckAction(id, tooMany)).toEqual({ ok: false, error: `A deck can have at most ${MAX_LINES} lines` });
+      const sqlOf = (stmt: unknown) => (typeof stmt === "string" ? stmt : String((stmt as { sql?: unknown }).sql ?? ""));
+      const catalogReads = execute.mock.calls.filter((c) => sqlOf(c[0]).includes("FROM cards WHERE id IN"));
+      expect(catalogReads).toEqual([]);
+    } finally {
+      execute.mockRestore();
+    }
+    // …and a `lines` that isn't an array at all reads as a refusal, not a raw TypeError.
+    expect(await saveDeckAction(id, null as never)).toEqual({ ok: false, error: "Invalid deck lines" });
+    // Refused whole: the deck still holds the 60 it was saved with.
     const deck = await getDeck(id, U1);
     expect(deck?.cardCount).toBe(60);
     expect(deck?.isDraft).toBe(false);

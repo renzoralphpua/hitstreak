@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { listGames } from "@/lib/catalog";
 import { listMyDecks } from "@/lib/decks/data";
+import { isGameSlug } from "@/lib/decks/types";
 import { SectionHeading, Panel, Button, EmptyState } from "@/components/ui";
 import NewDeckForm from "./NewDeckForm";
 import DeckActions from "./DeckActions";
@@ -14,7 +15,10 @@ export const dynamic = "force-dynamic";
 export default async function MyDecksPage() {
   const session = await getSession();
   if (!session) redirect("/sign-in");
-  const [decks, games] = await Promise.all([listMyDecks(session.user.id), listGames()]);
+  const [decks, allGames] = await Promise.all([listMyDecks(session.user.id), listGames()]);
+  // Every deck write validates against GAME_SLUGS, so a catalog row for a game the app has no rules for
+  // must not get a pill: its only outcome would be "Unknown game".
+  const games = allGames.filter((g) => isGameSlug(g.slug));
   return (
     <div className="flex flex-col gap-5">
       <SectionHeading

@@ -146,10 +146,10 @@ function lineStatements(deckId: number, lines: DeckLineInput[], isDraft?: boolea
   ];
 }
 
-/** Replaces a deck's lines atomically; `before` statements (e.g. a metadata UPDATE) join the same batch. */
-async function replaceLines(deckId: number, lines: DeckLineInput[], opts: { isDraft?: boolean; before?: InStatement[] } = {}): Promise<void> {
+/** Replaces a deck's lines atomically. */
+async function replaceLines(deckId: number, lines: DeckLineInput[], isDraft?: boolean): Promise<void> {
   const c = await db();
-  await c.batch([...(opts.before ?? []), ...lineStatements(deckId, lines, opts.isDraft)], "write");
+  await c.batch(lineStatements(deckId, lines, isDraft), "write");
 }
 
 export interface MetaDeckInput { id?: number; gameSlug: GameSlug; name: string; archetype?: string | null; tier?: number | null; format?: string | null; sourceNote?: string | null; lines: DeckLineInput[] }
@@ -163,28 +163,31 @@ export async function upsertMetaDeck(adminUserId: string, input: MetaDeckInput):
   await checkLines(input.gameSlug, gameId, input.lines);
   const c = await db();
   const meta = [input.archetype ?? null, input.tier ?? null, input.format ?? null, input.sourceNote ?? null];
-  if (input.id != null) {
-    // Confirm the target is this game's meta deck before any write: the batch below would otherwise swap the lines of
-    // a personal deck (or another game's deck) whose id was passed. Metadata UPDATE and line swap then commit together.
-    const own = await c.execute({ sql: "SELECT 1 FROM decks WHERE id = ? AND owner_user_id IS NULL AND game_id = ?", args: [input.id, gameId] });
-    if (own.rows.length !== 1) throw new Error("Meta deck not found");
-    await replaceLines(input.id, input.lines, {
-      before: [{
-        sql: "UPDATE decks SET name = ?, archetype = ?, tier = ?, format = ?, source_note = ? WHERE id = ? AND owner_user_id IS NULL AND game_id = ?",
-        args: [name, ...meta, input.id, gameId],
-      }],
-    });
-    return input.id;
-  }
-  // The lines need the new id, so INSERT … RETURNING id and the line batch run in one interactive transaction: a failed
-  // line write rolls the deck row back too (listMetaDecks would otherwise show an empty deck).
+  // Both paths run in one interactive write transaction. Create needs the new id for its lines, and a failed
+  // line write must roll the deck row back (listMetaDecks would otherwise show an empty deck). Edit needs its
+  // existence check to still hold when the writes land: read-then-batch let a concurrent deleteMetaDeck slip
+  // in between, turning the UPDATE into a no-op while the line INSERTs stayed — orphan `deck_cards` rows,
+  // since the FKs are not enforced.
   const tx = await c.transaction("write");
   try {
-    const r = await tx.execute({
-      sql: "INSERT INTO decks (game_id, owner_user_id, name, archetype, tier, format, source_note) VALUES (?, NULL, ?, ?, ?, ?, ?) RETURNING id",
-      args: [gameId, name, ...meta],
-    });
-    const id = Number(r.rows[0].id);
+    let id: number;
+    if (input.id != null) {
+      // Confirm the target is this game's meta deck before any write: the statements below would otherwise
+      // swap the lines of a personal deck (or another game's deck) whose id was passed.
+      const own = await tx.execute({ sql: "SELECT 1 FROM decks WHERE id = ? AND owner_user_id IS NULL AND game_id = ?", args: [input.id, gameId] });
+      if (own.rows.length !== 1) throw new Error("Meta deck not found");
+      id = input.id;
+      await tx.execute({
+        sql: "UPDATE decks SET name = ?, archetype = ?, tier = ?, format = ?, source_note = ? WHERE id = ? AND owner_user_id IS NULL AND game_id = ?",
+        args: [name, ...meta, id, gameId],
+      });
+    } else {
+      const r = await tx.execute({
+        sql: "INSERT INTO decks (game_id, owner_user_id, name, archetype, tier, format, source_note) VALUES (?, NULL, ?, ?, ?, ?, ?) RETURNING id",
+        args: [gameId, name, ...meta],
+      });
+      id = Number(r.rows[0].id);
+    }
     await tx.batch(lineStatements(id, input.lines));
     await tx.commit();
     return id;
@@ -229,7 +232,7 @@ export async function saveDeckCards(userId: string, id: number, lines: DeckLineI
   const d = (await c.execute({ sql: "SELECT d.game_id, g.slug FROM decks d JOIN games g ON g.id = d.game_id WHERE d.id = ? AND d.owner_user_id = ?", args: [id, userId] })).rows[0];
   if (!d) throw new Error("Deck not found");
   await checkLines(String(d.slug) as GameSlug, Number(d.game_id), lines);
-  await replaceLines(id, lines, { isDraft }); // lines + is_draft commit in one batch
+  await replaceLines(id, lines, isDraft); // lines + is_draft commit in one batch
 }
 
 export async function deleteDeck(userId: string, id: number): Promise<boolean> {

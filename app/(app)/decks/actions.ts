@@ -5,10 +5,15 @@
 import { revalidatePath } from "next/cache";
 import { withUser, assertId, assertQuantity } from "@/lib/action-utils";
 import { validateDeck } from "@/lib/decks/validate";
-import { isGameSlug, type GameSlug, type ValidationError, type Zone, ZONES } from "@/lib/decks/types";
+import { isGameSlug, type GameSlug, type ValidationError, type Zone, MAX_LINES, ZONES } from "@/lib/decks/types";
 import * as D from "@/lib/decks/data";
 
+/** Server actions are public RPC, so the cap has to bite HERE, not in `checkLines`: everything downstream
+ *  (`loadDeckCardInputs`' one-placeholder-per-card catalog query, the validator pass) is sized by the
+ *  caller's array. Same message `checkLines` uses — it still has the final word on what is written. */
 function assertLines(gameSlug: GameSlug, lines: D.DeckLineInput[]): D.DeckLineInput[] {
+  if (!Array.isArray(lines)) throw new Error("Invalid deck lines");
+  if (lines.length > MAX_LINES) throw new Error(`A deck can have at most ${MAX_LINES} lines`);
   const zones = ZONES[gameSlug] as readonly string[];
   return lines.map((l) => {
     if (!zones.includes(l.zone)) throw new Error(`Zone "${l.zone}" is not used by this game`);
@@ -66,10 +71,17 @@ export async function copyDeckAction(sourceId: number) {
     const source = await D.getDeck(assertId(sourceId), u);
     if (!source) throw new Error("Deck not found");
     const newId = await D.createDeck(u, { gameSlug: source.gameSlug, name: `${source.name} (copy)`.slice(0, 80) });
-    const lines = source.cards.map((l) => ({ cardId: l.cardId, zone: l.zone, quantity: l.quantity }));
-    const cards = await D.loadDeckCardInputs(lines);
-    const { valid } = validateDeck({ gameSlug: source.gameSlug, cards });
-    await D.saveDeckCards(u, newId, lines, !valid);
+    // The row and its lines are two writes (the lines need the new id). If the second fails, drop the
+    // row again rather than leave an empty "… (copy)" in the user's list.
+    try {
+      const lines = source.cards.map((l) => ({ cardId: l.cardId, zone: l.zone, quantity: l.quantity }));
+      const cards = await D.loadDeckCardInputs(lines);
+      const { valid } = validateDeck({ gameSlug: source.gameSlug, cards });
+      await D.saveDeckCards(u, newId, lines, !valid);
+    } catch (e) {
+      await D.deleteDeck(u, newId).catch(() => { /* best effort — the error below is the one to surface */ });
+      throw e;
+    }
     return newId;
   });
   if (r.ok) revalidatePath("/decks/mine");

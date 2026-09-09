@@ -3,7 +3,7 @@ import { getSession } from "@/lib/session";
 import { listGames } from "@/lib/catalog";
 import { isAdminUser, listMetaDecks, getDeck } from "@/lib/decks/data";
 import { formatDecklist } from "@/lib/decks/resolve";
-import { GAME_SLUGS } from "@/lib/decks/types";
+import { GAME_SLUGS, isGameSlug } from "@/lib/decks/types";
 import { SectionHeading, Panel, EmptyState } from "@/components/ui";
 import CurationForm from "./CurationForm";
 import MetaDeckRow from "./MetaDeckRow";
@@ -17,7 +17,8 @@ export default async function AdminDecksPage() {
   // Not a redirect: a non-admin should not learn that this route exists. Every action re-checks too.
   if (!(await isAdminUser(session.user.id))) notFound();
 
-  const games = await listGames();
+  // Only games the validators know: a pill for any other catalog row could only ever fail as "Unknown game".
+  const games = (await listGames()).filter((g) => isGameSlug(g.slug));
   const perGame = await Promise.all(GAME_SLUGS.map(async (slug) => ({ slug, decks: await listMetaDecks(slug) })));
   const all = perGame.flatMap((g) => g.decks);
   // Each row can hand the form its current list to edit. A deck deleted between the list and its read

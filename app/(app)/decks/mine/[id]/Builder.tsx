@@ -223,7 +223,7 @@ function LineRow({ line, onQuantity }: { line: GapLine; onQuantity: OnQuantity }
         <Button
           variant="secondary"
           size="sm"
-          className="px-2.5"
+          className="min-w-11 px-2.5 md:min-w-0"
           aria-label={`Remove one ${line.name}`}
           onClick={() => onQuantity(line, line.quantity - 1)}
         >
@@ -233,7 +233,7 @@ function LineRow({ line, onQuantity }: { line: GapLine; onQuantity: OnQuantity }
         <Button
           variant="secondary"
           size="sm"
-          className="px-2.5"
+          className="min-w-11 px-2.5 md:min-w-0"
           aria-label={`Add one ${line.name}`}
           disabled={single || line.quantity >= QTY_MAX}
           onClick={() => onQuantity(line, line.quantity + 1)}
