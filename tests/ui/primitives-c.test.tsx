@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { EmptyState, Input, MoneyDisplay } from "@/components/ui";
+import { EmptyState, Input, Textarea, MoneyDisplay } from "@/components/ui";
 
 describe("EmptyState", () => {
   it("renders a title heading, body text, and the action node", () => {
@@ -33,6 +33,24 @@ describe("Input", () => {
     const input = screen.getByLabelText("Email");
     expect(input).toHaveAttribute("type", "email");
     expect(input.closest("label")?.className).toMatch(/text-muted/);
+  });
+});
+
+describe("Textarea", () => {
+  it("carries the same field skin as Input, merges className last, and forwards textarea props", () => {
+    render(<Textarea aria-label="Decklist" className="min-h-64" rows={4} placeholder="4 Charmander" />);
+    const box = screen.getByLabelText("Decklist");
+    expect(box.tagName).toBe("TEXTAREA");
+    expect(box.className).toMatch(/border-hairline/);
+    expect(box.className).toMatch(/min-h-64/);
+    expect(box.className).not.toMatch(/min-h-32/); // className wins over the default floor
+    expect(box).toHaveAttribute("rows", "4");
+    expect(box).toHaveAttribute("placeholder", "4 Charmander");
+  });
+
+  it("with a label it wraps itself in one", () => {
+    render(<Textarea label="Decklist" />);
+    expect(screen.getByLabelText("Decklist").closest("label")?.className).toMatch(/text-muted/);
   });
 });
 

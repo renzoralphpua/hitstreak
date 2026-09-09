@@ -70,7 +70,7 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                       variant="secondary"
                       aria-label={`Remove one ${h.cardName}`}
                       size="sm"
-                      className="px-2.5"
+                      className="min-w-11 px-2.5 md:min-w-0"
                       disabled={busy || h.quantity <= 1}
                       onClick={() => setQuantity(h, h.quantity - 1)}
                     >
@@ -81,7 +81,7 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                       variant="secondary"
                       aria-label={`Add one ${h.cardName}`}
                       size="sm"
-                      className="px-2.5"
+                      className="min-w-11 px-2.5 md:min-w-0"
                       disabled={busy}
                       onClick={() => setQuantity(h, h.quantity + 1)}
                     >

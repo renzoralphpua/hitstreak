@@ -1,18 +1,25 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { tmpDb } from "./helpers/tmpdb";
 const tmp = tmpDb("catalog-read");
-import { closeDb } from "@/lib/db";
+import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import { createPortfolio, addItem } from "@/lib/portfolios";
 import { searchCards, listGames, listSetsWithCompletion, getSetDetail, getCardDetail, thirtyDayChange } from "@/lib/catalog";
 
 const U = "user_1";
+const LAW_ATTRS = { CardType: "Character", Color: "Green;Purple", Number: "OP08-047", Cost: "5" };
 let seed: Awaited<ReturnType<typeof seedMiniCatalog>>;
 beforeAll(async () => {
   seed = await seedMiniCatalog();
   const p = await createPortfolio(U, "Main");
   await addItem(U, p.id, { printingId: seed.printings.umbreonHolo, quantity: 1, condition: "NM" });
   await addItem(U, p.id, { printingId: seed.printings.pikachuNormal, quantity: 2, condition: "NM" });
+  // The mini catalog's cards all carry `attrs: '{}'`; the deck builder reads a hit's attrs, so one
+  // card here carries a real set of them.
+  await (await db()).execute({
+    sql: "INSERT INTO cards (set_id, tcgplayer_product_id, name, number, rarity, image_url, attrs) VALUES (?, 2002, 'Trafalgar Law', 'OP08-047', 'SR', NULL, ?)",
+    args: [seed.sets.twoLegends, JSON.stringify(LAW_ATTRS)],
+  });
 });
 afterAll(() => { closeDb(); tmp.clean(); });
 
@@ -26,6 +33,11 @@ describe("searchCards", () => {
     expect(await searchCards("shanks", { gameSlug: "one-piece" })).toHaveLength(1);
     expect(await searchCards("161/131")).toHaveLength(1); // number match
     expect(await searchCards("a")).toHaveLength(0);        // too short → no results
+  });
+  it("carries each hit's attrs, parsed", async () => {
+    const [law] = await searchCards("trafalgar");
+    expect(law.attrs).toEqual(LAW_ATTRS);
+    expect((await searchCards("pika"))[0].attrs).toEqual({}); // no attrs on the row → {}
   });
 });
 

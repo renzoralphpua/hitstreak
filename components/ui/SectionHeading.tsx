@@ -5,7 +5,9 @@ type Props = { title: string; caption?: string; trailing?: ReactNode; className?
 
 export default function SectionHeading({ title, caption, trailing, className, as: Tag = "h2" }: Props) {
   return (
-    <div className={cn("flex items-baseline gap-3", className)}>
+    // flex-wrap, not a per-page override: a 26px title plus a caption plus two `trailing` buttons
+    // (/decks) does not fit 390px, and every caller wants the same answer.
+    <div className={cn("flex flex-wrap items-baseline gap-3", className)}>
       <Tag className="font-display text-[26px] leading-none text-ink">{title}</Tag>
       {caption && <span className="text-[13px] text-dim">{caption}</span>}
       {trailing && <div className="ml-auto flex items-center gap-3 text-[13px]">{trailing}</div>}

@@ -110,8 +110,8 @@ Two deliberate decisions (from Task 2's review):
 - `price_alerts` — id, user_id, printing_id, direction (above/below), threshold, `armed` (1 = emails on the next crossing; 0 = fired, waiting to re-arm), last_fired_at, last_fired_price, created_at. Re-arms only after price crosses back over the threshold (columns as shipped 2026-09-08).
 
 **Decks:**
-- `decks` — id, game_id, owner_user_id (**NULL = curated meta deck**), name, archetype, tier, format, source_note, updated_at
-- `deck_cards` — deck_id, card_id, quantity, zone (main / leader / energy / rune / battlefield / …)
+- `decks` — id, game_id, owner_user_id (**NULL = curated meta deck**), name, archetype, tier (1–4, meta decks only), format, source_note, `is_draft`, created_at, updated_at. `is_draft` = a personal deck saved with validation errors; a curated deck is never a draft (columns as shipped 2026-09-09).
+- `deck_cards` — deck_id, card_id, zone, quantity, **primary key `(deck_id, card_id, zone)`** — the same card may appear in two zones of one deck but never twice in the same zone; quantity carries the copies. Zones as shipped: main / leader / legend / champion / rune / battlefield (`ZONES` in `lib/decks/types.ts` says which of them each game uses). Lines reference `cards`, not `printings`: a deck says *which card*, and ownership is matched by the per-game identity key (§7).
 - Gap analysis is computed at read time: `deck_cards` diffed against the user's aggregated collection (across all their portfolios), missing cards priced from latest snapshots. No denormalized tables.
 
 ## 6. Ingestion pipeline (GitHub Actions)
@@ -139,8 +139,8 @@ Route groups (Next.js App Router):
 - **Card detail:** `/cards/[id]` printings, price history chart (printing pills on the chart switch the charted printing; `?range=` + `?p=` links, so the chart is server-rendered), which portfolios hold it ("In your binders"), alert shortcut ("Set a price alert" → `/alerts?printing=`) — *detailed 2026-09-08*
 - **Sharing:** `/s/[token]` public read-only portfolio view (no auth, no other-user data reachable); market value only — cost basis and gain are excluded from the public view; one token per binder; turning sharing off keeps the token (the URL 404s while off), regenerate replaces it and kills the old URL — *detailed 2026-09-08*
 - **Alerts:** create / list (Triggered vs. Watching) / delete; email contains card, threshold, current price, link. v1 has no edit — changing a threshold or direction is delete + recreate (which re-arms and drops `last_fired_at`); an alert whose line is already crossed when it is created emails on the first nightly — *amended 2026-09-08*
-- **Decks:** `/decks/meta` browser (game + tier filters) → deck detail with decklist, gap analysis (owned n/total, missing cards priced, cost-to-complete); `/decks/mine` builder — search-add cards into zones, live validation feedback, save (valid or draft)
-- **Admin:** `/admin/decks` curation — paste/enter decklist, resolve card names against catalog (fuzzy match with manual fix-ups), set game/archetype/tier/format. Gated by `is_admin`.
+- **Decks:** `/decks` is the curated browser (game pills via `?game=`, grouped by tier) — *amended 2026-09-09; the route is `/decks`, not `/decks/meta`, so the nav's existing entry became the real screen*; `/decks/[id]` deck detail with decklist, gap analysis (owned n/total, missing cards priced, cost-to-complete), a rules checklist, and "Copy to my decks"; `/decks/mine` the personal deck list (create, rename, delete, Draft/Legal); `/decks/mine/[id]` the builder — search-add cards into zones, live validation and live gap, save (valid or draft). Gap analysis matches a deck line to what you own by a **per-game identity key** (`lib/decks/identity.ts`): base name for Pokémon and Riftbound (printing suffixes and alt-art parentheticals stripped, so any printing counts), `attrs.Number` for One Piece (alt arts share it). The same key is what the copy limits count.
+- **Admin:** `/admin/decks` curation — paste/enter decklist, resolve card names against catalog (exact match → cheapest printing; anything else offers candidates to pick from), set game/archetype/tier/format, edit and delete curated decks. Gated by `isAdminUser`: a signed-in non-admin gets **404, not a redirect** (the route should not announce itself), and every action re-checks admin against the DB rather than trusting the page render — *detailed 2026-09-09*.
 
 ## 8. Deck validation
 
@@ -152,9 +152,17 @@ validateDeck(game: GameRules, deck: DeckInput): { valid: boolean; errors: Valida
 
 Pure functions over catalog data (card `attrs`), run live in the builder UI and enforced on save (drafts may save invalid, flagged).
 
-- **Pokémon:** exactly 60 cards; max 4 per card *name* (basic energy exempt); max 1 ACE SPEC; Standard format = regulation-mark legality from card attrs
-- **One Piece:** exactly 1 leader + 50 main-deck cards; every card's color must match the leader's color(s); max 4 per card *number*
-- **Riftbound:** legend / rune / battlefield / main-deck structure and copy limits — **OPEN QUESTION: verify exact deck-construction rules against Riot's official rules document during implementation** (game too new for reliable priors). The validator interface accommodates whatever the rules turn out to be.
+- **Pokémon:** exactly 60 cards; at least one Basic Pokémon; max 4 per card *name* (basic energy exempt); max 1 ACE SPEC; max 1 Radiant. ~~Standard format = regulation-mark legality from card attrs~~ — **not validated, resolved 2026-09-09:** tcgcsv's `extendedData` carries no regulation mark (nor a format field), so there is nothing to check against. A deck the validator calls legal may still be Standard-illegal by rotation. Closing this needs a second source (LimitlessTCG or the Pokémon TCG API) mapped onto our cards — Phase 5+ at the earliest.
+- **One Piece:** exactly 1 leader + 50 main-deck cards; max 4 per card *number* (alt arts share it); colour matching is **share-at-least-one** — a multi-colour card is legal if any one of its colours is one of the leader's, not all of them (confirmed 2026-09-09). A card with no colour, and a leader with no colour, are never colour-checked. DON!! cards are not deck cards.
+- **Riftbound:** ~~**OPEN QUESTION: verify exact deck-construction rules against Riot's official rules document during implementation**~~ — **resolved 2026-09-08** against Riot's Core Rules §103 (constructed), cross-checked with `riftwatcher.com/rules/deck-construction` and the `playriftbound.com` tournament rules:
+  - exactly 1 **Champion Legend**;
+  - exactly 1 **Chosen Champion** — a Champion Unit sharing the Legend's champion tag — and it is counted **inside** the exactly-40 main deck, not alongside it;
+  - max 3 copies per card *name* across main deck + Chosen Champion;
+  - max 3 **Signature** cards, every one of them carrying the Legend's champion tag;
+  - **domain identity:** every main-deck, champion, rune and battlefield card's domains must be a subset of the Legend's two-domain identity. A domain of "None" or a missing Domain attr is colourless and always legal (103.4.b keeps battlefields "subject to Domain Identity if applicable"; all 71 in today's catalog are colourless, so that check is a no-op for now);
+  - exactly 12 **runes**;
+  - exactly 3 **Battlefields**, with distinct names;
+  - **tokens are never deck cards** in any zone — the catalog types them `"Unit;Token"`, `"Battlefield;Token"`, `"Gear;Battlefield;Token"`, so the base type alone does not qualify a card.
 
 ## 9. Error handling
 
@@ -181,9 +189,9 @@ Pure functions over catalog data (card `attrs`), run live in the builder UI and 
 6. Price charts (per-card, per-portfolio) + gain/loss
 7. Nightly materialization + share links
 8. Email alerts (Resend)
-9. Decks: schema + meta browser + gap analysis
-10. Deck builder + per-game validators (Riftbound rules research here)
-11. Admin curation screen
+9. Decks: schema + meta browser + gap analysis — **done 2026-09-09 (Phase 4)**
+10. Deck builder + per-game validators (Riftbound rules research here) — **done 2026-09-09 (Phase 4)**; the Riftbound research landed as the §8 amendment, and Pokémon Standard-format legality is explicitly out (no regulation marks in the data)
+11. Admin curation screen — **done 2026-09-09 (Phase 4)**; `/admin/decks` plus the `scripts/import-deck.mts` CLI
 12. Polish pass: responsive layouts, empty states, seed real collection
 13. Purchase tracking (raw cards AND sealed): an optional acquired date on add (defaults to today, editable later — the `acquired_date` column and data layer already exist; the add dialog never asks), a "since purchase" change on the holding row and on the card page, and the buy price/date drawn as a marker on the price-history chart — *added 2026-09-08*
 14. Sealed products first-class: a "Sealed" section on set pages with tap-to-own (still excluded from completion %), a sealed/singles filter in search, and a "Sealed" badge in place of the empty number/rarity caption. Context: the local catalog has ~5,500 sealed-type products (`cards.number IS NULL`), ~3,800 of them priced; they are already searchable, addable and valued, but invisible on set pages — *added 2026-09-08*
@@ -216,14 +224,28 @@ Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art 
 - The vitest auth tests carry explicit 20s timeouts because scrypt competes with per-file worker startup; if it flakes again the levers are a `maxWorkers` cap or `isolate: false` *(2026-09-08)*
 - On the binder page the range `PriceDelta` sits directly under the "vs. paid" one with no spacing element (cosmetic) *(2026-09-08)*
 - **Future `/api/*` routes must call `getSession()` themselves** — `proxy.ts` excludes `/api` from the optimistic redirect so Better Auth's handler stays reachable.
-- Riftbound deck-construction rules — verify against official Riot rules (step 10)
+- ~~Riftbound deck-construction rules — verify against official Riot rules (step 10)~~ — **resolved 2026-09-08 (Phase 4);** the verified rules are written out in §8.
 - ~~Exact per-game `extendedData` field shapes~~ — **resolved 2026-09-05 against real data:** all three games expose `Number` and `Rarity` (Pokémon also HP/Stage/Attacks; One Piece: Color/CardType/Life/Power/Attribute; Riftbound: Energy Cost/Power Cost/Might/Card Type/Tag/Domain). Sealed products (~10% of rows) have neither, and correctly land with null number/rarity.
 - Domain registration (`hitstreak.gg` / `hitstreak.app`) — user purchase, not build-blocking
 - Whether Pokémon catalog volume (largest of the three) needs ingestion batching/chunked upserts — measure in step 2
 - Release-date normalization at ingest — tcgcsv's `publishedOn` is a full timestamp, not a date; the UI currently slices to the date at render time instead of normalizing on write
 - `cards.number` `ORDER BY` is a plain text sort — fine for zero-padded numbers, wrong for unpadded ones (`9` sorts after `10`)
 - `listSetsWithCompletion` is unbenchmarked at scale — correlated subqueries per set/user, untested against a large catalog
-- Primitive candidates surfaced by repeated page patterns: `BackLink` (the recurring `← X` link), `DetailLayout` (the shared detail-page shell), `CardImage` (wraps the `url(...)`-quoted background-image treatment), and a `--text-caption` token to replace the ~25 ad-hoc `text-[13px]` uses. Added by the Phase 3 pre-merge review *(2026-09-08)*: a `GroupLabel` for the uppercase tracked group label (`text-xs font-semibold uppercase tracking-[0.06em] text-muted`, from `Alerts.dc.html`; today inline in `AlertList`'s Triggered / Watching headers — `tracking-[0.06em]` has no primitive and no row in the design README), and a 22px panel-heading size for `SectionHeading` (the `font-display text-[22px] leading-none` `<h2>` duplicated in `NewAlertForm` and `AddItemDialog`; `SectionHeading` only has the 26px size)
+- Primitive candidates surfaced by repeated page patterns: `BackLink` (the recurring `← X` link), `DetailLayout` (the shared detail-page shell), `CardImage` (wraps the `url(...)`-quoted background-image treatment), and a `--text-caption` token to replace the ~25 ad-hoc `text-[13px]` uses. Added by the Phase 3 pre-merge review *(2026-09-08)*: a `GroupLabel` for the uppercase tracked group label (`text-xs font-semibold uppercase tracking-[0.06em] text-muted`, from `Alerts.dc.html`; today inline in `AlertList`'s Triggered / Watching headers — `tracking-[0.06em]` has no primitive and no row in the design README), and a 22px panel-heading size for `SectionHeading` (the `font-display text-[22px] leading-none` `<h2>` duplicated in `NewAlertForm` and `AddItemDialog`; `SectionHeading` only has the 26px size). **Phase 4 raised `GroupLabel` to four sites** *(2026-09-09)* — `AlertList`, the `/decks` tier headings, the builder's zone headings and the `/admin/decks` per-game headings all repeat the same inline span; promote it in Phase 5.
 - `ConfirmDialog` primitive to replace the raw `window.confirm` currently used for destructive actions (e.g. removing a holding)
 - `getPortfolioSummary` re-reads holdings independently rather than sharing a query with `getPortfolioHoldings` — fine for now, worth collapsing if it becomes a hot path. `getSharedPortfolio` (Phase 3) inherits this and runs the holdings query twice per share-page view *(2026-09-08)*
 - No automated check that every `/api/*` route actually calls `getSession()` — today it's a convention documented above, not enforced by a test or lint rule
+
+Phase 4 (decks) follow-ups, all *2026-09-09*:
+
+- ~~**`scripts/import-deck.mts` does not run.** Task 8 moved `parseDecklist` / `formatDecklist` / `mergeResolved` into `lib/decks/decklist.ts`, re-exported by `lib/decks/resolve.ts`; tsx's strict-ESM path for a `.mts` entry point does not see `export *` re-exports, so the CLI throws "does not provide an export named 'mergeResolved'" at import.~~ — **fixed 2026-09-09 (`92095b0`):** the CLI imports those names from `@/lib/decks/decklist`. The durable rule stands — the same re-export shape exists at `lib/decks/gap.ts` → `gap-math.ts` and `lib/history.ts` → `lib/ranges.ts`, so **`scripts/*.mts` must import from the leaf module.** Product code, the bundler and `npx tsx -e` all resolve the re-exports fine, which is why nothing caught it; the "scripts/*.mts import the pure decklist helpers from the leaf module" case in `tests/ranges.test.ts` now does.
+- The resolver picks the **cheapest printing**, so World Championship replica sets surface in curated decks ("Rare Candy" resolves to `Rare Candy - 2025 (Riley McKay)` at $0.11). Consider excluding replica sets both from the cheapest-printing pick and from the `MIN(market)` that prices cost-to-complete.
+- Some alt-art printings carry no `Card Type` / `Domain` / `Tag` attrs (8 Riftbound cards today), so a deck line pointing at one validates as "unknown type". The resolver should prefer an attr-bearing printing of the same card.
+- Decklist shapes the parser does not handle: PTCGL energy shorthand (`4 Basic {F} Energy SVE 2`), bare-number tails (`3 Fire Energy 12`), OPTCGSim's `4xOP01-016` (no space after the `x`).
+- `formatDecklist` emits names only, so editing a One Piece deck re-ambiguates every card whose name spans several card numbers; emitting `attrs.Number` for One Piece would fix it.
+- N+1 reads: `/decks` runs `getDeck` per curated deck; `/admin/decks` does the same **and** ships every deck's formatted decklist to the browser; `resolveDecklist` runs up to two queries per line (bounded by `MAX_LINES`).
+- `/decks` costs one extra `isAdminUser` query per page load, for every user, purely to decide whether to show the "Curate" link.
+- The curation screen has no legality preview and `upsertMetaDeck` does not validate — a curated deck can be illegal by design (a partial list, a rotated format); `/decks/[id]` is where that shows.
+- `withUser` returns `e.message` verbatim, so a malformed direct action call can echo a raw `TypeError` to the caller — and since Task 7 that includes non-admin surfaces (`saveDeckAction` / `copyDeckAction` / `renameDeckAction` / `deleteDeckAction` are reachable by any signed-in user). The action layer's own `assert*` helpers return sentences, so this only bites a call that bypasses the UI; a message allowlist in `withUser` would close it.
+- Riftbound: 45 champions (78 Champion Unit printings — Gangplank, Illaoi, Riven, Sona, Kayle, Morgana and more) have no matching Legend in the catalog yet, so those champions cannot currently form a legal deck.
+- Pokémon Standard-format legality is unvalidated (see §8) — it needs a regulation-mark source outside tcgcsv.

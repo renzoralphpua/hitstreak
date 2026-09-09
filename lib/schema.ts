@@ -137,3 +137,32 @@ export const HISTORY_SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_alerts_user ON price_alerts(user_id);
   CREATE INDEX IF NOT EXISTS idx_alerts_printing ON price_alerts(printing_id);
 `;
+
+// Phase 4: decks. owner_user_id NULL = curated meta deck (spec §5); personal decks are scoped by owner
+// in lib/decks/data.ts. Lines reference cards (not printings): ownership is matched by the per-game
+// identity key in lib/decks/identity.ts.
+export const DECK_SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS decks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id INTEGER NOT NULL REFERENCES games(id),
+    owner_user_id TEXT,                 -- NULL = meta deck
+    name TEXT NOT NULL,
+    archetype TEXT,
+    tier INTEGER,                       -- 1..4, meta decks only
+    format TEXT,                        -- e.g. 'standard' (Pokémon), 'constructed' (Riftbound)
+    source_note TEXT,                   -- where the list came from (meta decks)
+    is_draft INTEGER NOT NULL DEFAULT 0, -- personal decks saved with validation errors
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_decks_owner ON decks(owner_user_id);
+  CREATE INDEX IF NOT EXISTS idx_decks_game ON decks(game_id);
+
+  CREATE TABLE IF NOT EXISTS deck_cards (
+    deck_id INTEGER NOT NULL REFERENCES decks(id),
+    card_id INTEGER NOT NULL REFERENCES cards(id),
+    zone TEXT NOT NULL,                 -- main | leader | legend | champion | rune | battlefield
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    PRIMARY KEY (deck_id, card_id, zone)
+  );
+`;

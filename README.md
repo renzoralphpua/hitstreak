@@ -21,10 +21,17 @@ Phase 3 complete: price-history charts on the card page (range + printing pills)
 (value chart with a 7D · 30D · 90D · 1Y · All row); `ingest/nightly.ts` as a second step of the daily
 ingest job (materializes `portfolio_history`, evaluates price alerts, emails crossings via Resend);
 read-only binder share links (`/s/[token]`, on/off/regenerate); the alerts page (Triggered / Watching,
-create, delete); and a sign-up gate (`SIGNUP_ALLOWLIST`). `npm test`: 287 tests in 46 files.
+create, delete); and a sign-up gate (`SIGNUP_ALLOWLIST`).
 
-Phase 4 next: decks — meta browser, gap analysis, builder, per-game validators, admin curation (the
-spec's §11 maps steps to phases; plans live in `docs/superpowers/plans/`).
+Phase 4 complete: decks — `decks` / `deck_cards` schema; per-game legality validators (Pokémon, One Piece,
+Riftbound, the last written against Riot Core Rules §103 — see spec §8); gap analysis (owned vs. missing,
+priced cost-to-complete) matched by a per-game identity key; a decklist parser/resolver shared by the app
+and `scripts/import-deck.mts`; the curated meta browser (`/decks`) and deck detail; the personal deck
+builder with live legality and live gap; and the admin curation screen (`/admin/decks`).
+`npm test`: 469 tests in 62 files.
+
+Phase 5 next: the polish pass, purchase tracking, and first-class sealed products (the spec's §11 maps
+steps to phases; plans live in `docs/superpowers/plans/`).
 
 ### Screens
 
@@ -37,7 +44,11 @@ spec's §11 maps steps to phases; plans live in `docs/superpowers/plans/`).
 - `/cards/[id]` — art, market price, 30-day change, price-history chart (`?range=` + `?p=` printing pills), printings table, "in your binders", add to a binder, set-alert shortcut
 - `/alerts` — Triggered / Watching lists, new-alert form (search → printing → direction → price; `?printing=` preselects one), delete
 - `/s/[token]` — public read-only binder view (no sign-in, market value only, `noindex`); unknown or disabled tokens 404
-- `/decks` — Phase 4 placeholder
+- `/decks` — curated meta-deck browser: game pills (`?game=`), decks grouped by tier, each panel showing owned/total and cost-to-complete against your binders
+- `/decks/[id]` — deck detail: missing cards priced, the full list by zone, and the game's legality checklist; "Copy to my decks" on a curated deck
+- `/decks/mine` — your decks (create, rename, delete), each marked Draft or Legal
+- `/decks/mine/[id]` — the builder: search-add into zones, quantity steppers, live legality and live gap, save as legal or draft
+- `/admin/decks` — meta-deck curation (admin only; a signed-in non-admin gets a 404): paste a list, resolve it, fix ambiguous lines, set metadata, save, edit, delete
 - `/dev/ui` — primitives gallery (dev only)
 - `/api/auth/[...all]` — Better Auth route handler (sign-in, sign-up, sign-out, session)
 - `GET /api/search?q=&game=` — type-ahead card search for the add-card dialog (session-checked)
@@ -65,6 +76,34 @@ TURSO_DATABASE_URL=file:hitstreak.local.db npx tsx scripts/db-counts.mts
 ```
 
 PowerShell: `$env:TURSO_DATABASE_URL = 'file:hitstreak.local.db'; npx tsx ingest/daily.ts`
+
+### Curating meta decks
+
+Curated (meta) decks are the ones everyone sees at `/decks`; they have no owner, and only an admin can
+write them. There are two ways in.
+
+**In the app:** `/admin/decks`, for a user with `"user".isAdmin = 1` — paste a list, resolve it, pick a
+card for anything ambiguous, fill in the metadata, save. That screen also edits and deletes curated
+decks. Every action re-checks admin-ness against the database, and a non-admin gets a 404 rather than a
+redirect. It does not preview legality: a curated list is stored as given, and `/decks/[id]` is where
+any rule breach shows.
+
+**On the command line:** the scriptable path, for bulk or repeatable imports. Curated decks are loaded
+from a plain decklist text file with `scripts/import-deck.mts`: it parses the common shapes (`4 Charmander MEW 4`, `4x Charizard ex`,
+`Rare Candy x4`, One Piece `1 OP01-003 Monkey.D.Luffy`, section headers such as `Trainer:` / `Leader` /
+`Runes:` that set the zone — One Piece `Character` / `Event` / `Stage` sections are all the main deck),
+resolves each line against the catalog (exact name → the cheapest priced printing; One Piece by card number,
+and a bare One Piece name only when it maps to a single card number), merges duplicate printings of one card
+into a single line (`3 Charmander MEW 4` + `1 Charmander PAF 7` → 4 Charmander), and writes the deck through
+`upsertMetaDeck`. Unresolved lines are printed with candidates and nothing is written. The `--as` account must be an admin — flip your local
+user once with `UPDATE "user" SET "isAdmin" = 1 WHERE email = 'dev@example.com'` — and `--id N`
+replaces an existing meta deck instead of creating one:
+
+```bash
+TURSO_DATABASE_URL=file:hitstreak.local.db npx tsx scripts/import-deck.mts \
+  --game pokemon --name "Charizard ex / Pidgeot" --tier 1 --format standard \
+  --source "Regional top cuts, Aug 30" --as dev@example.com --file decks/zard.txt
+```
 
 ## Ingestion
 
