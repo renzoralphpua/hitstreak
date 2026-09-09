@@ -49,6 +49,22 @@ describe("db-free client boundary", () => {
     expect(resolve.formatDecklist).toBe(decklist.formatDecklist);
     expect(resolve.mergeResolved).toBe(decklist.mergeResolved);
   });
+  // A `.mts` script run by tsx uses Node's strict-ESM path, which does NOT see `export *` re-exports
+  // (verified: importing mergeResolved from lib/decks/resolve dies at link time, which is how the Task 8
+  // split silently broke scripts/import-deck.mts). Scripts must name the leaf module. Product code and the
+  // bundler are unaffected, so only scripts/ is guarded.
+  it("scripts/*.mts import the pure decklist helpers from the leaf module, not through a re-export", () => {
+    const scripts = readdirSync(path.join(root, "scripts")).filter((f) => f.endsWith(".mts"));
+    expect(scripts.length).toBeGreaterThan(0);
+    for (const f of scripts) {
+      const src = withoutTypeImports(read(`scripts/${f}`));
+      const fromResolve = src.match(/import\s*\{([^}]*)\}\s*from\s+["'][^"']*decks\/resolve["']/)?.[1] ?? "";
+      for (const name of ["parseDecklist", "formatDecklist", "mergeResolved"]) {
+        expect(fromResolve, `scripts/${f} imports ${name} from lib/decks/resolve`).not.toContain(name);
+      }
+    }
+  });
+
   it("lib/history re-exports the range vocabulary unchanged", () => {
     expect(history.RANGES).toBe(ranges.RANGES);
     expect(history.RANGE_LABEL).toBe(ranges.RANGE_LABEL);

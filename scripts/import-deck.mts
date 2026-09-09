@@ -9,7 +9,10 @@
 // Exit codes: 2 usage / unknown --as user, 1 unresolved lines or any other failure (missing file, refused write).
 import { readFileSync } from "node:fs";
 import { db, closeDb } from "@/lib/db";
-import { mergeResolved, parseDecklist, resolveDecklist } from "@/lib/decks/resolve";
+// The pure helpers come from ./decklist directly, not through lib/decks/resolve's `export *`:
+// tsx's strict-ESM path for .mts files does not see re-exports, and this file is run that way.
+import { mergeResolved, parseDecklist } from "@/lib/decks/decklist";
+import { resolveDecklist } from "@/lib/decks/resolve";
 import { upsertMetaDeck } from "@/lib/decks/data";
 import { isGameSlug } from "@/lib/decks/types";
 
