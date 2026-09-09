@@ -85,7 +85,11 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
   const hrefFor = (r: Range, printingId: number) =>
     `/cards/${card.id}?range=${r}${printingId === primary?.printingId ? "" : `&p=${printingId}`}`;
 
-  const change = primary?.change30d ?? null;
+  // Follows the range pills, exactly as the binder page does — a 1Y chart with a "past 30 days"
+  // delta beside it was the old behaviour. Falls back to the printing's stored 30-day change when
+  // the window holds too little history to derive one.
+  const change = stats?.change ?? primary?.change30d ?? null;
+  const changeCaption = stats?.change ? RANGE_CAPTION[range] : "past 30 days";
 
   const attrs = Object.entries(card.attrs)
     .filter(([k, v]) => !SKIP_ATTRS.has(k.toLowerCase()) && String(v).trim() !== "")
@@ -132,7 +136,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
             <PriceDelta
               amount={change?.amount ?? null}
               ratio={change?.ratio ?? null}
-              caption="past 30 days"
+              caption={changeCaption}
             />
           </div>
           <span className="text-xs text-dim">Market price · as of {primary?.priceDate ?? "—"}</span>

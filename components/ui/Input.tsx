@@ -5,7 +5,7 @@ import { cn } from "./cn";
 // Height is not part of it — `Input` is a 44px row, `Textarea` (which imports this) is a box — so the
 // two share one skin rather than keeping two copies of it.
 export const field =
-  "w-full rounded-tile border border-hairline bg-surface px-3.5 text-ink outline-none focus:border-ink placeholder:text-dim";
+  "w-full rounded-tile border border-hairline bg-surface px-3.5 text-ink focus:border-ink placeholder:text-dim";
 
 type Props = ComponentProps<"input"> & { label?: string };
 

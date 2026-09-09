@@ -8,7 +8,7 @@ import { loadOwnedByKey, analyzeGap } from "@/lib/decks/gap";
 import { describeRules } from "@/lib/decks/validate";
 import { ZONES, ZONE_LABEL } from "@/lib/decks/types";
 import { formatMoney } from "@/lib/format";
-import { SectionHeading, Panel, StatTile, TierBadge, ValidationList, CardRow } from "@/components/ui";
+import { SectionHeading, Panel, StatTile, TierBadge, ValidationList, CardRow, Button } from "@/components/ui";
 import CopyDeckButton from "./CopyDeckButton";
 
 // Owned / missing / cost are per-user: never prerender or cache across users.
@@ -48,8 +48,13 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href={`/decks?game=${deck.gameSlug}`} className="text-[13px] text-muted hover:text-ink">
-        ← Meta decks
+      {/* getDeck serves a curated deck OR one of your own, so the way back and the primary action
+          both depend on which this is — otherwise your own deck is a dead end here. */}
+      <Link
+        href={deck.isMeta ? `/decks?game=${deck.gameSlug}` : "/decks/mine"}
+        className="text-[13px] text-muted hover:text-ink"
+      >
+        ← {deck.isMeta ? "Meta decks" : "My decks"}
       </Link>
 
       <div className="flex flex-col gap-1.5">
@@ -60,7 +65,11 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
         <div className="flex flex-wrap items-center gap-3">
           <SectionHeading as="h1" title={deck.name} />
           {deck.tier != null && <TierBadge tier={deck.tier} />}
-          {deck.isMeta && <CopyDeckButton sourceId={deck.id} />}
+          {deck.isMeta ? (
+            <CopyDeckButton sourceId={deck.id} />
+          ) : (
+            <Button href={`/decks/mine/${deck.id}`} size="sm">Open in builder</Button>
+          )}
         </div>
       </div>
 

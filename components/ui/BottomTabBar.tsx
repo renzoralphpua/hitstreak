@@ -38,7 +38,7 @@ const ICONS: Record<string, ReactNode> = {
 export default function BottomTabBar() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Primary" className="grid grid-cols-4 border-t border-hairline bg-surface px-3 pt-2.5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:hidden">
+    <nav aria-label="Primary" className="sticky bottom-0 z-40 grid grid-cols-4 border-t border-hairline bg-surface px-3 pt-2.5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:hidden">
       {NAV_ITEMS.map((it) => {
         const active = isActive(pathname, it.href);
         return (

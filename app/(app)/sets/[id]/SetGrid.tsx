@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { SetCard } from "@/lib/catalog";
 import type { Portfolio } from "@/lib/portfolios";
 import { formatMoney } from "@/lib/format";
-import { CardTile, Pill } from "@/components/ui";
+import { CardTile, EmptyState, Pill } from "@/components/ui";
 import { addItemAction } from "../../portfolios/actions";
 
 type Filter = "all" | "owned" | "missing";
@@ -112,6 +112,16 @@ export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portf
         </p>
       )}
 
+      {visible.length === 0 ? (
+        <EmptyState
+          title={filter === "owned" ? "You don't own any of these yet" : "Nothing missing here"}
+          body={
+            filter === "owned"
+              ? "Tap a card in the full set to add your first copy."
+              : "You own every card in this set."
+          }
+        />
+      ) : (
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
         {visible.map((c) => (
           <div key={c.cardId} className="flex flex-col gap-1">
@@ -129,6 +139,7 @@ export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portf
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

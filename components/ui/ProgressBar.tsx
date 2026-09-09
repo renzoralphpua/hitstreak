@@ -14,7 +14,7 @@ export default function ProgressBar({ value, label, tone = "accent", className }
       className={cn("h-1.5 w-full overflow-hidden rounded-full bg-hairline-soft", className)}
     >
       <div
-        className={cn("h-full", tone === "accent" && "bg-accent", tone === "gain" && "bg-gain", tone === "muted" && "bg-hairline")}
+        className={cn("h-full", tone === "accent" && "bg-accent", tone === "gain" && "bg-gain", tone === "muted" && "bg-hairline-strong")}
         style={{ width: `${pct}%` }}
       />
     </div>

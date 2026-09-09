@@ -20,8 +20,13 @@ Each `*.dc.html` file here is one artboard (static mockup) from that canvas; `ca
 | Dim | `#8a8072` | Tertiary text, captions |
 | Accent | `#b5573a` (terracotta) | Chart lines, links, "missing" progress, losses |
 | Gain | `#2f7a4f` | Positive deltas, owned confirmations |
-| Radii | 10–12px panels · 999px pills · 8–10px card tiles | |
-| Shadows | `0 8px 18px rgba(60,40,10,.12)` on card art tiles | Cards should read as physical objects |
+| Hairline (strong) | `#cfc5b4` | A hairline that must stay VISIBLE on `--hairline-soft` — the muted progress track, the dashed missing-tile border |
+| Chip ink (muted) | `#cfc5b4` | Secondary text ON an ink chip (the artboards use it 21×) |
+| Accent (hover) | `#8f4128` | Link hover, as every artboard specifies |
+| Focus | `#b5573a` | The one focus-visible ring (accent; clears 3:1 on every surface in both themes) |
+| Radii | 10–12px panels · 999px pills · 8–10px card tiles · 16px card art (`rounded-art`) | |
+| Shadows | `0 8px 18px rgba(60,40,10,.12)` on card art tiles; `0 18px 40px rgba(60,40,10,.18)` on the card-detail hero (`shadow-art`) | Cards should read as physical objects |
+| Small type ramp | `--text-caption` 13px · `--text-micro` 11px · `--tracking-label` 0.06em | Captions, micro labels, the uppercase group label. Added 2026-09-09 — `text-[13px]` had reached 64 hand-written uses |
 
 ### Dark mode (theme toggle; light is default)
 
@@ -36,12 +41,18 @@ Each `*.dc.html` file here is one artboard (static mockup) from that canvas; `ca
 | Accent | `#e07a55` |
 | Gain | `#7fcf98` |
 | Chip / chip ink | `#f1ebe0` / `#15120e` |
-| Card tile shadow | `0 10px 22px rgba(0,0,0,.45)` |
+| Chip ink (muted) | `#5c5347` |
+| Hairline (strong) | `#3a3128` |
+| Accent (hover) | `#f09a78` |
+| Focus | `#e07a55` |
+| Card tile shadow | `0 10px 22px rgba(0,0,0,.45)`; hero art `0 18px 40px rgba(0,0,0,.55)` |
 
 ## Conventions
 
 - **Owned vs missing:** owned cards are solid tiles with a `×N` count chip (ink fill, cream text); missing cards are dashed-border, tinted, dimmed. Same rule in Sets, Decks, Builder.
 - **Selected state** = inverted dark chip (ink background, cream text). Filters are pills.
+- **Focus:** one ring for the whole app — `:focus-visible { outline: 2px solid var(--focus) }` in `@layer base`. A primitive may thicken it or move it (`SearchField` puts it on the pill via `focus-within`) but must never remove it. `outline-none` is only allowed where an ancestor carries the ring.
+- **Motion:** everything is suppressed under `prefers-reduced-motion: reduce`.
 - **Navigation:** Binder · Sets · Decks · Alerts, search always present in the top bar (the Builder swaps search for the draft-status + Save action).
 - **Icons:** inline stroke SVG only — no emoji, no icon fonts.
 - **Numbers:** `font-variant-numeric: tabular-nums` everywhere a column of figures appears.

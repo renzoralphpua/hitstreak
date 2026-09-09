@@ -41,7 +41,9 @@ describe("DeckSummaryPanel", () => {
 
   it("uses the muted bar when nothing is owned and notes unpriced missing copies", () => {
     render(<DeckSummaryPanel deck={deck()} gap={gap({ owned: 0, missing: 60, missingCost: 12, unpricedMissing: 3 })} />);
-    expect(screen.getByRole("progressbar").firstElementChild).toHaveClass("bg-hairline");
+    // bg-hairline-strong, not bg-hairline: against the bg-hairline-soft track the plain hairline
+    // was 1.06:1 — an invisible bar on every 0%-owned deck.
+    expect(screen.getByRole("progressbar").firstElementChild).toHaveClass("bg-hairline-strong");
     expect(screen.getByText("3 missing copies have no market price")).toBeInTheDocument();
   });
 

@@ -14,7 +14,12 @@
   --gain: #2f7a4f;
   --chip: #1f1b16;      /* selected / primary chip fill */
   --chip-ink: #f6f1e8;  /* text on that chip */
+  --chip-ink-muted: #cfc5b4; /* secondary text ON an ink chip (artboards use it 21×) */
+  --hairline-strong: #cfc5b4; /* a hairline that must be VISIBLE against --hairline-soft */
+  --accent-hover: #8f4128;
+  --focus: #b5573a;     /* focus ring; accent clears 3:1 on every surface in both themes */
   --tile-shadow: 0 8px 18px rgba(60, 40, 10, 0.12);
+  --art-shadow: 0 18px 40px rgba(60, 40, 10, 0.18);
 }
 
 [data-theme="dark"] {
@@ -29,7 +34,12 @@
   --gain: #7fcf98;
   --chip: #f1ebe0;
   --chip-ink: #15120e;
+  --chip-ink-muted: #5c5347;
+  --hairline-strong: #3a3128;
+  --accent-hover: #f09a78;
+  --focus: #e07a55;
   --tile-shadow: 0 10px 22px rgba(0, 0, 0, 0.45);
+  --art-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
 }
 
 @theme inline {
@@ -44,11 +54,21 @@
   --color-gain: var(--gain);
   --color-chip: var(--chip);
   --color-chip-ink: var(--chip-ink);
+  --color-chip-ink-muted: var(--chip-ink-muted);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-accent-hover: var(--accent-hover);
+  --color-focus: var(--focus);
   --font-display: var(--font-dm-serif), Georgia, "Times New Roman", serif;
   --font-body: var(--font-dm-sans), "Segoe UI", system-ui, sans-serif;
   --radius-panel: 12px;
   --radius-tile: 10px;
+  --radius-art: 16px;
   --shadow-tile: var(--tile-shadow);
+  --shadow-art: var(--art-shadow);
+  /* The small type ramp. 13px carried ~64 hand-written `text-[13px]` uses before this existed. */
+  --text-caption: 13px;
+  --text-micro: 11px;
+  --tracking-label: 0.06em;
 }
 
 /* Base styles live in @layer base so Tailwind utilities (a later layer) can override
@@ -66,7 +86,24 @@
   }
 
   a { color: var(--accent); }
+  a:hover { color: var(--accent-hover); }
+
+  /* One focus ring for the whole app. Keyboard only (:focus-visible), so a mouse click on a
+     button does not light it up. Primitives may thicken it but must never remove it. */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 
   /* tabular figures everywhere a column of numbers appears */
   .num { font-variant-numeric: tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
