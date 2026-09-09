@@ -56,7 +56,7 @@ app/(app)/admin/decks/…               Task 8 curation
 
 **Files:** modify `lib/schema.ts`, `lib/db.ts`; create `lib/decks/types.ts`, `lib/decks/identity.ts`, `lib/decks/data.ts`, `tests/helpers/decks.ts`, `tests/decks-identity.test.ts`, `tests/decks-data.test.ts`
 
-- [ ] **Step 1: Schema.** Append to `lib/schema.ts` and run it from `lib/db.ts` after `HISTORY_SCHEMA_SQL`:
+- [x] **Step 1: Schema.** Append to `lib/schema.ts` and run it from `lib/db.ts` after `HISTORY_SCHEMA_SQL`:
 
 ```ts
 // Phase 4: decks. owner_user_id NULL = curated meta deck (spec §5); personal decks are scoped by owner
@@ -89,7 +89,7 @@ export const DECK_SCHEMA_SQL = `
 `;
 ```
 
-- [ ] **Step 2: Types + identity** — `lib/decks/types.ts`:
+- [x] **Step 2: Types + identity** — `lib/decks/types.ts`:
 
 ```ts
 // lib/decks/types.ts — the validator contract (spec §8) and the deck vocabulary shared by data, gap, UI.
@@ -143,7 +143,7 @@ export function identityKey(game: GameSlug, card: { name: string; attrs: Record<
 }
 ```
 
-- [ ] **Step 3: Failing tests.** `tests/decks-identity.test.ts`:
+- [x] **Step 3: Failing tests.** `tests/decks-identity.test.ts`:
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -307,7 +307,7 @@ describe("personal decks", () => {
 });
 ```
 
-- [ ] **Step 4: Implement `lib/decks/data.ts`:**
+- [x] **Step 4: Implement `lib/decks/data.ts`:**
 
 ```ts
 // lib/decks/data.ts
@@ -494,7 +494,7 @@ export async function deleteDeck(userId: string, id: number): Promise<boolean> {
 }
 ```
 
-- [ ] **Step 5:** tests, typecheck, lint green. **Commit** — `feat(decks): decks/deck_cards schema, identity keys, decks data layer (meta + personal)`
+- [x] **Step 5:** tests, typecheck, lint green. **Commit** — `feat(decks): decks/deck_cards schema, identity keys, decks data layer (meta + personal)`
 
 ---
 
@@ -502,7 +502,7 @@ export async function deleteDeck(userId: string, id: number): Promise<boolean> {
 
 **Files:** create `lib/decks/validate.ts`, `lib/decks/rules/pokemon.ts`, `tests/rules-pokemon.test.ts`
 
-- [ ] **Step 1: Failing tests** — `tests/rules-pokemon.test.ts`:
+- [x] **Step 1: Failing tests** — `tests/rules-pokemon.test.ts`:
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -579,7 +579,7 @@ describe("Pokémon deck rules", () => {
 });
 ```
 
-- [ ] **Step 2: Implement.** `lib/decks/validate.ts`:
+- [x] **Step 2: Implement.** `lib/decks/validate.ts`:
 
 ```ts
 // lib/decks/validate.ts — spec §8: one contract, one module per game, pure functions over attrs.
@@ -671,7 +671,7 @@ export function validatePokemon({ cards }: DeckInput): ValidationResult {
 }
 ```
 
-- [ ] **Step 3:** green; **Commit** — `feat(decks): validator contract and Pokémon deck rules`
+- [x] **Step 3:** green; **Commit** — `feat(decks): validator contract and Pokémon deck rules`
 
 ---
 
@@ -679,7 +679,7 @@ export function validatePokemon({ cards }: DeckInput): ValidationResult {
 
 **Files:** replace stub `lib/decks/rules/one-piece.ts`; create `tests/rules-one-piece.test.ts`
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -736,7 +736,7 @@ describe("One Piece deck rules", () => {
 });
 ```
 
-- [ ] **Step 2: Implement:**
+- [x] **Step 2: Implement:**
 
 ```ts
 // lib/decks/rules/one-piece.ts — exactly 1 Leader + exactly 50; ≤4 per card number (alt arts share it);
@@ -782,7 +782,7 @@ export function validateOnePiece({ cards }: DeckInput): ValidationResult {
 }
 ```
 
-- [ ] **Step 3:** green; **Commit** — `feat(decks): One Piece deck rules`
+- [x] **Step 3:** green; **Commit** — `feat(decks): One Piece deck rules`
 
 ---
 
@@ -790,7 +790,7 @@ export function validateOnePiece({ cards }: DeckInput): ValidationResult {
 
 **Files:** replace stub `lib/decks/rules/riftbound.ts`; create `tests/rules-riftbound.test.ts`
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -879,7 +879,7 @@ describe("Riftbound deck rules", () => {
 });
 ```
 
-- [ ] **Step 2: Implement:**
+- [x] **Step 2: Implement:**
 
 ```ts
 // lib/decks/rules/riftbound.ts — Riot Core Rules §103 (constructed): 1 Legend; 1 Chosen Champion (a Champion
@@ -954,7 +954,7 @@ export function validateRiftbound({ cards }: DeckInput): ValidationResult {
 }
 ```
 
-- [ ] **Step 3:** green; **Commit** — `feat(decks): Riftbound deck rules (Core Rules §103 constructed)`
+- [x] **Step 3:** green; **Commit** — `feat(decks): Riftbound deck rules (Core Rules §103 constructed)`
 
 ---
 
@@ -962,7 +962,7 @@ export function validateRiftbound({ cards }: DeckInput): ValidationResult {
 
 **Files:** create `lib/decks/gap.ts`, `lib/decks/resolve.ts`, `scripts/import-deck.mts`, `tests/decks-gap.test.ts`, `tests/decks-resolve.test.ts`; modify `README.md` (one "Curating meta decks locally" paragraph)
 
-- [ ] **Step 1: Failing tests** — `tests/decks-gap.test.ts`:
+- [x] **Step 1: Failing tests** — `tests/decks-gap.test.ts`:
 
 ```ts
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -1083,7 +1083,7 @@ describe("resolveDecklist", () => {
 });
 ```
 
-- [ ] **Step 2: Implement `lib/decks/gap.ts`:**
+- [x] **Step 2: Implement `lib/decks/gap.ts`:**
 
 ```ts
 // lib/decks/gap.ts — spec §5: gap analysis at read time. Ownership is the user's copies across ALL binders,
@@ -1140,7 +1140,7 @@ export function analyzeGap(deck: DeckDetail, owned: Map<string, number>): GapAna
 const round2 = (n: number) => Math.round(n * 100) / 100;
 ```
 
-- [ ] **Step 3: Implement `lib/decks/resolve.ts`:**
+- [x] **Step 3: Implement `lib/decks/resolve.ts`:**
 
 ```ts
 // lib/decks/resolve.ts — decklist text → catalog cards. Shared by the admin curation screen (Task 8) and
@@ -1230,7 +1230,7 @@ const toCandidate = (r: Record<string, unknown>): Candidate => ({ cardId: Number
 
 (The `LIKE 'name%'` prefilter plus the exact `baseName` comparison is what makes "Rare Candy" match both "Rare Candy" and "Rare Candy - 191/198" but not "Rare Candy Bar". "Charizard" prefilters "Charizard ex" but the exact test fails → candidates, `cardId: null`. Adjust the test fixtures only if a real behaviour is wrong, not to make a wrong behaviour pass.)
 
-- [ ] **Step 4: CLI** — `scripts/import-deck.mts`:
+- [x] **Step 4: CLI** — `scripts/import-deck.mts`:
 
 ```ts
 // scripts/import-deck.mts — local curation until the admin screen ships (Task 8), and a repeatable way to
@@ -1269,7 +1269,7 @@ closeDb();
 
 (`.mts` with top-level await, run via `npx tsx`; `@/` alias works because tsconfig `paths` covers `**/*.mts` — `scripts/db-counts.mts` is the precedent. If tsx does not honour the alias, use relative imports.) README: add a short "Curating meta decks locally" paragraph under Development with the command and the `isAdmin` flip.
 
-- [ ] **Step 5:** green; **Commit** — `feat(decks): gap analysis, decklist parser/resolver, local import CLI`
+- [x] **Step 5:** green; **Commit** — `feat(decks): gap analysis, decklist parser/resolver, local import CLI`
 
 ---
 
@@ -1277,7 +1277,7 @@ closeDb();
 
 **Files:** replace `app/(app)/decks/page.tsx`; create `app/(app)/decks/DeckSummaryPanel.tsx`, `app/(app)/decks/[id]/page.tsx`, `tests/ui/deck-summary-panel.test.tsx`; modify `docs/design/README.md` ("Implemented as": meta deck row → `DeckSummaryPanel`; group label stays the `GroupLabel` candidate from §13)
 
-- [ ] **Step 1: `DeckSummaryPanel`** (server component — no hooks; it is a `Link` around a `Panel`):
+- [x] **Step 1: `DeckSummaryPanel`** (server component — no hooks; it is a `Link` around a `Panel`):
 
 ```tsx
 import Link from "next/link";
@@ -1316,7 +1316,7 @@ export default function DeckSummaryPanel({ deck, gap }: { deck: DeckSummary; gap
 
 Test: renders name, tier badge, "You own 51 / 60", "$86.40 to complete", progressbar `aria-valuenow` 85, link to `/decks/7`; a complete deck shows "Complete" and tone gain; unpriced note appears when `unpricedMissing > 0`. (Build `gap` objects by hand; no DB.)
 
-- [ ] **Step 2: Browser page** — `app/(app)/decks/page.tsx`:
+- [x] **Step 2: Browser page** — `app/(app)/decks/page.tsx`:
 
 ```tsx
 import { notFound, redirect } from "next/navigation";
@@ -1373,7 +1373,7 @@ export default async function DecksPage({ searchParams }: PageProps<"/decks">) {
 
 (Personal decks, "My decks" and "New deck" arrive with the builder in Task 7 — leave them out; the mockup's uppercase group label is the same ad-hoc pattern AlertList uses and is already a §13 primitive candidate.)
 
-- [ ] **Step 3: Detail page** — `app/(app)/decks/[id]/page.tsx`:
+- [x] **Step 3: Detail page** — `app/(app)/decks/[id]/page.tsx`:
 
 ```tsx
 import { cache } from "react";
@@ -1487,7 +1487,7 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
 
 ("Copy to my decks" / "Open in builder" arrive in Task 7.)
 
-- [ ] **Step 4:** tests, typecheck, lint. Manually (dev server on :3000 with the `dev@example.com` session; flip `isAdmin` for that user once via SQL): import a real Pokémon list with the Task 5 CLI, open `/decks`, `/decks/<id>`; check `/decks?game=riftbound` empty state; `/decks/999999` → 404. **Commit** — `feat(decks): meta deck browser with gap analysis and deck detail (missing cards, full list, legality)`
+- [x] **Step 4:** tests, typecheck, lint. Manually (dev server on :3000 with the `dev@example.com` session; flip `isAdmin` for that user once via SQL): import a real Pokémon list with the Task 5 CLI, open `/decks`, `/decks/<id>`; check `/decks?game=riftbound` empty state; `/decks/999999` → 404. **Commit** — `feat(decks): meta deck browser with gap analysis and deck detail (missing cards, full list, legality)`
 
 ---
 
@@ -1498,7 +1498,7 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
 The builder validates **live in the browser**, so everything it imports must be db-free. Three enabling
 changes come first (Steps 1–3), then the actions, then the screens.
 
-- [ ] **Step 1: db-free gap math.** Move `GapLine`, `GapAnalysis` and `analyzeGap` out of `lib/decks/gap.ts`
+- [x] **Step 1: db-free gap math.** Move `GapLine`, `GapAnalysis` and `analyzeGap` out of `lib/decks/gap.ts`
   into a new `lib/decks/gap-math.ts` (it may import only `./identity`, `./types` and `import type` from
   `./data`), and relax the deck parameter so the builder can pass its live lines:
 
@@ -1530,7 +1530,7 @@ Extend `tests/ranges.test.ts`'s guard: add `lib/decks/gap-math.ts`, `lib/decks/v
 `import type` lines: match `/^import\s+(?!type\b)/m`-anchored imports, or simply strip lines starting
 with `import type` before testing).
 
-- [ ] **Step 2: default zone** — `lib/decks/zone.ts`:
+- [x] **Step 2: default zone** — `lib/decks/zone.ts`:
 
 ```ts
 // lib/decks/zone.ts
@@ -1564,7 +1564,7 @@ export function defaultZone(game: GameSlug, card: { attrs: Record<string, string
 `"Gear;Battlefield;Token"` → `battlefield` (the validator rejects the token separately), `{}` → `main`;
 `isSingleCardZone` true for leader/legend/champion, false for main/rune/battlefield.
 
-- [ ] **Step 3: search carries `attrs`, and can be filtered by game.**
+- [x] **Step 3: search carries `attrs`, and can be filtered by game.**
   - `lib/catalog.ts`: add `attrs: Record<string, string>` to `SearchHit`, select `ca.attrs` in
     `searchCards`, and parse it exactly as `getCardDetail` does (`try { JSON.parse(String(r.attrs ?? "{}")) } catch { {} }`).
     Add one assertion to `tests/catalog-read.test.ts`'s search test that a hit carries its `attrs`.
@@ -1575,7 +1575,7 @@ export function defaultZone(game: GameSlug, card: { attrs: Record<string, string
     so switching game re-fetches instead of showing another game's hits). `AddItemDialog` keeps working
     unchanged (it reads only the fields it already used).
 
-- [ ] **Step 4: `loadDeckCardInputs`** in `lib/decks/data.ts` — the server must validate a save without
+- [x] **Step 4: `loadDeckCardInputs`** in `lib/decks/data.ts` — the server must validate a save without
   trusting the client's copy of `attrs`:
 
 ```ts
@@ -1603,7 +1603,7 @@ export async function loadDeckCardInputs(lines: DeckLineInput[]): Promise<DeckCa
 
 (`DeckCardInput` is imported from `./types`.)
 
-- [ ] **Step 5: `validationItems`** in `lib/decks/validate.ts`, so the builder's `ValidationList` shows the
+- [x] **Step 5: `validationItems`** in `lib/decks/validate.ts`, so the builder's `ValidationList` shows the
   mockup's specific messages while still listing rules that pass:
 
 ```ts
@@ -1622,7 +1622,7 @@ Test in a new `describe` inside `tests/rules-pokemon.test.ts`: a legal deck give
 `RULE_TEXT` order; a 61-card deck with 5 Rare Candy gives `ok: false` items whose text contains "61" and
 "Rare Candy", and the untouched rules stay `ok: true`.
 
-- [ ] **Step 6: server actions** — `app/(app)/decks/actions.ts`:
+- [x] **Step 6: server actions** — `app/(app)/decks/actions.ts`:
 
 ```ts
 "use server";
@@ -1711,7 +1711,7 @@ a save whose lines claim a wrong zone → `{ ok: false }`; `copyDeckAction` on a
 named `"… (copy)"` owned by the caller with the same lines, leaves the source untouched, and returns the
 new id; `copyDeckAction` on someone else's personal deck → `"Deck not found"`.
 
-- [ ] **Step 7: my-decks list** — `app/(app)/decks/mine/page.tsx` (Server Component):
+- [x] **Step 7: my-decks list** — `app/(app)/decks/mine/page.tsx` (Server Component):
 
 ```tsx
 import Link from "next/link";
@@ -1774,7 +1774,7 @@ clicking Create calls `createDeckAction("pokemon", "Zard")` and pushes `/decks/m
 switches the game passed to the action; an action error renders an alert and does not navigate; Create
 is disabled while the name is blank.
 
-- [ ] **Step 8: the builder** — `app/(app)/decks/mine/[id]/page.tsx` (server: loads and gates) plus
+- [x] **Step 8: the builder** — `app/(app)/decks/mine/[id]/page.tsx` (server: loads and gates) plus
   `Builder.tsx` (client: all interaction).
 
 ```tsx
@@ -1845,7 +1845,7 @@ list shows a failing rule's concrete message and flips to `ok` when the deck is 
 `saveDeckAction` with the current lines and shows "Saved as draft" when the server says
 `valid: false`; an action error renders an alert and does not clear the dirty state.
 
-- [ ] **Step 9: the two links.**
+- [x] **Step 9: the two links.**
   - `app/(app)/decks/page.tsx`: pass `trailing={<Button href="/decks/mine" variant="secondary" size="sm">My decks</Button>}` to the `SectionHeading`.
   - `app/(app)/decks/[id]/page.tsx`: render `<CopyDeckButton sourceId={deck.id} />` next to the heading when
     `deck.isMeta`. `CopyDeckButton.tsx` (client) calls `copyDeckAction(sourceId)` and pushes
@@ -1854,7 +1854,7 @@ list shows a failing rule's concrete message and flips to `ok` when the deck is 
   - `docs/design/README.md` "Implemented as": add `Deck builder zone group → the shared uppercase group
     label (GroupLabel candidate, §13)` only if a new pattern appears; otherwise leave it.
 
-- [ ] **Step 10:** `npm test`, `npm run typecheck`, `npm run lint` all green. **Commit** —
+- [x] **Step 10:** `npm test`, `npm run typecheck`, `npm run lint` all green. **Commit** —
   `feat(decks): personal deck builder with live legality, my-decks list, copy from a meta deck`
 
 ---
@@ -1868,7 +1868,7 @@ card for anything ambiguous → fill in the metadata → save. It lives under `a
 shell and the session gate; **admin-ness is checked in the page and in every action**, and a non-admin
 gets `notFound()` rather than a redirect — the route should not advertise itself.
 
-- [ ] **Step 1: `deleteMetaDeck`** in `lib/decks/data.ts` (admin-only, mirrors `deleteDeck`'s shape but
+- [x] **Step 1: `deleteMetaDeck`** in `lib/decks/data.ts` (admin-only, mirrors `deleteDeck`'s shape but
   scoped to curated rows):
 
 ```ts
@@ -1893,7 +1893,7 @@ Add to `tests/decks-data.test.ts`: a non-admin call rejects with `/admin/i` and 
 delete returns `true`, removes the row and its `deck_cards`; deleting a **personal** deck's id through
 this path returns `false` and leaves it intact; deleting a missing id returns `false`.
 
-- [ ] **Step 2: `formatDecklist`** in `lib/decks/resolve.ts` — the inverse of `parseDecklist`, so "Edit"
+- [x] **Step 2: `formatDecklist`** in `lib/decks/resolve.ts` — the inverse of `parseDecklist`, so "Edit"
   can round-trip an existing deck back through the same paste → resolve path:
 
 ```ts
@@ -1922,10 +1922,10 @@ them, `parseDecklist` the result, `resolveDecklist` it, and assert `mergeResolve
 (Note the honest limitation in a comment: a card whose **name** now resolves to a cheaper printing comes
 back as that printing's card id. Round-tripping is for editing a list, not for preserving printings.)
 
-- [ ] **Step 3: proxy.** Add `"/admin"` to `PROTECTED` in `proxy.ts`, and a case to `tests/proxy.test.ts`:
+- [x] **Step 3: proxy.** Add `"/admin"` to `PROTECTED` in `proxy.ts`, and a case to `tests/proxy.test.ts`:
   `/admin/decks` without a cookie → 307 to `/sign-in?next=%2Fadmin%2Fdecks`.
 
-- [ ] **Step 4: actions** — `app/(app)/admin/decks/actions.ts`:
+- [x] **Step 4: actions** — `app/(app)/admin/decks/actions.ts`:
 
 ```ts
 "use server";
@@ -1994,7 +1994,7 @@ creates a deck and returns its id, then updates it in place when `id` is passed 
 appended); a bad game or a non-integer line id is refused; `deleteMetaDeckAction` removes the deck and its
 lines, returns `"Deck not found"` for a personal deck's id, and revalidates both paths.
 
-- [ ] **Step 5: the page** — `app/(app)/admin/decks/page.tsx`:
+- [x] **Step 5: the page** — `app/(app)/admin/decks/page.tsx`:
 
 ```tsx
 import { notFound, redirect } from "next/navigation";
@@ -2059,7 +2059,7 @@ and loads (a plain event keeps the two siblings decoupled without lifting state 
 a "Delete" `Button` guarded by `window.confirm(\`Delete "${name}"?\`)` calling `deleteMetaDeckAction`,
 then `router.refresh()`. Errors render with `role="alert"`.
 
-- [ ] **Step 6: `CurationForm.tsx`** (client) — the paste → resolve → fix-up → save flow:
+- [x] **Step 6: `CurationForm.tsx`** (client) — the paste → resolve → fix-up → save flow:
 
 - State: `gameSlug`, `name`, `archetype`, `tier` (`"" | "1".."4"`), `format`, `sourceNote`, `text`,
   `editingId: number | null`, `resolutions: Resolution[] | null`, `picks: Record<number, number>`
@@ -2091,16 +2091,16 @@ from the fields; an action error renders an alert and Save stays available; swit
 resolving passes the new slug; the `hitstreak:edit-deck` event fills the fields and sets the id that Save
 sends.
 
-- [ ] **Step 7: the way in.** On `app/(app)/decks/page.tsx`, the `SectionHeading`'s `trailing` already
+- [x] **Step 7: the way in.** On `app/(app)/decks/page.tsx`, the `SectionHeading`'s `trailing` already
   holds "My decks"; add an admin-only "Curate" `Button href="/admin/decks"` beside it — the page is a
   Server Component, so gate it on `await isAdminUser(session.user.id)` and render nothing for everyone
   else. Add a page-level test to `tests/ui/deck-pages.test.tsx`: `/admin/decks` renders for an admin, is
   `notFound` for a signed-in non-admin, and the "Curate" link appears on `/decks` only for an admin.
 
-- [ ] **Step 8: docs.** README "Curating meta decks locally" gains a sentence: the same flow is available
+- [x] **Step 8: docs.** README "Curating meta decks locally" gains a sentence: the same flow is available
   in the app at `/admin/decks` for a user with `isAdmin = 1`, and the CLI remains the scriptable path.
 
-- [ ] **Step 9:** `npm test`, `npm run typecheck`, `npm run lint` all green. **Commit** —
+- [x] **Step 9:** `npm test`, `npm run typecheck`, `npm run lint` all green. **Commit** —
   `feat(decks): admin meta-deck curation — paste, resolve, fix up, save`
 
 ---
@@ -2114,3 +2114,137 @@ README (Screens: `/decks`, `/decks/[id]`, curation CLI), spec §8 amendment (Pok
 - Spec coverage for Tasks 1–6: §5 decks/deck_cards ✔ (T1), gap analysis at read time ✔ (T5), §7 meta browser (game + tier filters → detail with decklist, gap, cost-to-complete) ✔ (T6), §8 validator contract + three rule sets ✔ (T2–T4; Standard-format legality deliberately absent — amendment), §10 validator unit tests happy path + every violation ✔, gap math ✔. Builder/admin are T7/T8 (not this run).
 - Type consistency: `Zone`/`ZONES`/`GameSlug`/`DeckCardInput` from `lib/decks/types` used by rules, data, gap, pages; `DeckDetail`/`DeckLine` from `data.ts` used by `gap.ts` and pages; `card()` fixture builder in `tests/helpers/decks.ts` used by all three rule test files; `identityKey` is the single definition of "same card" for copies (rules) and ownership (gap).
 - Ownership: meta decks readable with `userId` null or any user, writable only via `isAdminUser`; personal decks scoped by `owner_user_id` on every read/write; `loadOwnedByKey` joins `portfolios.user_id`.
+
+## Executed 2026-09-09 — deviations
+
+Shipped on `phase-4/decks` across Tasks 1–9 (`6d2ee93` … the Task 9 docs commit); `npm test` is
+467 tests in 62 files. Where the code differs from the plan above:
+
+- **Deck fixtures derive their ids.** `tests/helpers/decks.ts` inserts every row with `RETURNING id`
+  (or looks it up by its TCGplayer key) and hands back `games` / `sets` / `cards` / `printings` maps
+  instead of the plan's hard-coded literals: `seedMiniCatalog()` owns the rows underneath and its ids
+  are not stable across suites. Tests use the map, never a literal id.
+- **`baseName` strips more printing shapes than the plan listed.** Beyond `" - 191/198"` it also has to
+  handle gallery/promo numbers (`"- TG05/TG30"`), slash-less promos (`"- 054"`) and set-code-prefixed
+  energies (`"- MEE 001"`), while leaving product names such as `"Code Card - 151 Booster Pack"` alone.
+  The Pokémon basic-energy predicate additionally tests the head segment of a `" - "` split, because
+  `baseName` deliberately does not treat the set-code shape as a suffix everywhere.
+- **Deck-line writes are one atomic batch, and meta-deck creation is a transaction.** `replaceLines`
+  sends `DELETE` + every `INSERT` + the `updated_at` / `is_draft` `UPDATE` as a single `"write"` batch, so
+  a deck is never briefly empty; `upsertMetaDeck`'s create path needs the new id for its lines, so
+  `INSERT … RETURNING id` and the line batch run in one interactive write transaction and a failed line
+  write rolls the deck row back.
+- **A `MAX_LINES` cap (200) was added.** The plan bounded quantities but not line count; without it a
+  paste is an unbounded write batch. It lives in `lib/decks/types.ts` rather than `data.ts` (as does
+  `QTY_MAX`) so the client bundle and the curation action can both have it — see the Task 8 bullets below.
+- **Every rule applies across zones, and a mis-zoned card gets its own `zone` error.** The plan's own
+  Pokémon test demanded that the 60-card count include a card sitting in a zone Pokémon does not use, so
+  all three rule sets settled on the same shape: a mis-zoned card is flagged *and* still counts toward
+  size, copies, colour/domain and the ACE SPEC / Radiant limits. It is a real card in the deck; dropping
+  it would hide the error the user needs to see.
+- **The Pokémon predicates read the data, not a type whitelist.** tcgcsv's `Card Type` on a Pokémon is
+  usually its energy type but is also `"Dark"`, `"Normal"`, typos (`"Lighnting"`), dual types, and NULL
+  on ~270 cards that still carry HP and Stage. So `isPokemon` is "HP > 0 and not typed
+  Trainer/Item/Supporter/Stadium/Tool/Energy", `Stage` is compared case-insensitively (one card is
+  `"bASIC"`), and `isBasicEnergy` accepts `"Basic <Type> Energy"`, legacy `"Energy"` and untyped rows via
+  a name fallback while excluding `"… Energy (Special)"`.
+- **One Piece: a colourless Leader checks nothing.** Three alt-art Leaders carry no `Color`; failing the
+  whole deck against an empty identity would be wrong, so the colour rule is skipped rather than failed.
+  DON!! cards are rejected wherever they appear (`zone`), and the plan's mono-Leader assertion of 6
+  colour errors is 5 — the plan counted a dual-colour card that legitimately shares the Leader's colour.
+  A fixture `Nami` also had to move to `OP01-116`: at `OP01-016` it collided with the helper's existing
+  `Nami` stack and the copies count came out of the wrong bucket.
+- **Riftbound: Battlefields are inside the domain check, and tokens are rejected in every single-card
+  zone.** Core Rules 103.4.b makes Battlefields "subject to Domain Identity if applicable"; all 71 in
+  today's catalog are colourless so the check is a no-op, but it is written for the day one is not.
+  Wrong-typed runes and battlefields get one message per card rather than a single count, and because
+  the catalog types tokens as `"Unit;Token"` / `"Battlefield;Token"` / `"Gear;Battlefield;Token"`, the
+  type alone is not enough: a token in the legend / champion / rune / battlefield slot is named as a
+  token. The plan's Signature fixture (4 copies of one name) also tripped `copies`, so it became 3 + 1
+  across two names to isolate the `signature` error.
+- **Decklist parsing needed a tighter header rule and a wider prefilter.** A section header is the header
+  word alone on its line (optionally `":"` / `"("` plus a count), otherwise `"Energy Retrieval"` is
+  swallowed as an `Energy` header. One Piece `Character` / `Event` / `Stage` sections all map to the main
+  deck. The exact-match prefilter's `LIMIT` went from the plan's 50 to 500, because `LIKE 'Pikachu%'`
+  pulls 300+ `Pikachu ex` / `Pikachu V` rows before the exact `baseName` comparison happens in JS.
+- **`mergeResolved` sums duplicate printings of one card.** PTCGL exports list one line per printing
+  (`3 Charmander MEW 4` + `1 Charmander PAF 7`), both resolve to the same card, and `checkLines` would
+  otherwise reject the pair as a duplicate line.
+- **A bare One Piece name spanning several card numbers returns candidates.** Identity there is
+  `attrs.Number`, and `"Nami"` is `OP01-016`, `OP10-013` and more; silently taking the cheapest would
+  pick the wrong card, so the resolver hands back one candidate per Number and a human picks.
+- **The CLI prints `e.message`, not a stack, and closes the DB on every exit path** (the error path
+  included), so a bad `--as` or an unresolved line reads as a sentence.
+- **Task 6's manual browser check became a kept test.** The dev server on :3000 is the user's and no
+  credentials may be typed into it, so `tests/ui/deck-pages.test.tsx` renders the real page components
+  (browser, detail, my-decks, builder, admin) as an end-to-end jsdom test against a seeded throwaway DB.
+  It grew with Tasks 7 and 8 and now also seeds a second user with `isAdmin = 0`, so the `/admin/decks`
+  404 case exercises a real signed-in non-admin rather than a missing user row.
+- **`validationItems` needed an explicit return annotation.** The plan's snippet did not typecheck: with
+  a bare `flatMap`, TypeScript takes the first branch's `ok: true[]` as the callback's whole return type.
+  The plan's docstring also claimed failures were appended after the passing rules; the code keeps
+  `RULE_TEXT` order and replaces a broken rule in place with its concrete errors, which is what the
+  builder's panel wants.
+- **`setQuantity` matches on `(cardId, zone)`, not object identity** — the builder rebuilds its line
+  objects on every edit, so identity is not stable across renders.
+- **`defaultZone` takes the deck's current lines.** Riftbound Champion Units are legal in the main deck
+  alongside the Chosen Champion; routing every one of them to the single-card `champion` zone would
+  silently replace the chosen one, so the first goes to `champion` and later ones to `main`.
+- **The db-free guard test strips `import type` lines** before matching: type-only imports are erased at
+  build time and are how the client-safe deck modules reference `DeckLine` / `DeckLineInput`. The
+  search-route attrs test inserts its own card, because `seedMiniCatalog()`'s rows all carry `attrs: '{}'`.
+- **Task 8 split `lib/decks/decklist.ts` out of `resolve.ts`.** `parseDecklist` / `formatDecklist` /
+  `mergeResolved` and the line types are db-free and the curation form (`"use client"`) needs the merge,
+  so they moved to a leaf module re-exported by `resolve.ts` — the same shape as `gap.ts` → `gap-math.ts`
+  and `lib/history.ts` → `lib/ranges.ts`. **This broke `scripts/import-deck.mts`**, which still imports
+  those names from `@/lib/decks/resolve`; see the known items below.
+- **Two primitives and two shared helpers came out of Task 8.** A `Textarea` primitive was added and
+  `h-11` was lifted out of `Input`'s shared `field` string so both can use the same skin; `assertQuantity`
+  and `assertOptionalText` were lifted into `lib/action-utils.ts` for both action modules.
+- **"Edit" travels as a `CustomEvent`.** `MetaDeckRow` and `CurationForm` are sibling client islands under
+  a Server Component page, so the hand-off is a `hitstreak:edit-deck` window event whose name and payload
+  type live in `app/(app)/admin/decks/edit-event.ts` — neither island imports the other and the page stays
+  a Server Component.
+- **The curation paste is bounded before it is resolved.** `resolveDecklistAction` caps the raw text at
+  20 KB *and* the parsed line count at `MAX_LINES`: 20 KB of `"1 x"` lines is ~5,000 lines and up to
+  ~10,000 sequential catalog queries held open in one server action. `assertOptionalText` caps archetype,
+  format and source note at 200 characters, which the plan left unbounded.
+
+### Known items, deliberately left
+
+Also recorded in spec §13.
+
+- **`scripts/import-deck.mts` is broken as shipped.** Task 8's `decklist.ts` split left the CLI importing
+  `parseDecklist` / `mergeResolved` from `@/lib/decks/resolve`, and tsx's strict-ESM path for a `.mts`
+  entry point does not see `export *` re-exports: the script dies with "does not provide an export named
+  'mergeResolved'" before it runs. Product code, the bundler and `npx tsx -e` all resolve those re-exports
+  fine, and `tests/ranges.test.ts` asserts they are the same function objects — which is why nothing
+  caught it. The fix is a one-line import change to `@/lib/decks/decklist`; it is a code change, so it is
+  left to the branch review rather than made in the docs commit. The in-app `/admin/decks` screen, which
+  is the same flow, is unaffected.
+- The resolver picks the cheapest printing, so World Championship replica sets win: "Rare Candy" resolves
+  to `Rare Candy - 2025 (Riley McKay)` (World Championship Decks, $0.11) ahead of every playable printing,
+  and the same `MIN(market)` drives cost-to-complete.
+- A few Riftbound alt arts carry no `Card Type` / `Domain` / `Tag` attrs at all (8 in today's catalog,
+  e.g. `Ornn, Blacksmith (Alternate Art)`), so a deck line pointing at one validates as "unknown type".
+  The resolver should prefer an attr-bearing printing of the same card.
+- Decklist shapes still unparsed: PTCGL energy shorthand (`4 Basic {F} Energy SVE 2`), bare-number tails
+  (`3 Fire Energy 12`), and OPTCGSim's `4xOP01-016` with no space after the `x`.
+- `formatDecklist` emits names only, so editing a One Piece deck re-ambiguates every card whose name spans
+  several numbers. Emitting `attrs.Number` for One Piece would fix it.
+- N+1 reads: `/decks` runs `getDeck` per curated deck; `/admin/decks` does the same *and* ships every
+  deck's formatted decklist to the browser; `resolveDecklist` runs up to two queries per line (bounded by
+  `MAX_LINES`). Curated lists are a handful of decks today.
+- `/decks` costs one extra `isAdminUser` query per page load, for every user, only to decide whether to
+  render the "Curate" link.
+- The curation screen shows no legality preview and `upsertMetaDeck` does not validate: a curated deck can
+  be illegal by design (a partial list, a rotated format). `/decks/[id]` is where that shows.
+- `GroupLabel` (the uppercase `tracking-[0.06em]` group label) now has four sites — the alerts list, the
+  decks browser, the builder's zone headers and the admin list. Promote it in Phase 5.
+- `withUser` returns `e.message` verbatim, so a malformed direct action call can echo a raw `TypeError` to
+  the caller. Every such surface is admin-only today.
+- 45 Riftbound champions (78 Champion Unit printings — Gangplank, Illaoi, Riven, Sona, Kayle, Morgana and
+  39 more) have no Legend in the catalog yet, so those champions cannot currently form a legal deck. The
+  validator is right; the card pool is incomplete.
+- Pokémon Standard-format (regulation mark) legality is not validated at all — tcgcsv carries no
+  regulation marks. See the spec §8 amendment.
