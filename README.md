@@ -10,7 +10,7 @@ raw archives to R2, historical backfill from 2024-02-08.
 Phase 2a complete: design tokens + `components/ui/` primitives (`BottomTabBar`, `Button`, `CardRow`,
 `CardTile`, `EmptyState`, `Input`, `MoneyDisplay`, `Panel`, `Pill`, `PriceDelta`, `ProgressBar`,
 `SearchField`, `SectionHeading`, `StatTile`, `TierBadge`, `TopNav`, `UserMenu`, `ValidationList`); a
-`/dev/ui` primitives gallery (dev only); Better Auth (email + password) with sign-in/sign-up and a
+`/dev/ui` primitives gallery (dev only); a ⌘K command palette on every screen (cards, sets and decks; it navigates, it does not act); Better Auth (email + password) with sign-in/sign-up and a
 protected app shell.
 
 Phase 2b complete: collections with live valuation from `latest_prices`; the add-card flow with type-ahead

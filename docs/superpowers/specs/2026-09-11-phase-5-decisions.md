@@ -86,6 +86,17 @@ collections" links, an inline add form, and a set-alert shortcut.
 Results are grouped: **In your collection** (rows read vs paid) → **In the catalog** (market price
 only; there is nothing to compare against yet) → **Go to** (sets and decks).
 
+**Built 2026-09-11.** `CommandPalette` is mounted in the app shell through `TopNav`'s `search` slot
+— which had existed since phase 2a and never been filled. ⌘K anywhere, or the pill. Results come
+back in three groups: **In your collection** (with the copy count, the fastest way to tell "I have
+this" from "I could have this"), **In the catalog**, and **Go to** for sets and decks. Enter opens
+the card page with `?from=` set to wherever you were, so its back arrow returns there.
+
+Openness is derived rather than stored — the palette is open while the path it opened on is still
+the path you are on — so navigating closes it with no effect and no cascading render. Results carry
+the query they answer, the way `useCardSearch` does, so a stale page is never shown and no
+synchronous `setState` sits in an effect body.
+
 **Card page gaps to close**, both small and both drawn in `Card.dc.html`:
 - `getCardHolders` returns quantity but not cost — needs `SUM(quantity * acquired_price)` so the page
   can show what you paid.

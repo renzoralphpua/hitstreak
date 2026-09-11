@@ -31,7 +31,9 @@ export default function TopNav({ search, right }: Props) {
         })}
       </nav>
       <div className="ml-auto flex items-center gap-3">
-        {search && <div className="hidden w-72 md:block">{search}</div>}
+        {/* No wrapper: the palette hides its own trigger below md and its overlay is fixed, so a
+            `hidden` ancestor here would take the overlay with it. */}
+        {search}
         {right}
       </div>
     </header>

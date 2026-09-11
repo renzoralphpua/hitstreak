@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getSession } from "@/lib/session";
-import { TopNav, BottomTabBar } from "@/components/ui";
+import { TopNav, BottomTabBar, CommandPalette } from "@/components/ui";
 import UserMenu from "@/components/ui/UserMenu";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 
@@ -15,6 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-dvh flex-col">
       <TopNav
+        search={<CommandPalette />}
         right={
           <>
             <ThemeToggle />

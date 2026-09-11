@@ -36,7 +36,8 @@ describe("GET /api/search", () => {
   it("returns no hits for a too-short query", async () => {
     const res = await GET(req("?q=a"));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ hits: [] });
+    // `jump` is always present now: the palette asks for sets and decks alongside cards.
+    expect(await res.json()).toEqual({ hits: [], jump: [] });
   });
 
   it("401s without a session", async () => {

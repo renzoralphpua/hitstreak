@@ -85,6 +85,48 @@ export async function searchCards(q: string, opts: { gameSlug?: string; limit?: 
   });
 }
 
+export interface JumpTarget { kind: "set" | "deck"; id: number; name: string; caption: string }
+
+/**
+ * Sets and decks matching a query, for the palette's "Go to" group.
+ *
+ * The palette is a navigator, and half of what you want to reach is not a card — "take me to
+ * Prismatic Evolutions" or "open my Charizard build" are the other two things on this screen.
+ * Meta decks are included alongside your own because both are browsable.
+ */
+export async function searchJumpTargets(userId: string, q: string, limit = 4): Promise<JumpTarget[]> {
+  const query = q.trim();
+  if (query.length < MIN_QUERY) return [];
+  const like = likeTerm(query);
+  const c = await db();
+  const [sets, decks] = await Promise.all([
+    c.execute({
+      sql: `SELECT se.id, se.name, g.name AS game, se.code
+            FROM sets se JOIN games g ON g.id = se.game_id
+            WHERE se.name LIKE ? ESCAPE '\' OR se.code LIKE ? ESCAPE '\'
+            ORDER BY se.series_rank IS NULL, se.series_rank DESC, se.release_date DESC LIMIT ?`,
+      args: [like, like, limit],
+    }),
+    c.execute({
+      sql: `SELECT d.id, d.name, g.name AS game, d.owner_user_id IS NULL AS is_meta
+            FROM decks d JOIN games g ON g.id = d.game_id
+            WHERE d.name LIKE ? ESCAPE '\' AND (d.owner_user_id IS NULL OR d.owner_user_id = ?)
+            ORDER BY d.owner_user_id IS NULL, d.updated_at DESC LIMIT ?`,
+      args: [like, userId, limit],
+    }),
+  ]);
+  return [
+    ...sets.rows.map((r) => ({
+      kind: "set" as const, id: Number(r.id), name: String(r.name),
+      caption: [String(r.game), r.code == null ? null : String(r.code)].filter(Boolean).join(" · "),
+    })),
+    ...decks.rows.map((r) => ({
+      kind: "deck" as const, id: Number(r.id), name: String(r.name),
+      caption: `${r.game} · ${Number(r.is_meta) === 1 ? "meta deck" : "your deck"}`,
+    })),
+  ];
+}
+
 export interface Game { id: number; slug: string; name: string }
 export async function listGames(): Promise<Game[]> {
   const c = await db();

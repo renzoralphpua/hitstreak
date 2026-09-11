@@ -294,6 +294,27 @@ export interface CardHolder {
   uncostedQuantity: number;
 }
 /** The signed-in user's collections that hold any printing of `cardId`, with copies and what they cost. */
+/**
+ * How many copies of each of these cards the caller owns, across every collection.
+ *
+ * One query for a whole result page rather than one per row: the palette asks about up to twenty
+ * cards at a time, and the answer only decides which GROUP a row lands in.
+ */
+export async function getOwnedCounts(userId: string, cardIds: number[]): Promise<Map<number, number>> {
+  if (cardIds.length === 0) return new Map();
+  const c = await db();
+  const r = await c.execute({
+    sql: `SELECT p.card_id, SUM(ci.quantity) AS n
+          FROM collection_items ci
+          JOIN collections co ON co.id = ci.collection_id AND co.user_id = ?
+          JOIN printings p ON p.id = ci.printing_id
+          WHERE p.card_id IN (${cardIds.map(() => "?").join(",")})
+          GROUP BY p.card_id`,
+    args: [userId, ...cardIds],
+  });
+  return new Map(r.rows.map((x) => [Number(x.card_id), Number(x.n)]));
+}
+
 export interface CardLot {
   itemId: number;
   collectionId: number;
