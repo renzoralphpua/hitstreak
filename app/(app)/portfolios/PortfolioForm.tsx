@@ -63,7 +63,7 @@ export default function PortfolioForm(props: Props) {
         )}
       </div>
       {error && (
-        <p role="alert" className="text-[13px] text-accent">
+        <p role="alert" className="text-base text-accent">
           {error}
         </p>
       )}

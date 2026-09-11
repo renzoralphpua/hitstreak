@@ -71,6 +71,6 @@ describe("MoneyDisplay", () => {
 
   it("applies the lg size class", () => {
     render(<MoneyDisplay amount={12} size="lg" />);
-    expect(screen.getByText("$12").className).toMatch(/text-\[56px\]/);
+    expect(screen.getByText("$12").className).toMatch(/text-hero/);
   });
 });

@@ -14,7 +14,7 @@ function Group({ title, alerts, onDelete, busyId }: { title: string; alerts: Ale
   if (alerts.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{title}</span>
+      <span className="text-caption font-semibold uppercase tracking-[0.06em] text-muted">{title}</span>
       <ul className="flex flex-col gap-2">
         {alerts.map((a) => {
           const triggered = !a.armed;
@@ -30,16 +30,16 @@ function Group({ title, alerts, onDelete, busyId }: { title: string; alerts: Ale
                 imageUrl={a.imageUrl}
                 right={
                   <>
-                    <span className="text-sm font-semibold">{formatMoney(a.market)}</span>
+                    <span className="text-base font-semibold">{formatMoney(a.market)}</span>
                     {triggered ? (
-                      <span className="text-[11px] opacity-70">
+                      <span className="text-micro opacity-70">
                         re-arms {a.direction === "above" ? "below" : "above"} {formatMoney(a.threshold)}
                       </span>
                     ) : a.change30d ? (
                       // Same up/down tone as the mockup's watching rows; a 0 change stays dim.
                       <span
                         className={cn(
-                          "text-[11px]",
+                          "text-micro",
                           a.change30d.amount > 0 && "text-gain",
                           a.change30d.amount < 0 && "text-accent",
                           a.change30d.amount === 0 && "text-dim"
@@ -48,7 +48,7 @@ function Group({ title, alerts, onDelete, busyId }: { title: string; alerts: Ale
                         {formatPercent(a.change30d.ratio)} · 30D
                       </span>
                     ) : (
-                      <span className="text-[11px] text-dim">no 30D history</span>
+                      <span className="text-micro text-dim">no 30D history</span>
                     )}
                     <Button
                       variant="secondary"
@@ -99,7 +99,7 @@ export default function AlertList({ alerts }: { alerts: Alert[] }) {
       <Group title="Triggered" alerts={alerts.filter((a) => !a.armed)} onDelete={remove} busyId={busyId} />
       <Group title="Watching" alerts={alerts.filter((a) => a.armed)} onDelete={remove} busyId={busyId} />
       {error && (
-        <p role="alert" className="text-[13px] text-accent">
+        <p role="alert" className="text-base text-accent">
           {error}
         </p>
       )}

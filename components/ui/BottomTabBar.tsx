@@ -19,7 +19,7 @@ export default function BottomTabBar() {
             key={it.href}
             href={it.href}
             aria-current={active ? "page" : undefined}
-            className={cn("flex min-h-11 flex-col items-center gap-1 py-1.5 text-[11px]", active ? "font-semibold text-ink" : "text-dim")}
+            className={cn("flex min-h-11 flex-col items-center gap-1 py-1.5 text-micro", active ? "font-semibold text-ink" : "text-dim")}
           >
             <Icon name={ICONS[it.label]} size="lg" />
             {it.label}

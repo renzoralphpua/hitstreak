@@ -62,7 +62,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="font-display text-[22px] leading-none text-ink">New alert</h2>
+      <h2 className="font-display text-title leading-none text-ink">New alert</h2>
 
       {card == null ? (
         <>
@@ -76,7 +76,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
               ))}
             </ul>
           )}
-          {settled && hits.length === 0 && <p className="text-[13px] text-dim">No cards match “{q.trim()}”.</p>}
+          {settled && hits.length === 0 && <p className="text-base text-dim">No cards match “{q.trim()}”.</p>}
         </>
       ) : (
         <>
@@ -99,7 +99,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
           />
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-dim">Printing</span>
+            <span className="text-caption text-dim">Printing</span>
             <div className="flex flex-wrap gap-2">
               {card.printings.map((p) => (
                 <Pill key={p.printingId} selected={p.printingId === printingId} onClick={() => setPrintingId(p.printingId)}>
@@ -110,7 +110,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-dim">Notify me when the market price</span>
+            <span className="text-caption text-dim">Notify me when the market price</span>
             <div className="grid grid-cols-2 gap-2">
               <Pill selected={direction === "above"} onClick={() => setDirection("above")}>
                 rises above
@@ -119,7 +119,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
                 drops below
               </Pill>
             </div>
-            <label className="flex flex-col gap-1.5 text-xs text-dim">
+            <label className="flex flex-col gap-1.5 text-caption text-dim">
               Price (USD)
               <Input
                 type="number"
@@ -131,7 +131,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
                 onChange={(e) => setThreshold(e.target.value)}
               />
             </label>
-            {hint && <span className="num text-xs text-dim">{hint}</span>}
+            {hint && <span className="num text-caption text-dim">{hint}</span>}
           </div>
 
           <Button onClick={submit} disabled={busy || threshold.trim() === ""}>
@@ -141,7 +141,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
       )}
 
       {(error ?? searchError) && (
-        <p role="alert" className="text-[13px] text-accent">
+        <p role="alert" className="text-base text-accent">
           {error ?? searchError}
         </p>
       )}

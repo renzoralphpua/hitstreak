@@ -189,8 +189,20 @@ The artboards settle which size wins: **218 uses of 12px against 90 of 13px.** T
 prefers 12; the code drifted to 13.
 
 **Body ramp (DM Sans):** `text-micro` 11 · `text-caption` 12 · `text-base` 14 · `text-stat` 18.
-**Display ramp (DM Serif):** `text-dialog` 22 · `text-section` 26 · `text-price` 32 · `text-hero` 56,
-plus 44 for the phone hero. The wordmark stays at 24, outside the ramp — it is a brand mark.
+**Display ramp (DM Serif):** `text-title` 22 · `text-wordmark` 24 · `text-section` 26 · `text-price` 32
+· `text-hero` 56, plus 44 for the phone hero.
+
+`text-base` is redefined to **14px**; Tailwind's own default is 16, which never matched the 14px body
+font-size this app has always set. The wordmark earns a token of its own rather than sitting outside
+the ramp: it is 24 in a bar, and the standalone lockup on auth and landing uses `text-section`, which
+keeps the page heading larger than the branding above it.
+
+**Implemented 2026-09-11.** The split landed 37 of the 64 thirteens on caption and promoted 27 to
+base — every `role="alert"`, every empty state, every notice. `tests/ui/type-scale.test.ts` fails on
+any arbitrary `text-[Npx]` or any Tailwind generic size in `app/` or `components/`, and the artboards
+were folded in the same pass: 89 more thirteens, plus 15→14 (21), 20→18, 30→26, 17→18, 36→32, 16→14,
+and the live set now uses only the nine sizes plus the phone hero's 44. `Ticker` and `Playmat` were
+left alone — they are archived directions, explicitly not chosen.
 
 **Splitting the 64 thirteens:** *supporting another element* → 12 (back links, archetype and game
 labels, field labels, "sorted by value"); *read as content* → 14 (error messages, empty states, "No

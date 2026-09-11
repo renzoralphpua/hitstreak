@@ -44,7 +44,7 @@ export default function MetaDeckRow({ deck, decklist }: { deck: DeckSummary; dec
     <Panel className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <div className="flex min-w-0 grow flex-col">
         <span className="truncate font-semibold text-ink">{deck.name}</span>
-        <span className="truncate text-xs text-dim">
+        <span className="truncate text-caption text-dim">
           {deck.gameName} · <span className="num">{deck.cardCount}</span> cards
           {deck.archetype ? ` · ${deck.archetype}` : ""}
           {deck.format ? ` · ${deck.format}` : ""}
@@ -58,7 +58,7 @@ export default function MetaDeckRow({ deck, decklist }: { deck: DeckSummary; dec
         Delete
       </Button>
       {error && (
-        <p role="alert" className="w-full text-[13px] text-accent">
+        <p role="alert" className="w-full text-base text-accent">
           {error}
         </p>
       )}

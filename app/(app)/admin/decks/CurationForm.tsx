@@ -153,7 +153,7 @@ export default function CurationForm({ games }: { games: Array<{ slug: string; n
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[13px] text-muted">Tier</span>
+        <span className="text-caption text-muted">Tier</span>
         <Pill selected={fields.tier === ""} onClick={() => set("tier", "")} aria-label="No tier">
           —
         </Pill>
@@ -178,17 +178,17 @@ export default function CurationForm({ games }: { games: Array<{ slug: string; n
         <Button size="sm" disabled={busy || !ready || fields.name.trim() === ""} onClick={save}>
           {editingId == null ? "Save deck" : "Save changes"}
         </Button>
-        {notice && <span className="text-[13px] text-gain">{notice}</span>}
+        {notice && <span className="text-base text-gain">{notice}</span>}
       </div>
 
       {error && (
-        <p role="alert" className="text-[13px] text-accent">
+        <p role="alert" className="text-base text-accent">
           {error}
         </p>
       )}
 
       {resolutions !== null && resolutions.length === 0 && (
-        <p className="text-[13px] text-dim">Nothing to resolve — that list has no card lines.</p>
+        <p className="text-base text-dim">Nothing to resolve — that list has no card lines.</p>
       )}
 
       {resolutions !== null && resolutions.length > 0 && (
@@ -231,10 +231,10 @@ function ResolutionRow({
   return (
     <li className="flex flex-col gap-2 px-3 py-2.5" data-resolved={cardId != null}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="num text-sm font-semibold text-ink">×{line.quantity}</span>
+        <span className="num text-base font-semibold text-ink">×{line.quantity}</span>
         <span className="min-w-0 grow text-ink">{chosen ? chosen.name : line.text}</span>
-        {zone && <span className="text-xs text-dim">{zone}</span>}
-        <span className={`text-xs ${cardId == null ? "text-accent" : "text-gain"}`}>
+        {zone && <span className="text-caption text-dim">{zone}</span>}
+        <span className={`text-caption ${cardId == null ? "text-accent" : "text-gain"}`}>
           {cardId == null ? "needs a card" : chosen ? `${chosen.setName} · ${chosen.number ?? "—"}` : "resolved"}
         </span>
         {cardId != null && (
@@ -282,9 +282,9 @@ function CardPicker({ gameSlug, initialQuery, onPick }: { gameSlug: string; init
           ))}
         </ul>
       )}
-      {settled && hits.length === 0 && <p className="text-[13px] text-dim">No cards match “{q.trim()}”.</p>}
+      {settled && hits.length === 0 && <p className="text-base text-dim">No cards match “{q.trim()}”.</p>}
       {error && (
-        <p role="alert" className="text-[13px] text-accent">
+        <p role="alert" className="text-base text-accent">
           {error}
         </p>
       )}

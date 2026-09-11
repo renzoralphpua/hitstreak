@@ -71,7 +71,7 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
   return (
     <div className="grid gap-10 md:grid-cols-[380px_1fr]">
       <div className="flex flex-col gap-4">
-        <Link href="/portfolios" className="text-[13px] text-muted hover:text-ink">
+        <Link href="/portfolios" className="text-caption text-muted hover:text-ink">
           ← Binders
         </Link>
 
@@ -113,7 +113,7 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
           )}
         </div>
         {summary.unpriced > 0 && (
-          <p className="text-[13px] text-dim">
+          <p className="text-caption text-dim">
             {summary.unpriced} {summary.unpriced === 1 ? "copy has" : "copies have"} no market price yet, so
             they are left out of the total.
           </p>

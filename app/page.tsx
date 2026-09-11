@@ -6,8 +6,8 @@ export default async function Home() {
   if (await getSession()) redirect("/portfolios");
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-ground px-6 py-12 text-center">
-      <span className="font-display text-3xl text-ink">Hitstreak</span>
-      <p className="max-w-sm text-[15px] text-muted">
+      <span className="font-display text-section text-ink">Hitstreak</span>
+      <p className="max-w-sm text-base text-muted">
         Track your collection, prices, and decks — Pokémon, One Piece, Riftbound.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-3">

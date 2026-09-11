@@ -56,7 +56,7 @@ function Variants({ children }: { children: ReactNode }) {
 function Section({ name, children }: { name: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-display text-xl">{name}</h2>
+      <h2 className="font-display text-title">{name}</h2>
       {children}
     </section>
   );
@@ -72,8 +72,8 @@ export default function Gallery() {
     <div className="flex flex-col gap-10 p-8 max-w-6xl mx-auto">
       <header className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="font-display text-3xl">Hitstreak UI</h1>
-          <p className="text-sm text-dim">Every primitive, every variant — light and dark. Name a component to change it.</p>
+          <h1 className="font-display text-section">Hitstreak UI</h1>
+          <p className="text-base text-dim">Every primitive, every variant — light and dark. Name a component to change it.</p>
         </div>
         <ThemeToggle />
       </header>
@@ -101,7 +101,7 @@ export default function Gallery() {
               <Button size="sm" href="/dev/ui" variant="secondary">
                 Small link
               </Button>
-              <span className="text-xs text-dim">size=&quot;sm&quot;: 44px on phones, 32px from md up</span>
+              <span className="text-caption text-dim">size=&quot;sm&quot;: 44px on phones, 32px from md up</span>
             </div>
           </div>
         </Variants>
@@ -122,7 +122,7 @@ export default function Gallery() {
       <Section name="Panel">
         <Variants>
           <Panel>
-            <p className="text-sm text-ink">A panel is a surface with a hairline border — cards, forms, and grouped content live here.</p>
+            <p className="text-base text-ink">A panel is a surface with a hairline border — cards, forms, and grouped content live here.</p>
           </Panel>
         </Variants>
       </Section>
@@ -267,12 +267,12 @@ export default function Gallery() {
               imageUrl={null}
               right={
                 <>
-                  <span className="text-sm font-semibold">{formatMoney(1465)}</span>
-                  <span className="text-[11px] opacity-70">re-arms below {formatMoney(1450)}</span>
+                  <span className="text-base font-semibold">{formatMoney(1465)}</span>
+                  <span className="text-micro opacity-70">re-arms below {formatMoney(1450)}</span>
                 </>
               }
             />
-            <span className="text-xs text-dim">tone=&quot;inverted&quot;: a triggered alert row</span>
+            <span className="text-caption text-dim">tone=&quot;inverted&quot;: a triggered alert row</span>
           </div>
         </Variants>
       </Section>
@@ -286,7 +286,7 @@ export default function Gallery() {
       <Section name="BottomTabBar">
         <Variants>
           <div className="flex flex-col gap-2">
-            <p className="text-xs text-dim">visible below md</p>
+            <p className="text-caption text-dim">visible below md</p>
             <BottomTabBar />
           </div>
         </Variants>

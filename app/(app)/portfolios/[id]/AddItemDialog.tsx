@@ -150,7 +150,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
             className="w-full max-w-lg"
           >
             <div className="flex flex-col gap-4">
-              <h2 id={headingId} className="font-display text-[22px] leading-none text-ink">
+              <h2 id={headingId} className="font-display text-title leading-none text-ink">
                 Add a card
               </h2>
 
@@ -166,14 +166,14 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
                             subtitle={h.subtitle}
                             imageUrl={h.imageUrl}
                             onClick={() => pick(h)}
-                            right={<span className="text-sm font-semibold text-ink">{formatMoney(lowestMarket(h.printings))}</span>}
+                            right={<span className="text-base font-semibold text-ink">{formatMoney(lowestMarket(h.printings))}</span>}
                           />
                         </li>
                       ))}
                     </ul>
                   )}
                   {settled && hits.length === 0 && (
-                    <p className="text-[13px] text-dim">No cards match “{query}”.</p>
+                    <p className="text-base text-dim">No cards match “{query}”.</p>
                   )}
                 </>
               ) : (
@@ -181,7 +181,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
                   <CardRow name={selected.name} subtitle={selected.subtitle} imageUrl={selected.imageUrl} />
 
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-xs text-dim">Printing</span>
+                    <span className="text-caption text-dim">Printing</span>
                     <div className="flex flex-wrap gap-2">
                       {selected.printings.map((p) => (
                         <Pill
@@ -196,7 +196,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-xs text-dim">Condition</span>
+                    <span className="text-caption text-dim">Condition</span>
                     <div className="flex flex-wrap gap-2">
                       {CONDITIONS.map((c) => (
                         <Pill key={c} selected={c === condition} onClick={() => setCondition(c)}>
@@ -207,7 +207,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <label className="flex flex-col gap-1.5 text-xs text-dim">
+                    <label className="flex flex-col gap-1.5 text-caption text-dim">
                       Quantity
                       <Input
                         type="number"
@@ -217,7 +217,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
                         onChange={(e) => setQuantity(e.target.value)}
                       />
                     </label>
-                    <label className="flex flex-col gap-1.5 text-xs text-dim">
+                    <label className="flex flex-col gap-1.5 text-caption text-dim">
                       Price paid (each, optional)
                       <Input
                         type="number"
@@ -239,7 +239,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
               )}
 
               {(searchError ?? error) && (
-                <p role="alert" className="text-[13px] text-accent">
+                <p role="alert" className="text-base text-accent">
                   {searchError ?? error}
                 </p>
               )}

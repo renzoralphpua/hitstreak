@@ -21,7 +21,7 @@ export default function LineChart({ points, from, to, height = 150, label, class
   const valued = points.filter((p): p is { date: string; value: number } => p.value != null && Number.isFinite(p.value));
   if (valued.length === 0) {
     return (
-      <div className={cn("flex items-center justify-center text-[13px] text-dim", className)} style={{ height }}>
+      <div className={cn("flex items-center justify-center text-caption text-dim", className)} style={{ height }}>
         Not enough history yet.
       </div>
     );
@@ -66,7 +66,7 @@ export default function LineChart({ points, from, to, height = 150, label, class
           style={{ top: Y(last.value) }}
         />
       </div>
-      <div className="flex justify-between text-xs text-dim">
+      <div className="flex justify-between text-caption text-dim">
         <span>{fmt.format(new Date(`${from}T00:00:00Z`))}</span>
         <span>{fmt.format(new Date(`${to}T00:00:00Z`))}</span>
       </div>

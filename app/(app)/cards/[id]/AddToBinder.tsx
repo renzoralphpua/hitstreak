@@ -20,7 +20,7 @@ export default function AddToBinder({ portfolios, card }: { portfolios: Portfoli
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-xs text-dim">Add to:</span>
+        <span className="text-caption text-dim">Add to:</span>
         {portfolios.map((p) => (
           <Pill key={p.id} selected={p.id === target} onClick={() => setTarget(p.id)}>
             {p.name}

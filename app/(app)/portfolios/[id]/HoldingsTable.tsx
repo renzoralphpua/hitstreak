@@ -74,17 +74,17 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                 <>
                   {h.value == null ? (
                     <>
-                      <span className="text-lg font-semibold text-dim">—</span>
-                      <span className="text-[11px] text-dim">no price</span>
+                      <span className="text-stat font-semibold text-dim">—</span>
+                      <span className="text-micro text-dim">no price</span>
                     </>
                   ) : (
-                    <span className="text-lg font-semibold text-ink">{formatMoney(h.value)}</span>
+                    <span className="text-stat font-semibold text-ink">{formatMoney(h.value)}</span>
                   )}
                   <PriceDelta amount={h.value != null && h.cost != null ? h.value - h.cost : null} />
                   {/* Cost covers only the priced lots, so a partly-uncosted holding's gain is
                       overstated. Say so rather than letting the number quietly mislead. */}
                   {h.uncostedQuantity > 0 && (
-                    <span className="text-[11px] text-dim">
+                    <span className="text-micro text-dim">
                       {h.uncostedQuantity === h.quantity
                         ? "no cost recorded"
                         : `${h.uncostedQuantity} of ${h.quantity} without a cost`}
@@ -101,7 +101,7 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                     >
                       −
                     </Button>
-                    <span className="num min-w-6 text-center text-sm font-semibold text-ink">{h.quantity}</span>
+                    <span className="num min-w-6 text-center text-base font-semibold text-ink">{h.quantity}</span>
                     <Button
                       variant="secondary"
                       aria-label={`Add one ${h.cardName}`}
@@ -116,7 +116,7 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                       variant="secondary"
                       aria-label={`Remove ${h.cardName} from binder`}
                       size="sm"
-                      className="ml-1 text-[13px] font-normal"
+                      className="ml-1 text-caption font-normal"
                       disabled={busy}
                       onClick={() => remove(h)}
                     >
@@ -127,7 +127,7 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
               }
             />
             {error && (
-              <p role="alert" className="px-2.5 text-[13px] text-accent">
+              <p role="alert" className="px-2.5 text-base text-accent">
                 {error}
               </p>
             )}

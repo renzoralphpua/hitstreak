@@ -24,14 +24,14 @@ function SetPanel({ set }: { set: SetCompletion }) {
         <div className="flex items-baseline justify-between gap-3">
           <span className={sealedOnly ? "text-muted" : "font-semibold text-ink"}>{set.name}</span>
           {sealedOnly ? (
-            <span className="text-xs text-dim">No singles</span>
+            <span className="text-caption text-dim">No singles</span>
           ) : (
-            <span className="num text-[13px] text-muted">
+            <span className="num text-caption text-muted">
               {set.ownedCards} / {set.totalCards}
             </span>
           )}
         </div>
-        {caption && <span className="text-xs text-dim">{caption}</span>}
+        {caption && <span className="text-caption text-dim">{caption}</span>}
         {!sealedOnly && (
           <ProgressBar
             value={set.ownedCards / set.totalCards}

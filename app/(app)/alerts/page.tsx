@@ -45,7 +45,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
               that printing — its state is seeded from props only on mount. */}
           <NewAlertForm key={preselected?.printingId ?? "search"} preselected={preselected} />
         </Panel>
-        <Panel className="flex flex-col gap-2 text-[13px] text-muted">
+        <Panel className="flex flex-col gap-2 text-caption text-muted">
           <span className="font-semibold text-ink">How alerts work</span>
           <p>
             Prices sync once a day. Each alert emails you once when it crosses, then re-arms after the price

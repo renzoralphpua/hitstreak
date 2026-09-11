@@ -98,7 +98,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
   return (
     <div className="mx-auto grid w-full max-w-read gap-11 md:grid-cols-[340px_1fr]">
       <div className="flex flex-col gap-3.5">
-        <Link href={`/sets/${card.setId}`} className="text-[13px] text-muted hover:text-ink">
+        <Link href={`/sets/${card.setId}`} className="text-caption text-muted hover:text-ink">
           ← {card.setName}
         </Link>
         <div
@@ -124,7 +124,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
 
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
-          <span className="text-[13px] text-muted">
+          <span className="text-caption text-muted">
             {card.gameName} · {card.setName} · {card.number ?? "—"} · {card.rarity ?? "—"}
           </span>
           <SectionHeading as="h1" title={card.name} />
@@ -139,13 +139,13 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
               caption={changeCaption}
             />
           </div>
-          <span className="text-xs text-dim">Market price · as of {primary?.priceDate ?? "—"}</span>
+          <span className="text-caption text-dim">Market price · as of {primary?.priceDate ?? "—"}</span>
         </div>
 
         <Panel className="flex flex-col gap-2.5">
           <span className="font-semibold text-ink">Printings</span>
           <div className="flex flex-col">
-            <div className="grid grid-cols-[1.6fr_1fr_1fr] gap-3 border-b border-hairline-soft pb-2 text-xs text-dim">
+            <div className="grid grid-cols-[1.6fr_1fr_1fr] gap-3 border-b border-hairline-soft pb-2 text-caption text-dim">
               <span>Printing</span>
               <span className="text-right">Market</span>
               <span className="text-right">You own</span>
@@ -165,7 +165,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
           </div>
         </Panel>
 
-        <div className="flex flex-wrap items-center gap-3 text-[13px]">
+        <div className="flex flex-wrap items-center gap-3 text-caption">
           {holders.length === 0 ? (
             <span className="text-dim">Not in any of your binders yet.</span>
           ) : (
@@ -193,7 +193,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
           <div className="flex flex-wrap items-center gap-3">
             <span className="font-semibold text-ink">Price history</span>
             {stats && (
-              <span className="num ml-auto text-xs text-dim">
+              <span className="num ml-auto text-caption text-dim">
                 Low {formatMoney(stats.low)} · High {formatMoney(stats.high)}
               </span>
             )}
@@ -230,7 +230,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
         {attrs.length > 0 && (
           <Panel className="flex flex-col gap-2">
             <span className="font-semibold text-ink">Details</span>
-            <dl className="flex flex-col gap-1 text-[13px]">
+            <dl className="flex flex-col gap-1 text-caption">
               {attrs.map(([k, v]) => (
                 <div key={k} className="flex gap-2">
                   <dt className="text-dim">{k}:</dt>

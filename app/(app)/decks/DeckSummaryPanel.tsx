@@ -17,9 +17,9 @@ export default function DeckSummaryPanel({ deck, gap }: { deck: DeckSummary; gap
             {deck.name}
             {deck.tier != null && <TierBadge tier={deck.tier} />}
           </span>
-          {deck.archetype && deck.archetype !== deck.name && <span className="text-[13px] text-dim">{deck.archetype}</span>}
+          {deck.archetype && deck.archetype !== deck.name && <span className="text-caption text-dim">{deck.archetype}</span>}
         </div>
-        <div className="flex items-baseline justify-between text-[13px]">
+        <div className="flex items-baseline justify-between text-caption">
           <span className="text-muted">
             You own <span className="num font-semibold text-ink">{gap.owned} / {gap.total}</span>
           </span>
@@ -35,7 +35,7 @@ export default function DeckSummaryPanel({ deck, gap }: { deck: DeckSummary; gap
         </div>
         <ProgressBar value={ratio} label={`${deck.name} completion`} tone={complete ? "gain" : gap.owned > 0 ? "accent" : "muted"} />
         {gap.unpricedMissing > 0 && (
-          <span className="text-xs text-dim">
+          <span className="text-caption text-dim">
             {gap.unpricedMissing} missing {gap.unpricedMissing === 1 ? "copy has" : "copies have"} no market price
           </span>
         )}

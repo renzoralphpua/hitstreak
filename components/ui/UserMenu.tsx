@@ -16,7 +16,7 @@ export default function UserMenu({ name }: { name: string }) {
         router.push("/");
         router.refresh();
       }}
-      className="flex h-11 w-11 items-center justify-center rounded-full bg-hairline text-sm font-semibold text-ink md:h-9 md:w-9"
+      className="flex h-11 w-11 items-center justify-center rounded-full bg-hairline text-base font-semibold text-ink md:h-9 md:w-9"
     >
       {initial}
     </button>

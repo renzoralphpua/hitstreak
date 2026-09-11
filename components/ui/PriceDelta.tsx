@@ -16,7 +16,7 @@ export default function PriceDelta({ amount, ratio, caption, className }: Props)
   if (amount == null || !Number.isFinite(amount)) return <span className={cn("text-dim", className)}>—</span>;
   if (amount === 0) {
     return (
-      <span className={cn("num text-sm text-dim", className)}>
+      <span className={cn("num text-base text-dim", className)}>
         $0.00
         {ratio != null && <> ({formatPercent(ratio)})</>}
         {caption && <span className="ml-1 font-normal text-dim">{caption}</span>}
@@ -25,7 +25,7 @@ export default function PriceDelta({ amount, ratio, caption, className }: Props)
   }
   const up = amount >= 0;
   return (
-    <span className={cn("num text-sm font-medium", up ? "text-gain" : "text-accent", className)}>
+    <span className={cn("num text-base font-medium", up ? "text-gain" : "text-accent", className)}>
       {up ? "▲" : "▼"} {formatDelta(amount)}
       {ratio != null && <> ({formatPercent(ratio)})</>}
       {caption && <span className="ml-1 font-normal text-dim">{caption}</span>}

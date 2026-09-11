@@ -85,12 +85,12 @@ export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portf
 
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {portfolios.length === 0 ? (
-            <Link href="/portfolios" className="text-[13px] text-accent">
+            <Link href="/portfolios" className="text-caption text-accent">
               Create a binder to start marking cards owned
             </Link>
           ) : (
             <>
-              <span className="text-xs text-dim">Add to:</span>
+              <span className="text-caption text-dim">Add to:</span>
               {portfolios.map((p) => (
                 <Pill
                   key={p.id}
@@ -100,14 +100,14 @@ export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portf
                   {p.name}
                 </Pill>
               ))}
-              <span className="ml-1.5 text-xs text-dim">Tap a card to add one copy</span>
+              <span className="ml-1.5 text-caption text-dim">Tap a card to add one copy</span>
             </>
           )}
         </div>
       </div>
 
       {error && (
-        <p role="alert" className="text-[13px] text-accent">
+        <p role="alert" className="text-base text-accent">
           {error}
         </p>
       )}
@@ -133,7 +133,7 @@ export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portf
               imageUrl={c.imageUrl}
               onClick={canAdd ? () => add(c) : undefined}
             />
-            <Link href={`/cards/${c.cardId}`} className="text-xs text-accent">
+            <Link href={`/cards/${c.cardId}`} className="text-caption text-accent">
               Details
             </Link>
           </div>

@@ -13,8 +13,8 @@ export default function TopNav({ search, right }: Props) {
     // Sticky on every screen: the builder is the worst case (a long card list with Save and
     // draft status in the heading) but nothing is improved by the wordmark and nav scrolling away.
     <header className="sticky top-0 z-40 flex h-16 items-center gap-9 border-b border-hairline bg-ground px-6 md:px-10">
-      <Link href="/portfolios" className="font-display text-2xl text-ink">Hitstreak</Link>
-      <nav className="hidden gap-5 text-[15px] md:flex" aria-label="Primary">
+      <Link href="/portfolios" className="font-display text-wordmark text-ink">Hitstreak</Link>
+      <nav className="hidden gap-5 text-base md:flex" aria-label="Primary">
         {NAV_ITEMS.map((it) => {
           const active = isActive(pathname, it.href);
           return (

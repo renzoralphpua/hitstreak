@@ -21,9 +21,9 @@ type Props =
     });
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold min-h-11 transition-opacity disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-base font-semibold min-h-11 transition-opacity disabled:opacity-50";
 // The `md:` variant carries a different modifier, so it survives beside `min-h-11` (like Pill's shape).
-const small = "min-h-11 px-3 py-1 text-[13px] md:min-h-8";
+const small = "min-h-11 px-3 py-1 text-caption md:min-h-8";
 const skin = (variant: Variant) =>
   variant === "primary"
     ? "bg-chip text-chip-ink hover:opacity-90"

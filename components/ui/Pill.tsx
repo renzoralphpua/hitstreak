@@ -5,7 +5,7 @@ import { cn } from "./cn";
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean; href?: string; scroll?: boolean };
 
 // 44px minimum on phones (thumb target), back to the compact 32px chip from md up.
-const shape = "rounded-full px-3 py-1.5 text-[13px] leading-none min-h-11 md:min-h-8 transition-colors";
+const shape = "rounded-full px-3 py-1.5 text-caption leading-none min-h-11 md:min-h-8 transition-colors";
 const skin = (selected: boolean) =>
   selected ? "bg-chip text-chip-ink font-medium" : "border border-hairline text-muted hover:text-ink";
 

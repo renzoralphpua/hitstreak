@@ -34,7 +34,7 @@ export default function CopyDeckButton({ sourceId }: { sourceId: number }) {
         Copy to my decks
       </Button>
       {error && (
-        <span role="alert" className="text-[13px] text-accent">
+        <span role="alert" className="text-base text-accent">
           {error}
         </span>
       )}

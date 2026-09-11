@@ -55,7 +55,7 @@ export default function AuthForm({ mode, next = "/portfolios" }: { mode: "sign-i
         minLength={8}
         autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
       />
-      {error && <p role="alert" className="text-[13px] text-accent">{error}</p>}
+      {error && <p role="alert" className="text-base text-accent">{error}</p>}
       <Button type="submit" disabled={busy}>{mode === "sign-in" ? "Sign in" : "Create account"}</Button>
     </form>
   );

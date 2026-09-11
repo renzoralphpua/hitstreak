@@ -36,7 +36,7 @@ export default function CardRow({ name, subtitle, imageUrl, right, onClick, clas
       />
       <div className="flex min-w-0 grow flex-col">
         <span className={cn("truncate font-semibold", inverted ? "text-chip-ink" : "text-ink")}>{name}</span>
-        <span className={cn("truncate text-xs", inverted ? "text-chip-ink/70" : "text-dim")}>{subtitle}</span>
+        <span className={cn("truncate text-caption", inverted ? "text-chip-ink/70" : "text-dim")}>{subtitle}</span>
       </div>
       {right && <div className="num flex shrink-0 flex-col items-end">{right}</div>}
     </Wrapper>

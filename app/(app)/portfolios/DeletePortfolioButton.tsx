@@ -34,7 +34,7 @@ export default function DeletePortfolioButton({ id, name, count }: { id: number;
         Delete
       </Button>
       {error && (
-        <p role="alert" className="text-[13px] text-accent">
+        <p role="alert" className="text-base text-accent">
           {error}
         </p>
       )}

@@ -55,7 +55,7 @@ export default function NewDeckForm({ games }: { games: Array<{ slug: string; na
         </Button>
       </div>
       {error && (
-        <p role="alert" className="text-[13px] text-accent">
+        <p role="alert" className="text-base text-accent">
           {error}
         </p>
       )}

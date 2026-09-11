@@ -8,9 +8,9 @@ export default function SectionHeading({ title, caption, trailing, className, as
     // flex-wrap, not a per-page override: a 26px title plus a caption plus two `trailing` buttons
     // (/decks) does not fit 390px, and every caller wants the same answer.
     <div className={cn("flex flex-wrap items-baseline gap-3", className)}>
-      <Tag className="font-display text-[26px] leading-none text-ink">{title}</Tag>
-      {caption && <span className="text-[13px] text-dim">{caption}</span>}
-      {trailing && <div className="ml-auto flex items-center gap-3 text-[13px]">{trailing}</div>}
+      <Tag className="font-display text-section leading-none text-ink">{title}</Tag>
+      {caption && <span className="text-caption text-dim">{caption}</span>}
+      {trailing && <div className="ml-auto flex items-center gap-3 text-caption">{trailing}</div>}
     </div>
   );
 }

@@ -82,7 +82,7 @@ export default function DeckActions({ id, name }: { id: number; name: string }) 
         </div>
       )}
       {error && (
-        <p role="alert" className="text-[13px] text-accent">
+        <p role="alert" className="text-base text-accent">
           {error}
         </p>
       )}

@@ -33,8 +33,8 @@ export default async function SharedPortfolioPage({ params, searchParams }: Page
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex h-16 items-center gap-4 border-b border-hairline px-6 md:px-10">
-        <Link href="/" className="font-display text-2xl text-ink">Hitstreak</Link>
-        <span className="text-[13px] text-dim">Shared binder · read-only</span>
+        <Link href="/" className="font-display text-wordmark text-ink">Hitstreak</Link>
+        <span className="text-caption text-dim">Shared binder · read-only</span>
       </header>
       <main className="grid grow gap-10 px-6 py-6 md:grid-cols-[380px_1fr] md:px-10">
         <div className="flex flex-col gap-4">
@@ -51,7 +51,7 @@ export default async function SharedPortfolioPage({ params, searchParams }: Page
             />
             <RangePills current={range} hrefFor={(r) => `/s/${token}?range=${r}`} />
           </div>
-          {shared.unpriced > 0 && <p className="text-[13px] text-dim">{shared.unpriced} {shared.unpriced === 1 ? "copy has" : "copies have"} no market price yet.</p>}
+          {shared.unpriced > 0 && <p className="text-caption text-dim">{shared.unpriced} {shared.unpriced === 1 ? "copy has" : "copies have"} no market price yet.</p>}
         </div>
         <div className="flex flex-col gap-4">
           <SectionHeading title="Cards" caption="sorted by value" />
@@ -67,8 +67,8 @@ export default async function SharedPortfolioPage({ params, searchParams }: Page
                     imageUrl={h.imageUrl}
                     right={
                       <>
-                        <span className="text-lg font-semibold text-ink">{formatMoney(h.value)}</span>
-                        <span className="text-[11px] text-dim">×{h.quantity}</span>
+                        <span className="text-stat font-semibold text-ink">{formatMoney(h.value)}</span>
+                        <span className="text-micro text-dim">×{h.quantity}</span>
                       </>
                     }
                   />

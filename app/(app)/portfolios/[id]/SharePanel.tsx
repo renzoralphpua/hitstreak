@@ -48,12 +48,12 @@ export default function SharePanel({ portfolioId, link }: { portfolioId: number;
     <Panel className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-3">
         <span className="font-semibold text-ink">Share</span>
-        <span className="text-xs text-dim">{current?.enabled ? "Anyone with the link can view" : "Off"}</span>
+        <span className="text-caption text-dim">{current?.enabled ? "Anyone with the link can view" : "Off"}</span>
       </div>
       {current?.enabled ? (
         <>
-          <code className="num truncate rounded-tile border border-hairline bg-ground px-3 py-2 text-[13px] text-ink" aria-label="Share link">{path}</code>
-          <p className="text-xs text-dim">Viewers see the cards and their market value — never what you paid.</p>
+          <code className="num truncate rounded-tile border border-hairline bg-ground px-3 py-2 text-caption text-ink" aria-label="Share link">{path}</code>
+          <p className="text-caption text-dim">Viewers see the cards and their market value — never what you paid.</p>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={copy} disabled={busy}>Copy link</Button>
             <Button variant="secondary" size="sm" disabled={busy}
@@ -71,8 +71,8 @@ export default function SharePanel({ portfolioId, link }: { portfolioId: number;
           Share this binder
         </Button>
       )}
-      {notice && <p className="text-[13px] text-gain">{notice}</p>}
-      {error && <p role="alert" className="text-[13px] text-accent">{error}</p>}
+      {notice && <p className="text-base text-gain">{notice}</p>}
+      {error && <p role="alert" className="text-base text-accent">{error}</p>}
     </Panel>
   );
 }

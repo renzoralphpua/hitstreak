@@ -35,9 +35,9 @@ export default async function MyDecksPage() {
             <Panel key={d.id} className="flex flex-col gap-2">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <Link href={`/decks/mine/${d.id}`} className="font-semibold text-ink">{d.name}</Link>
-                <span className="text-[13px] text-dim">{d.gameName}</span>
+                <span className="text-caption text-dim">{d.gameName}</span>
               </div>
-              <div className="flex items-baseline justify-between text-[13px]">
+              <div className="flex items-baseline justify-between text-caption">
                 <span className="num text-muted">{d.cardCount} card{d.cardCount === 1 ? "" : "s"}</span>
                 <span className={d.isDraft ? "text-accent" : "text-gain"}>{d.isDraft ? "Draft" : "Legal"}</span>
               </div>

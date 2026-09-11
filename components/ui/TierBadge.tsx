@@ -4,7 +4,7 @@ export default function TierBadge({ tier, className }: { tier: number; className
   return (
     <span
       className={cn(
-        "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        "rounded px-1.5 py-0.5 text-micro font-bold uppercase tracking-wide",
         tier === 1 ? "bg-gain text-chip-ink" : "bg-hairline text-ink",
         className
       )}

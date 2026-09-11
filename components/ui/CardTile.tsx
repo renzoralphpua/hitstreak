@@ -28,14 +28,14 @@ export default function CardTile({ name, subtitle, price, quantity, imageUrl, de
         style={imageUrl ? { backgroundImage: `url(${imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
       >
         {owned && (
-          <span className="num absolute right-1.5 top-1.5 rounded-full bg-chip px-1.5 py-0.5 text-[11px] font-semibold text-chip-ink">
+          <span className="num absolute right-1.5 top-1.5 rounded-full bg-chip px-1.5 py-0.5 text-micro font-semibold text-chip-ink">
             ×{quantity}
           </span>
         )}
       </div>
       <div className={cn("flex flex-col gap-0.5", !owned && "text-dim")}>
         <span className="font-semibold text-ink">{name}</span>
-        <span className="text-xs text-dim">{subtitle}</span>
+        <span className="text-caption text-dim">{subtitle}</span>
         <div className="flex items-baseline justify-between">
           <span className={cn("num font-semibold", !owned && "font-normal text-dim")}>{price}</span>
           {delta}

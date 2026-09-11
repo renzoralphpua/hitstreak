@@ -71,9 +71,26 @@
      outer bound on `main`, so nothing is ever truly unbounded. */
   --container-read: 1200px;
   --container-scan: 1800px;
-  /* The small type ramp. 13px carried ~64 hand-written `text-[13px]` uses before this existed. */
-  --text-caption: 13px;
+  /* THE TYPE RAMP — nine sizes, and no others. Fourteen were in use before this: 81 arbitrary
+     `text-[Npx]` against 66 Tailwind named sizes, with 12px and 13px both doing "secondary text"
+     across 107 uses and no rule deciding which. The artboards settled it at 12 (218 uses there
+     against 13's 90), so 13px is gone.
+
+     Body, DM Sans. `text-base` is redefined to 14px — Tailwind's own default is 16, which never
+     matched the 14px body font-size this app has always set.
+       caption vs base: is the text SUPPORTING another element, or is it READ as content? Back
+       links, field labels and card captions are caption; errors and empty states are base, because
+       they are the text you have to act on. */
   --text-micro: 11px;
+  --text-caption: 12px;
+  --text-base: 14px;
+  --text-stat: 18px;
+  /* Display, DM Serif. One job each. */
+  --text-title: 22px;      /* dialog headings, empty-state titles */
+  --text-wordmark: 24px;   /* the brand mark in a bar — not a heading size */
+  --text-section: 26px;    /* section headings, and the standalone wordmark lockup */
+  --text-price: 32px;      /* a card's price */
+  --text-hero: 56px;       /* a binder or portfolio total */
   --tracking-label: 0.06em;
 }
 

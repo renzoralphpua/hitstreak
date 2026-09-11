@@ -117,7 +117,7 @@ export default function Builder({ deck, owned }: { deck: DeckDetail; owned: Reco
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/decks/mine" className="text-[13px] text-muted hover:text-ink">
+      <Link href="/decks/mine" className="text-caption text-muted hover:text-ink">
         ← My decks
       </Link>
 
@@ -135,7 +135,7 @@ export default function Builder({ deck, owned }: { deck: DeckDetail; owned: Reco
         }
       />
       {error && (
-        <p role="alert" className="text-[13px] text-accent">
+        <p role="alert" className="text-base text-accent">
           {error}
         </p>
       )}
@@ -157,16 +157,16 @@ export default function Builder({ deck, owned }: { deck: DeckDetail; owned: Reco
               ))}
             </ul>
           )}
-          {settled && hits.length === 0 && <p className="text-[13px] text-dim">No cards match “{q.trim()}”.</p>}
+          {settled && hits.length === 0 && <p className="text-base text-dim">No cards match “{q.trim()}”.</p>}
           {searchError && (
-            <p role="alert" className="text-[13px] text-accent">
+            <p role="alert" className="text-base text-accent">
               {searchError}
             </p>
           )}
         </div>
 
         <div className="flex flex-col gap-3.5">
-          {lines.length === 0 && <p className="text-[13px] text-dim">Search for a card to start this deck.</p>}
+          {lines.length === 0 && <p className="text-base text-dim">Search for a card to start this deck.</p>}
           {ZONES[deck.gameSlug].map((zone) => {
             const zoneLines = gap.lines.filter((l) => l.zone === zone);
             if (zoneLines.length === 0) return null;
@@ -185,7 +185,7 @@ export default function Builder({ deck, owned }: { deck: DeckDetail; owned: Reco
             <StatTile label="Cost to complete" value={formatMoney(gap.missingCost)} tone={gap.missing === 0 ? "gain" : "default"} />
           </div>
           {gap.unpricedMissing > 0 && (
-            <p className="text-[13px] text-dim">
+            <p className="text-caption text-dim">
               {gap.unpricedMissing} missing {gap.unpricedMissing === 1 ? "copy has" : "copies have"} no market price and{" "}
               {gap.unpricedMissing === 1 ? "is" : "are"} left out of the cost.
             </p>
@@ -202,7 +202,7 @@ function ZoneGroup({ zone, lines, onQuantity }: { zone: Zone; lines: GapLine[]; 
   return (
     <div className="flex flex-col gap-1.5">
       {/* Same group label as AlertList and the meta browser — a §13 `GroupLabel` primitive candidate. */}
-      <div className="flex items-baseline justify-between text-xs font-semibold uppercase tracking-[0.06em] text-muted">
+      <div className="flex items-baseline justify-between text-caption font-semibold uppercase tracking-[0.06em] text-muted">
         <span>{ZONE_LABEL[zone]}</span>
         <span className="num">{subtotal}</span>
       </div>
@@ -229,7 +229,7 @@ function LineRow({ line, onQuantity }: { line: GapLine; onQuantity: OnQuantity }
         >
           −
         </Button>
-        <span className="num min-w-6 text-center text-sm font-semibold text-ink">{line.quantity}</span>
+        <span className="num min-w-6 text-center text-base font-semibold text-ink">{line.quantity}</span>
         <Button
           variant="secondary"
           size="sm"
@@ -242,10 +242,10 @@ function LineRow({ line, onQuantity }: { line: GapLine; onQuantity: OnQuantity }
         </Button>
       </div>
       <span className="min-w-0 grow text-ink">
-        {line.name} <span className="text-xs text-dim">{line.setName} · {line.number ?? "—"}</span>
+        {line.name} <span className="text-caption text-dim">{line.setName} · {line.number ?? "—"}</span>
       </span>
-      <span className={`num text-xs ${line.missing === 0 ? "text-gain" : "text-accent"}`}>own {line.owned}</span>
-      <span className="num w-16 text-right text-xs text-muted">{formatMoney(line.market)}</span>
+      <span className={`num text-caption ${line.missing === 0 ? "text-gain" : "text-accent"}`}>own {line.owned}</span>
+      <span className="num w-16 text-right text-caption text-muted">{formatMoney(line.market)}</span>
     </li>
   );
 }

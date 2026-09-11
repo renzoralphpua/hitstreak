@@ -41,10 +41,19 @@ describe("Phase 5 tokens", () => {
     for (const t of NEW) expect(css).toMatch(new RegExp(`--color-${t}:\\s*var\\(--${t}\\)`));
   });
 
-  it("names the small type ramp instead of leaving it as arbitrary values", () => {
-    expect(css).toMatch(/--text-caption:\s*13px/);
-    expect(css).toMatch(/--text-micro:\s*11px/);
-    expect(css).toMatch(/--tracking-label:/);
+  it("defines the whole ramp, and nothing outside it", () => {
+    // Nine sizes. 12px won the caption slot over 13px because the artboards use it 218 times
+    // against 13's 90 — the design always preferred it; the code drifted.
+    const RAMP = [
+      ["micro", "11px"], ["caption", "12px"], ["base", "14px"], ["stat", "18px"],
+      ["title", "22px"], ["wordmark", "24px"], ["section", "26px"], ["price", "32px"], ["hero", "56px"],
+    ] as const;
+    for (const [name, px] of RAMP) {
+      expect(css, `--text-${name}`).toContain(`--text-${name}: ${px}`);
+    }
+    expect(css).toContain("--tracking-label:");
+    // 13px is retired: it split "secondary text" with 12px across 107 uses and no rule.
+    expect(css).not.toMatch(/--text-[a-z]+:\s*13px/);
   });
 
   it("has one focus-visible ring for the whole app, and a link hover colour", () => {

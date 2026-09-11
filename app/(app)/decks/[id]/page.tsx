@@ -52,13 +52,13 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
           both depend on which this is — otherwise your own deck is a dead end here. */}
       <Link
         href={deck.isMeta ? `/decks?game=${deck.gameSlug}` : "/decks/mine"}
-        className="text-[13px] text-muted hover:text-ink"
+        className="text-caption text-muted hover:text-ink"
       >
         ← {deck.isMeta ? "Meta decks" : "My decks"}
       </Link>
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-[13px] text-muted">
+        <span className="text-caption text-muted">
           {deck.gameName}
           {caption ? ` · ${caption}` : ""}
         </span>
@@ -79,7 +79,7 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
         <StatTile label="Cost to complete" value={formatMoney(gap.missingCost)} tone={gap.missing === 0 ? "gain" : "default"} />
       </div>
       {gap.unpricedMissing > 0 && (
-        <p className="text-[13px] text-dim">
+        <p className="text-caption text-dim">
           {gap.unpricedMissing} missing {gap.unpricedMissing === 1 ? "copy has" : "copies have"} no market price and{" "}
           {gap.unpricedMissing === 1 ? "is" : "are"} left out of the cost.
         </p>
@@ -89,10 +89,10 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
         <Panel className="flex flex-col gap-2.5">
           <div className="flex items-baseline gap-2">
             <span className="font-semibold text-ink">Missing cards</span>
-            <span className="text-xs text-dim">· priced at market</span>
+            <span className="text-caption text-dim">· priced at market</span>
           </div>
           {missing.length === 0 ? (
-            <p className="text-[13px] text-gain">You own every card in this deck.</p>
+            <p className="text-base text-gain">You own every card in this deck.</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {missing.map((l) => (
@@ -103,8 +103,8 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
                     imageUrl={l.imageUrl}
                     right={
                       <>
-                        <span className="text-sm font-semibold text-ink">×{l.missing}</span>
-                        <span className="text-[11px] text-dim">{l.missingCost == null ? "no price" : formatMoney(l.missingCost)}</span>
+                        <span className="text-base font-semibold text-ink">×{l.missing}</span>
+                        <span className="text-micro text-dim">{l.missingCost == null ? "no price" : formatMoney(l.missingCost)}</span>
                       </>
                     }
                   />
@@ -112,7 +112,7 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
               ))}
             </ul>
           )}
-          <details className="text-[13px]">
+          <details className="text-caption">
             <summary className="flex min-h-11 cursor-pointer items-center text-muted hover:text-ink md:min-h-8">Show full list ({gap.total})</summary>
             <div className="mt-2 flex flex-col gap-3">
               {ZONES[deck.gameSlug].map((z) => {
@@ -120,16 +120,16 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
                 if (lines.length === 0) return null;
                 return (
                   <div key={z} className="flex flex-col gap-1">
-                    <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{ZONE_LABEL[z]}</span>
+                    <span className="text-caption font-semibold uppercase tracking-[0.06em] text-muted">{ZONE_LABEL[z]}</span>
                     {lines.map((l) => (
                       <div key={l.cardId} className="flex items-baseline justify-between gap-3 border-b border-hairline-soft py-1 last:border-b-0">
                         <span className={l.missing === 0 ? "text-ink" : "text-muted"}>
                           <span className="num text-dim">×{l.quantity}</span> {l.name}{" "}
-                          <span className="text-xs text-dim">
+                          <span className="text-caption text-dim">
                             {l.setName} · {l.number ?? "—"}
                           </span>
                         </span>
-                        <span className={`num text-xs ${l.missing === 0 ? "text-gain" : "text-dim"}`}>
+                        <span className={`num text-caption ${l.missing === 0 ? "text-gain" : "text-dim"}`}>
                           {l.missing === 0 ? "owned" : `${l.owned} of ${l.quantity}`}
                         </span>
                       </div>

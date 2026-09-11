@@ -42,13 +42,13 @@ export default async function SetDetailPage({ params }: Params) {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href={`/sets?game=${set.gameSlug}`} className="text-[13px] text-muted hover:text-ink">
+      <Link href={`/sets?game=${set.gameSlug}`} className="text-caption text-muted hover:text-ink">
         ← Sets
       </Link>
 
       <div className="flex flex-wrap items-end gap-6">
         <div className="flex flex-col gap-1.5">
-          <span className="text-[13px] text-dim">
+          <span className="text-caption text-dim">
             {/* Ingested release dates are full ISO timestamps; show the day only. */}
             {set.gameName} · Released {set.releaseDate?.slice(0, 10) ?? "—"}
           </span>
@@ -64,7 +64,7 @@ export default async function SetDetailPage({ params }: Params) {
         </div>
 
         <div className="flex w-[220px] flex-col gap-1.5 md:ml-auto">
-          <div className="flex items-baseline justify-between text-xs text-muted">
+          <div className="flex items-baseline justify-between text-caption text-muted">
             <span>Set completion</span>
             <span className="num font-semibold text-ink">{pct}%</span>
           </div>
@@ -74,7 +74,7 @@ export default async function SetDetailPage({ params }: Params) {
             tone={stats.ownedCards === stats.totalCards && stats.totalCards > 0 ? "gain" : stats.ownedCards > 0 ? "accent" : "muted"}
             className="h-2"
           />
-          <span className="text-xs text-dim">
+          <span className="text-caption text-dim">
             Missing cards cost <span className="num font-semibold text-ink">{formatMoney(stats.missingCost)}</span>{" "}
             to complete
           </span>

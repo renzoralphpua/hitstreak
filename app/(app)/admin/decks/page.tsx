@@ -43,7 +43,7 @@ export default async function AdminDecksPage() {
           {perGame.filter((g) => g.decks.length > 0).map((g) => (
             <div key={g.slug} className="flex flex-col gap-2">
               {/* Same group label as AlertList and the meta browser — a §13 `GroupLabel` primitive candidate. */}
-              <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">
+              <span className="text-caption font-semibold uppercase tracking-[0.06em] text-muted">
                 {games.find((x) => x.slug === g.slug)?.name ?? g.slug}
               </span>
               {g.decks.map((d) => <MetaDeckRow key={d.id} deck={d} decklist={texts[d.id] ?? ""} />)}
