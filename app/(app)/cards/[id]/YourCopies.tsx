@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CardLot } from "@/lib/collections";
-import { formatMoney, formatPercent } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { Button, Input, Panel, PriceDelta } from "@/components/ui";
 import { updateItemAction, removeItemAction } from "@/app/(app)/collections/actions";
 

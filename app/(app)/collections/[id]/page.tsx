@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
-import { parseView } from "@/lib/view-mode";
 import { getCollection, getCollectionHoldings, getCollectionSummary } from "@/lib/collections";
 import { getShareLink } from "@/lib/share";
 import {
@@ -24,10 +23,8 @@ import {
   EmptyState,
   LineChart,
   RangePills,
-  Pill,
 } from "@/components/ui";
-import HoldingsTable from "./HoldingsTable";
-import CollectionGrid from "./CollectionGrid";
+import CollectionCards from "./CollectionCards";
 import AddItemDialog from "./AddItemDialog";
 import SharePanel from "./SharePanel";
 
@@ -57,9 +54,8 @@ export async function generateMetadata({ params }: Params) {
 export default async function CollectionDetailPage({ params, searchParams }: PageProps<"/collections/[id]">) {
   const { id } = await params;
   const { userId, collectionId, collection } = await load(id);
-  const { range: rawRange, view: rawView } = await searchParams;
+  const { range: rawRange } = await searchParams;
   const range = parseRange(rawRange);
-  const view = parseView(rawView);
   const today = new Date().toISOString().slice(0, 10);
   const from = rangeStart(range, today);
   const [holdings, summary, shareLink] = await Promise.all([
@@ -102,7 +98,7 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
             height={120}
             label={`${collection.name} value, ${RANGE_CAPTION[range]}`}
           />
-          <RangePills current={range} hrefFor={(r) => `/collections/${collectionId}?range=${r}&view=${view}`} />
+          <RangePills current={range} hrefFor={(r) => `/collections/${collectionId}?range=${r}`} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -129,35 +125,17 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
       </div>
 
       <div className="flex flex-col gap-4">
-        <SectionHeading
-          title="Cards"
-          caption="sorted by value"
-          trailing={
-            holdings.length > 0 ? (
-              <div className="flex gap-1.5">
-                {/* Grid is for recognising a card, the list is for changing it — which is why the
-                    stepper and Remove exist only in the list. `scroll={false}` keeps your place
-                    when you flip between them. */}
-                <Pill href={`/collections/${collectionId}?range=${range}&view=grid`} selected={view === "grid"} scroll={false}>
-                  Grid
-                </Pill>
-                <Pill href={`/collections/${collectionId}?range=${range}&view=list`} selected={view === "list"} scroll={false}>
-                  List
-                </Pill>
-              </div>
-            ) : undefined
-          }
-        />
         {holdings.length === 0 ? (
-          <EmptyState
-            title="Nothing here yet"
-            body="Add a card to start tracking this collection's value."
-            action={<AddItemDialog collectionId={collectionId} label="Add your first card" />}
-          />
-        ) : view === "grid" ? (
-          <CollectionGrid holdings={holdings} from={`/collections/${collectionId}?view=grid`} />
+          <div className="flex flex-col gap-4">
+            <SectionHeading title="Cards" caption="sorted by value" />
+            <EmptyState
+              title="Nothing here yet"
+              body="Add a card to start tracking this collection's value."
+              action={<AddItemDialog collectionId={collectionId} label="Add your first card" />}
+            />
+          </div>
         ) : (
-          <HoldingsTable collectionId={collectionId} holdings={holdings} />
+          <CollectionCards collectionId={collectionId} holdings={holdings} />
         )}
       </div>
     </div>

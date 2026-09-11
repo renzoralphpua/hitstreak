@@ -5,7 +5,12 @@ import { cn } from "./cn";
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean; href?: string; scroll?: boolean };
 
 // 44px minimum on phones (thumb target), back to the compact 32px chip from md up.
-const shape = "rounded-full px-3 py-1.5 text-caption leading-none min-h-11 md:min-h-8 transition-colors";
+// inline-flex + centring is load-bearing, not decoration: min-h-11 makes the box 44px for a thumb,
+// and without it the label sits at the TOP of that box with the slack below, which reads as a
+// lopsided chip — and on the selected (ink) pill, as a dark band under the text. Button already
+// does this; Pill did not.
+const shape =
+  "inline-flex items-center justify-center rounded-full px-3 py-1.5 text-caption leading-none min-h-11 md:min-h-8 transition-colors";
 const skin = (selected: boolean) =>
   selected ? "bg-chip text-chip-ink font-medium" : "border border-hairline text-muted hover:text-ink";
 

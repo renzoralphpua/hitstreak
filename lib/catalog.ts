@@ -2,6 +2,7 @@
 // Read side of the catalog for the UI. Prices come from latest_prices (last seen); 30-day change
 // is derived from price_snapshots by carry-forward (spec §5 write-on-change semantics).
 import { db } from "@/lib/db";
+import { tokenize, likeTerm } from "@/lib/search-terms";
 
 export interface PrintingPrice { printingId: number; subtype: string; market: number | null; priceDate: string | null }
 // `attrs` rides along because the deck builder needs a hit's card type to know which zone it belongs in
@@ -10,19 +11,54 @@ export interface SearchHit { cardId: number; name: string; number: string | null
 
 const MIN_QUERY = 2;
 
+/**
+ * Type-ahead over the catalog: name, number, rarity, printing subtype and set name.
+ *
+ * Every TOKEN must match something, and any of those five fields will do — so "charizard sir" is a
+ * Charizard that is a Special Illustration Rare, not every card mentioning either word. It used to
+ * match name and number alone, which is why searching a rarity returned nothing and the add-a-card
+ * dialog felt empty.
+ *
+ * Ranking keeps a name match ahead of a rarity match: someone typing "rare" wants a card called
+ * Rare Candy before 3,500 rares.
+ */
 export async function searchCards(q: string, opts: { gameSlug?: string; limit?: number } = {}): Promise<SearchHit[]> {
   const query = q.trim();
   if (query.length < MIN_QUERY) return [];
+  const tokens = tokenize(query);
+  if (tokens.length === 0) return [];
   const limit = Math.min(opts.limit ?? 20, 50);
   const c = await db();
-  const like = `%${query.replace(/[%_]/g, (m) => "\\" + m)}%`;
+
+  const args: unknown[] = [];
+  // One AND per token; inside it, one OR per field per expansion of that token.
+  const where = tokens
+    .map((t) =>
+      "(" +
+      t.terms
+        .map(() => {
+          const like = "?";
+          args.push(null); // placeholder, filled below in the same order
+          return `ca.name LIKE ${like} ESCAPE '\\' OR ca.number LIKE ${like} ESCAPE '\\' OR ca.rarity LIKE ${like} ESCAPE '\\' OR se.name LIKE ${like} ESCAPE '\\' OR EXISTS (SELECT 1 FROM printings p2 WHERE p2.card_id = ca.id AND p2.subtype LIKE ${like} ESCAPE '\\')`;
+        })
+        .join(" OR ") +
+      ")"
+    )
+    .join(" AND ");
+  // Each expansion supplies the same term to all five comparisons.
+  args.length = 0;
+  for (const t of tokens) for (const term of t.terms) for (let i = 0; i < 5; i++) args.push(likeTerm(term));
+
+  // Same escaping as likeTerm, but anchored at the start: this is the RANKING term, which puts a
+  // name beginning with the query above a rarity that merely contains it.
+  const prefix = likeTerm(query).slice(1);
   const rows = (await c.execute({
     sql: `SELECT ca.id, ca.name, ca.number, ca.rarity, ca.image_url, ca.attrs, se.name AS set_name, g.slug AS game_slug
           FROM cards ca JOIN sets se ON se.id = ca.set_id JOIN games g ON g.id = se.game_id
-          WHERE (ca.name LIKE ? ESCAPE '\\' OR ca.number LIKE ? ESCAPE '\\') AND (? IS NULL OR g.slug = ?)
+          WHERE (${where}) AND (? IS NULL OR g.slug = ?)
           ORDER BY CASE WHEN ca.name LIKE ? ESCAPE '\\' THEN 0 ELSE 1 END, ca.name, se.release_date DESC
           LIMIT ?`,
-    args: [like, like, opts.gameSlug ?? null, opts.gameSlug ?? null, `${query.replace(/[%_]/g, (m) => "\\" + m)}%`, limit],
+    args: [...args, opts.gameSlug ?? null, opts.gameSlug ?? null, prefix, limit] as never[],
   })).rows;
   if (rows.length === 0) return [];
   const ids = rows.map((r) => Number(r.id));

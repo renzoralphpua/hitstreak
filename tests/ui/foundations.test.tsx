@@ -11,6 +11,7 @@ import BottomTabBar from "@/components/ui/BottomTabBar";
 import TopNav from "@/components/ui/TopNav";
 import PriceDelta from "@/components/ui/PriceDelta";
 import Input from "@/components/ui/Input";
+import Pill from "@/components/ui/Pill";
 import { vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/collections" }));
@@ -122,6 +123,16 @@ describe("Phase 5 bug fixes", () => {
     rerender(<PriceDelta amount={-12.5} />);
     expect(container.firstElementChild).toHaveClass("text-accent");
     expect(container.textContent).toContain("▼");
+  });
+
+  it("a pill centres its label inside the 44px thumb target", () => {
+    // min-h-11 without centring leaves the label at the top of the box and the slack beneath it,
+    // which reads as a lopsided chip — and on the selected ink pill, as a dark band under the text.
+    render(<Pill selected>Grid</Pill>);
+    const pill = screen.getByRole("button", { name: "Grid" });
+    expect(pill.className).toMatch(/inline-flex/);
+    expect(pill.className).toMatch(/items-center/);
+    expect(pill.className).toMatch(/min-h-11/);
   });
 
   it("Input no longer strips the browser's focus ring", () => {
