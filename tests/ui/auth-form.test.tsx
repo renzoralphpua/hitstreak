@@ -13,13 +13,13 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }
 import AuthForm from "@/app/(auth)/AuthForm";
 
 describe("AuthForm", () => {
-  it("sign-in submits email + password and navigates to /binders", async () => {
+  it("sign-in submits email + password and navigates to /collections", async () => {
     render(<AuthForm mode="sign-in" />);
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "r@x.com" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "pw12345678" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
     await waitFor(() => expect(signIn).toHaveBeenCalledWith(expect.objectContaining({ email: "r@x.com", password: "pw12345678" })));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/binders"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/collections"));
   });
   it("sign-up also sends the name and shows an API error", async () => {
     signUp.mockResolvedValueOnce({ error: { message: "User already exists" } });

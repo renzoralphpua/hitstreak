@@ -4,7 +4,7 @@
 
 **Goal:** The deck layer: curated meta decks per game with gap analysis against the user's whole collection (owned / missing / cost to complete), per-game legality validators (Pokémon, One Piece, Riftbound), a personal deck builder, and an admin curation screen.
 
-**Architecture:** Two tables (`decks`, `deck_cards`) join the self-initializing schema; `owner_user_id IS NULL` marks a curated meta deck (spec §5). Deck lines reference `cards` (not printings) in a `zone`. Each game has a **card identity key** — Pokémon and Riftbound by base name (reprints and alt arts are the same card), One Piece by card number (alt arts share `attrs.Number`) — used both for copy limits and for matching the user's collection in gap analysis. Validators are pure functions over `attrs` behind one contract (`validateDeck(input) → { valid, errors }`), one module per game, unit-tested per rule (spec §8, §10). Gap analysis is computed at read time (spec §5): the user's holdings across all binders are aggregated by identity key once per game and allocated to deck lines in order; missing lines are priced from the card's cheapest printing. A decklist text parser + catalog resolver (exact by name/number, fuzzy fallback with candidates) is shared by the admin screen (Task 8) and a local import CLI (Task 5), so curated decks can exist before the admin UI ships. Screens compose `components/ui/` primitives only; the browser and detail pages are Server Components with `?game=` links.
+**Architecture:** Two tables (`decks`, `deck_cards`) join the self-initializing schema; `owner_user_id IS NULL` marks a curated meta deck (spec §5). Deck lines reference `cards` (not printings) in a `zone`. Each game has a **card identity key** — Pokémon and Riftbound by base name (reprints and alt arts are the same card), One Piece by card number (alt arts share `attrs.Number`) — used both for copy limits and for matching the user's collection in gap analysis. Validators are pure functions over `attrs` behind one contract (`validateDeck(input) → { valid, errors }`), one module per game, unit-tested per rule (spec §8, §10). Gap analysis is computed at read time (spec §5): the user's holdings across all collections are aggregated by identity key once per game and allocated to deck lines in order; missing lines are priced from the card's cheapest printing. A decklist text parser + catalog resolver (exact by name/number, fuzzy fallback with candidates) is shared by the admin screen (Task 8) and a local import CLI (Task 5), so curated decks can exist before the admin UI ships. Screens compose `components/ui/` primitives only; the browser and detail pages are Server Components with `?game=` links.
 
 **Tech Stack:** Next.js 16 App Router, React 19, Tailwind v4 tokens, libSQL, Better Auth session (`isAdmin` for curation), vitest + Testing Library.
 
@@ -974,7 +974,7 @@ const tmp = tmpDb("decks-gap");
 import { closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import { seedDeckFixtures } from "./helpers/decks";
-import { createPortfolio, addItem } from "@/lib/portfolios";
+import { createCollection, addItem } from "@/lib/collections";
 import { loadOwnedByKey, analyzeGap } from "@/lib/decks/gap";
 import type { DeckDetail } from "@/lib/decks/data";
 
@@ -990,16 +990,16 @@ const deck = (cards: DeckDetail["cards"], gameSlug: DeckDetail["gameSlug"] = "po
 beforeAll(async () => {
   await seedMiniCatalog();
   f = await seedDeckFixtures();
-  const a = await createPortfolio(U, "A"), b = await createPortfolio(U, "B");
+  const a = await createCollection(U, "A"), b = await createCollection(U, "B");
   await addItem(U, a.id, { printingId: 7, quantity: 2, condition: "NM" });  // Rare Candy (SVI reprint)
   await addItem(U, b.id, { printingId: 6, quantity: 1, condition: "LP" });  // Rare Candy (OBF)
   await addItem(U, a.id, { printingId: 10, quantity: 3, condition: "NM" }); // Nami alt art
-  await createPortfolio("other", "Not mine").then((p) => addItem("other", p.id, { printingId: 5, quantity: 4, condition: "NM" })); // Charizard ex, someone else's
+  await createCollection("other", "Not mine").then((p) => addItem("other", p.id, { printingId: 5, quantity: 4, condition: "NM" })); // Charizard ex, someone else's
 });
 afterAll(() => { closeDb(); tmp.clean(); });
 
 describe("loadOwnedByKey", () => {
-  it("aggregates the user's copies across all binders by identity key", async () => {
+  it("aggregates the user's copies across all collections by identity key", async () => {
     const owned = await loadOwnedByKey(U, "pokemon");
     expect(owned.get("name:rare candy")).toBe(3);
     expect(owned.get("name:charizard ex")).toBeUndefined();
@@ -1089,7 +1089,7 @@ describe("resolveDecklist", () => {
 - [x] **Step 2: Implement `lib/decks/gap.ts`:**
 
 ```ts
-// lib/decks/gap.ts — spec §5: gap analysis at read time. Ownership is the user's copies across ALL binders,
+// lib/decks/gap.ts — spec §5: gap analysis at read time. Ownership is the user's copies across ALL collections,
 // aggregated by identity key (any printing counts), allocated to the deck's lines in order.
 import { db } from "@/lib/db";
 import { identityKey } from "./identity";
@@ -1099,13 +1099,13 @@ import type { DeckDetail, DeckLine } from "./data";
 export interface GapLine extends DeckLine { key: string; owned: number; missing: number; missingCost: number | null }
 export interface GapAnalysis { lines: GapLine[]; total: number; owned: number; missing: number; missingCost: number; unpricedMissing: number }
 
-/** identity key → total copies the user owns of that card (any printing, any binder) within one game. */
+/** identity key → total copies the user owns of that card (any printing, any collection) within one game. */
 export async function loadOwnedByKey(userId: string, gameSlug: GameSlug): Promise<Map<string, number>> {
   const c = await db();
   const rows = (await c.execute({
     sql: `SELECT ca.name, ca.attrs, SUM(ci.quantity) AS n
           FROM collection_items ci
-          JOIN portfolios po ON po.id = ci.portfolio_id AND po.user_id = ?
+          JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
           JOIN printings p ON p.id = ci.printing_id
           JOIN cards ca ON ca.id = p.card_id
           JOIN sets se ON se.id = ca.set_id
@@ -1629,7 +1629,7 @@ Test in a new `describe` inside `tests/rules-pokemon.test.ts`: a legal deck give
 
 ```ts
 "use server";
-// Mutations for personal decks. Same contract as the portfolio and alert actions: the session is
+// Mutations for personal decks. Same contract as the collection and alert actions: the session is
 // re-checked, ids are validated before SQL, failures come back as { ok: false, error }. The deck is
 // validated HERE, from the catalog's own attrs — the client's copy is never trusted.
 import { revalidatePath } from "next/cache";
@@ -1768,7 +1768,7 @@ export default async function MyDecksPage() {
 
 `NewDeckForm.tsx` (client): game `Pill`s (default the first), an `Input` for the name, a `Button`
 "Create deck"; on success `router.push(\`/decks/mine/${id}\`)`. `DeckActions.tsx` (client): a "Rename"
-toggle that swaps in an `Input` + Save (like `PortfolioForm`'s `RenameToggle`), and a "Delete" `Button`
+toggle that swaps in an `Input` + Save (like `CollectionForm`'s `RenameToggle`), and a "Delete" `Button`
 guarded by `window.confirm(\`Delete "${name}"?\`)`; both `router.refresh()` on success and render
 `role="alert"` text on failure. Both use `size="sm"`.
 
@@ -2118,7 +2118,7 @@ README (Screens: `/decks`, `/decks/[id]`, curation CLI), spec §8 amendment (Pok
 
 - Spec coverage for Tasks 1–6: §5 decks/deck_cards ✔ (T1), gap analysis at read time ✔ (T5), §7 meta browser (game + tier filters → detail with decklist, gap, cost-to-complete) ✔ (T6), §8 validator contract + three rule sets ✔ (T2–T4; Standard-format legality deliberately absent — amendment), §10 validator unit tests happy path + every violation ✔, gap math ✔. Builder/admin are T7/T8 (not this run).
 - Type consistency: `Zone`/`ZONES`/`GameSlug`/`DeckCardInput` from `lib/decks/types` used by rules, data, gap, pages; `DeckDetail`/`DeckLine` from `data.ts` used by `gap.ts` and pages; `card()` fixture builder in `tests/helpers/decks.ts` used by all three rule test files; `identityKey` is the single definition of "same card" for copies (rules) and ownership (gap).
-- Ownership: meta decks readable with `userId` null or any user, writable only via `isAdminUser`; personal decks scoped by `owner_user_id` on every read/write; `loadOwnedByKey` joins `portfolios.user_id`.
+- Ownership: meta decks readable with `userId` null or any user, writable only via `isAdminUser`; personal decks scoped by `owner_user_id` on every read/write; `loadOwnedByKey` joins `collections.user_id`.
 
 ## Executed 2026-09-09 — deviations
 

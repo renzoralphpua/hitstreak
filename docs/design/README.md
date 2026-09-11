@@ -1,4 +1,4 @@
-# Hitstreak design — "Binder" system
+# Hitstreak design — "Collection" system
 
 Approved 2026-09-05. Live canvas (view/export, editable where enabled):
 https://claude.ai/code/artifact/824b346b-d706-447f-b137-a5a83df3ee2c
@@ -7,14 +7,14 @@ Each `*.dc.html` file here is one artboard (static mockup) from that canvas; `ca
 `Ticker` and `Playmat` are the directions that were **not** chosen — kept for reference only.
 
 `Dashboard.dc.html` (added 2026-09-10) is the Home screen, and it splits the job `Main.dc.html` used to do
-alone. **Home is what you read** — the total across every binder, its chart, the biggest movers, deck
-progress, alerts that fired; nothing on it edits anything. **Binder (`Main.dc.html`) is what you change** —
-add and remove cards, purchase price, rename, delete — and binder switching moves into a dropdown in its
-header, so the by-binder rows on Home are a breakdown, drawn as plain rows rather than the selected dark chip.
+alone. **Home is what you read** — the total across every collection, its chart, the biggest movers, deck
+progress, alerts that fired; nothing on it edits anything. **Collection (`Main.dc.html`) is what you change** —
+add and remove cards, purchase price, rename, delete — and collection switching moves into a dropdown in its
+header, so the by-collection rows on Home are a breakdown, drawn as plain rows rather than the selected dark chip.
 Home gets **no nav item** — the wordmark is the link to it, on desktop and on the phone header alike — so the
 primary nav stays at four and no existing artboard's top bar changes.
 
-**Every comparison on Home is against cost basis.** One measure, everywhere: the headline delta, the per-binder
+**Every comparison on Home is against cost basis.** One measure, everywhere: the headline delta, the per-collection
 rows and the winners/losers list all read *vs paid*, never "change over the last N days". The range pills stay,
 but they only pick the chart's **window** — the chart plots market value against the cost-basis step line, so the
 gap between the two lines is the gain, whatever window you choose. The headline gain is a level, not a window
@@ -69,10 +69,10 @@ not belong on Home: that is why the tier-1 rows show a build cost with no trend,
 - **Selected state** = inverted dark chip (ink background, cream text). Filters are pills.
 - **Focus:** one ring for the whole app — `:focus-visible { outline: 2px solid var(--focus) }` in `@layer base`. A primitive may thicken it or move it (`SearchField` puts it on the pill via `focus-within`) but must never remove it. `outline-none` is only allowed where an ancestor carries the ring.
 - **Motion:** everything is suppressed under `prefers-reduced-motion: reduce`.
-- **Navigation:** Binder · Sets · Decks · Alerts, search always present in the top bar (the Builder swaps search for the draft-status + Save action). The wordmark links to Home; on Home itself no nav item is lit.
+- **Navigation:** Collection · Sets · Decks · Alerts, search always present in the top bar (the Builder swaps search for the draft-status + Save action). The wordmark links to Home; on Home itself no nav item is lit.
 - **Icons:** inline stroke SVG only — no emoji, no icon fonts.
 - **Numbers:** `font-variant-numeric: tabular-nums` everywhere a column of figures appears.
-- **Phone:** 390px layout with a 4-tab bottom bar (Binder, Sets, Decks, Alerts); leave the system status bar area alone.
+- **Phone:** 390px layout with a 4-tab bottom bar (Collection, Sets, Decks, Alerts); leave the system status bar area alone.
 - Sample data in the mockups is illustrative only.
 
 ## Implemented as
@@ -112,7 +112,7 @@ Mockup element → primitive (`components/ui/`):
 | Tier 1/2 badges | `TierBadge` |
 | Legality panel | `ValidationList` |
 | Search pill | `SearchField` |
-| Binder-grid cards | `CardTile` |
+| Collection-grid cards | `CardTile` |
 | List rows | `CardRow` |
 | Triggered alert row | `CardRow tone="inverted"` (the ink chip; the `right` slot inherits its colour) |
 | Top bar | `TopNav` |

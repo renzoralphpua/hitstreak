@@ -1,16 +1,16 @@
-# Hitstreak Phase 3 — Price History, Portfolio History, Share Links, Alerts, Sign-up Gate Implementation Plan
+# Hitstreak Phase 3 — Price History, Collection History, Share Links, Alerts, Sign-up Gate Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the accumulated price data visible and useful: per-card and per-binder value history charts, a nightly job that materializes binder value and evaluates email price alerts, read-only share links for binders, and a sign-up gate so the app can be reachable at a public domain without open registration.
+**Goal:** Make the accumulated price data visible and useful: per-card and per-collection value history charts, a nightly job that materializes collection value and evaluates email price alerts, read-only share links for collections, and a sign-up gate so the app can be reachable at a public domain without open registration.
 
-**Architecture:** Three new tables (`portfolio_history`, `share_links`, `price_alerts`) join the self-initializing schema. History reads live in `lib/history.ts` and honour write-on-change semantics (a series is the carry-in point plus every change in the window; readers step forward). Charts are one new primitive, `LineChart` — a token-coloured SVG step line — plus `RangePills` (`?range=` links, so charts are server-rendered with no client state). The nightly job is `ingest/nightly.ts`, run as a **second step of the existing GitHub Actions "Daily price ingest" job** right after the ingest (it already holds the DB credentials; no HTTP endpoint, no shared secret, no Vercel function limits — a deliberate spec deviation, see "Spec amendments"). Alerts are a pure `evaluateAlert()` state machine (`armed` flag; fire on an inclusive crossing, re-arm when strictly back over the line) wrapped by a Resend mailer with a fake in tests. Share links are 128-bit base64url tokens; `/s/[token]` lives outside `(app)` and exposes exactly one binder at market value with cost basis stripped. The sign-up gate is a Better Auth `hooks.before` allowlist driven by `SIGNUP_ALLOWLIST`.
+**Architecture:** Three new tables (`collection_history`, `share_links`, `price_alerts`) join the self-initializing schema. History reads live in `lib/history.ts` and honour write-on-change semantics (a series is the carry-in point plus every change in the window; readers step forward). Charts are one new primitive, `LineChart` — a token-coloured SVG step line — plus `RangePills` (`?range=` links, so charts are server-rendered with no client state). The nightly job is `ingest/nightly.ts`, run as a **second step of the existing GitHub Actions "Daily price ingest" job** right after the ingest (it already holds the DB credentials; no HTTP endpoint, no shared secret, no Vercel function limits — a deliberate spec deviation, see "Spec amendments"). Alerts are a pure `evaluateAlert()` state machine (`armed` flag; fire on an inclusive crossing, re-arm when strictly back over the line) wrapped by a Resend mailer with a fake in tests. Share links are 128-bit base64url tokens; `/s/[token]` lives outside `(app)` and exposes exactly one collection at market value with cost basis stripped. The sign-up gate is a Better Auth `hooks.before` allowlist driven by `SIGNUP_ALLOWLIST`.
 
 **Tech Stack:** Next.js 16 App Router (server actions, `searchParams`, `PageProps` generated types), React 19, Tailwind v4 tokens, libSQL, Better Auth 1.7.3 (`hooks.before`, `createAuthMiddleware`, `APIError` from `better-auth/api`), Resend REST API via `fetch` (no SDK), GitHub Actions, vitest + Testing Library.
 
-**Reference:** Spec §5 (data model: `portfolio_history`, `share_links`, `price_alerts`), §6 step 5 (nightly), §7 (portfolios chart, card detail chart + "which portfolios hold it" + alert shortcut, sharing, alerts), §9 (idempotent nightly, alert retry semantics, share 404s), §10 (alert threshold/re-arm unit tests, share-token boundary tests), §13 (gate sign-up). Mockups: `docs/design/Main.dc.html` (binder chart + range row), `Card.dc.html` (price history panel with Low/High), `Alerts.dc.html` (Triggered/Watching lists, New alert panel, "How alerts work").
+**Reference:** Spec §5 (data model: `collection_history`, `share_links`, `price_alerts`), §6 step 5 (nightly), §7 (collections chart, card detail chart + "which collections hold it" + alert shortcut, sharing, alerts), §9 (idempotent nightly, alert retry semantics, share 404s), §10 (alert threshold/re-arm unit tests, share-token boundary tests), §13 (gate sign-up). Mockups: `docs/design/Main.dc.html` (collection chart + range row), `Card.dc.html` (price history panel with Low/High), `Alerts.dc.html` (Triggered/Watching lists, New alert panel, "How alerts work").
 
-**Conventions:** as Phase 2b. Every data-layer function that touches user data takes `userId` first and scopes through `portfolios.user_id` / `price_alerts.user_id`. Server actions return `{ ok, error }` and re-check the session. Money stays `REAL` dollars. DB tests use `tmpDb()` + `seedMiniCatalog()`; component tests are `tests/ui/*.test.tsx` with `// @vitest-environment jsdom` on line 1. Verify each task with `npm test`, `npm run typecheck`, `npm run lint`; commit after each green task on branch `phase-3/history-share-alerts`.
+**Conventions:** as Phase 2b. Every data-layer function that touches user data takes `userId` first and scopes through `collections.user_id` / `price_alerts.user_id`. Server actions return `{ ok, error }` and re-check the session. Money stays `REAL` dollars. DB tests use `tmpDb()` + `seedMiniCatalog()`; component tests are `tests/ui/*.test.tsx` with `// @vitest-environment jsdom` on line 1. Verify each task with `npm test`, `npm run typecheck`, `npm run lint`; commit after each green task on branch `phase-3/history-share-alerts`.
 
 **Deferred to Phase 4 (do NOT build here):** decks, gap analysis, builder, validators, admin curation. Also not here: wishlists, CSV, graded values, push notifications, movers/shakers.
 
@@ -19,17 +19,17 @@
 ## File structure
 
 ```
-lib/schema.ts                         + HISTORY_SCHEMA_SQL: portfolio_history, share_links, price_alerts
+lib/schema.ts                         + HISTORY_SCHEMA_SQL: collection_history, share_links, price_alerts
 lib/db.ts                             runs HISTORY_SCHEMA_SQL too
-lib/history.ts                        RANGES, parseRange, rangeStart, getPrintingHistory, getPortfolioHistory, seriesStats
-lib/portfolios.ts                     deletePortfolio also clears portfolio_history + share_links; getCardHolders
-lib/share.ts                          getShareLink, enableShare, regenerateShare, disableShare, getSharedPortfolio, isShareToken
+lib/history.ts                        RANGES, parseRange, rangeStart, getPrintingHistory, getCollectionHistory, seriesStats
+lib/collections.ts                     deleteCollection also clears collection_history + share_links; getCardHolders
+lib/share.ts                          getShareLink, enableShare, regenerateShare, disableShare, getSharedCollection, isShareToken
 lib/alerts.ts                         DIRECTIONS, evaluateAlert (pure), listAlerts, createAlert, deleteAlert, getAlertCard
-lib/action-utils.ts                   withUser, assertId, ActionResult (moved out of portfolios/actions.ts)
+lib/action-utils.ts                   withUser, assertId, ActionResult (moved out of collections/actions.ts)
 lib/signup-gate.ts                    parseAllowlist, signupAllowed
 lib/auth.ts                           hooks.before → 403 when SIGNUP_ALLOWLIST excludes the email
 ingest/mailer.ts                      Mailer interface, createResendMailer (fetch), mailerFromEnv, alertEmail
-ingest/nightly.ts                     materializePortfolioHistory, processAlerts, runNightly, CLI
+ingest/nightly.ts                     materializeCollectionHistory, processAlerts, runNightly, CLI
 .github/workflows/daily-ingest.yml    + nightly step (if: !cancelled()), RESEND_API_KEY / ALERT_FROM_EMAIL / APP_URL
 components/ui/LineChart.tsx           new primitive: SVG step line from Point[] over [from, to]
 components/ui/RangePills.tsx          new primitive: 7D 30D 90D 1Y All as Pill hrefs
@@ -38,11 +38,11 @@ components/ui/CardRow.tsx             + tone="inverted" (triggered alert rows)
 components/ui/useCardSearch.ts        shared debounced /api/search hook (AddItemDialog + NewAlertForm)
 components/ui/index.ts                exports
 app/dev/ui/page.tsx                   gallery: LineChart, RangePills, CardRow inverted
-app/(app)/cards/[id]/page.tsx         price history panel (range + printing), "In your binders", "Set alert"
-app/(app)/portfolios/[id]/page.tsx    value chart + range row, SharePanel
-app/(app)/portfolios/[id]/SharePanel.tsx   client: on/off, copy, regenerate
-app/(app)/portfolios/actions.ts       + enableShareAction, regenerateShareAction, disableShareAction
-app/s/[token]/page.tsx                public read-only binder (no auth, noindex)
+app/(app)/cards/[id]/page.tsx         price history panel (range + printing), "In your collections", "Set alert"
+app/(app)/collections/[id]/page.tsx    value chart + range row, SharePanel
+app/(app)/collections/[id]/SharePanel.tsx   client: on/off, copy, regenerate
+app/(app)/collections/actions.ts       + enableShareAction, regenerateShareAction, disableShareAction
+app/s/[token]/page.tsx                public read-only collection (no auth, noindex)
 app/(app)/alerts/page.tsx             Triggered / Watching + New alert + How alerts work
 app/(app)/alerts/actions.ts           createAlertAction, deleteAlertAction
 app/(app)/alerts/AlertList.tsx        client: grouped rows + delete
@@ -58,26 +58,26 @@ tests/ui/card-row-tone.test.tsx
 
 ### Task 1: Schema + history data layer
 
-**Files:** modify `lib/schema.ts`, `lib/db.ts`, `lib/portfolios.ts`; create `lib/history.ts`, `tests/history.test.ts`
+**Files:** modify `lib/schema.ts`, `lib/db.ts`, `lib/collections.ts`; create `lib/history.ts`, `tests/history.test.ts`
 
 - [x] **Step 1: Schema.** Append to `lib/schema.ts`:
 
 ```ts
-// Phase 3: materialized binder value, share links, price alerts. FKs are documentation (unenforced
-// in SQLite); lib/portfolios.ts deletePortfolio clears the two portfolio-scoped tables itself.
+// Phase 3: materialized collection value, share links, price alerts. FKs are documentation (unenforced
+// in SQLite); lib/collections.ts deleteCollection clears the two collection-scoped tables itself.
 export const HISTORY_SCHEMA_SQL = `
-  -- One row per binder per day, written by ingest/nightly.ts (value as of that day's prices).
-  CREATE TABLE IF NOT EXISTS portfolio_history (
-    portfolio_id INTEGER NOT NULL REFERENCES portfolios(id),
+  -- One row per collection per day, written by ingest/nightly.ts (value as of that day's prices).
+  CREATE TABLE IF NOT EXISTS collection_history (
+    collection_id INTEGER NOT NULL REFERENCES collections(id),
     date TEXT NOT NULL,             -- YYYY-MM-DD
     total_value REAL NOT NULL,      -- dollars; unpriced copies contribute nothing
-    PRIMARY KEY (portfolio_id, date)
+    PRIMARY KEY (collection_id, date)
   );
 
-  -- One link per binder. Disabled links 404; regenerating replaces the token.
+  -- One link per collection. Disabled links 404; regenerating replaces the token.
   CREATE TABLE IF NOT EXISTS share_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    portfolio_id INTEGER NOT NULL UNIQUE REFERENCES portfolios(id),
+    collection_id INTEGER NOT NULL UNIQUE REFERENCES collections(id),
     token TEXT NOT NULL UNIQUE,     -- 16 random bytes, base64url (22 chars)
     enabled INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
@@ -99,32 +99,32 @@ export const HISTORY_SCHEMA_SQL = `
 `;
 ```
 
-In `lib/db.ts` import it and run `SCHEMA_SQL + AUTH_SCHEMA_SQL + PORTFOLIO_SCHEMA_SQL + HISTORY_SCHEMA_SQL`; update the comment.
+In `lib/db.ts` import it and run `SCHEMA_SQL + AUTH_SCHEMA_SQL + COLLECTION_SCHEMA_SQL + HISTORY_SCHEMA_SQL`; update the comment.
 
-- [x] **Step 2: Cascade.** In `lib/portfolios.ts` `deletePortfolio`, add to the batch before the portfolios delete:
+- [x] **Step 2: Cascade.** In `lib/collections.ts` `deleteCollection`, add to the batch before the collections delete:
 
 ```ts
-      { sql: "DELETE FROM portfolio_history WHERE portfolio_id = ?", args: [id] },
-      { sql: "DELETE FROM share_links WHERE portfolio_id = ?", args: [id] },
+      { sql: "DELETE FROM collection_history WHERE collection_id = ?", args: [id] },
+      { sql: "DELETE FROM share_links WHERE collection_id = ?", args: [id] },
 ```
 
-Also add (spec §7 "which portfolios hold it"):
+Also add (spec §7 "which collections hold it"):
 
 ```ts
-export interface CardHolder { portfolioId: number; name: string; quantity: number }
-/** The signed-in user's binders that hold any printing of `cardId`, with total copies. */
+export interface CardHolder { collectionId: number; name: string; quantity: number }
+/** The signed-in user's collections that hold any printing of `cardId`, with total copies. */
 export async function getCardHolders(userId: string, cardId: number): Promise<CardHolder[]> {
   const c = await db();
   const r = await c.execute({
     sql: `SELECT po.id, po.name, SUM(ci.quantity) AS quantity
           FROM collection_items ci
-          JOIN portfolios po ON po.id = ci.portfolio_id AND po.user_id = ?
+          JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
           JOIN printings p ON p.id = ci.printing_id
           WHERE p.card_id = ?
           GROUP BY po.id ORDER BY quantity DESC, po.name`,
     args: [userId, cardId],
   });
-  return r.rows.map((x) => ({ portfolioId: Number(x.id), name: String(x.name), quantity: Number(x.quantity) }));
+  return r.rows.map((x) => ({ collectionId: Number(x.id), name: String(x.name), quantity: Number(x.quantity) }));
 }
 ```
 
@@ -136,8 +136,8 @@ import { tmpDb } from "./helpers/tmpdb";
 const tmp = tmpDb("history");
 import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
-import { createPortfolio, addItem, deletePortfolio, getCardHolders } from "@/lib/portfolios";
-import { RANGES, RANGE_CAPTION, parseRange, rangeStart, chartFrom, withLivePoint, getPrintingHistory, getPortfolioHistory, seriesStats, HISTORY_EPOCH } from "@/lib/history";
+import { createCollection, addItem, deleteCollection, getCardHolders } from "@/lib/collections";
+import { RANGES, RANGE_CAPTION, parseRange, rangeStart, chartFrom, withLivePoint, getPrintingHistory, getCollectionHistory, seriesStats, HISTORY_EPOCH } from "@/lib/history";
 
 let seed: Awaited<ReturnType<typeof seedMiniCatalog>>;
 beforeAll(async () => { seed = await seedMiniCatalog(); });
@@ -206,24 +206,24 @@ describe("getPrintingHistory", () => {
   });
 });
 
-describe("getPortfolioHistory", () => {
+describe("getCollectionHistory", () => {
   it("returns the owner's rows in the window and nothing for another user", async () => {
-    const p = await createPortfolio("u1", "Main");
+    const p = await createCollection("u1", "Main");
     const c = await db();
-    await c.execute({ sql: "INSERT INTO portfolio_history (portfolio_id, date, total_value) VALUES (?, '2026-09-05', 100), (?, '2026-09-06', 120), (?, '2026-09-07', 110)", args: [p.id, p.id, p.id] });
-    expect(await getPortfolioHistory("u1", p.id, "2026-09-06", "2026-09-07")).toEqual([
+    await c.execute({ sql: "INSERT INTO collection_history (collection_id, date, total_value) VALUES (?, '2026-09-05', 100), (?, '2026-09-06', 120), (?, '2026-09-07', 110)", args: [p.id, p.id, p.id] });
+    expect(await getCollectionHistory("u1", p.id, "2026-09-06", "2026-09-07")).toEqual([
       { date: "2026-09-06", value: 120 }, { date: "2026-09-07", value: 110 },
     ]);
-    expect(await getPortfolioHistory("u2", p.id, "2026-09-01", "2026-09-07")).toEqual([]);
+    expect(await getCollectionHistory("u2", p.id, "2026-09-01", "2026-09-07")).toEqual([]);
   });
-  it("deleting the binder removes its history and share link", async () => {
-    const p = await createPortfolio("u1", "Temp");
+  it("deleting the collection removes its history and share link", async () => {
+    const p = await createCollection("u1", "Temp");
     const c = await db();
-    await c.execute({ sql: "INSERT INTO portfolio_history (portfolio_id, date, total_value) VALUES (?, '2026-09-07', 5)", args: [p.id] });
-    await c.execute({ sql: "INSERT INTO share_links (portfolio_id, token) VALUES (?, 'tok')", args: [p.id] });
-    expect(await deletePortfolio("u1", p.id)).toBe(true);
-    expect((await c.execute({ sql: "SELECT COUNT(*) AS n FROM portfolio_history WHERE portfolio_id = ?", args: [p.id] })).rows[0].n).toBe(0);
-    expect((await c.execute({ sql: "SELECT COUNT(*) AS n FROM share_links WHERE portfolio_id = ?", args: [p.id] })).rows[0].n).toBe(0);
+    await c.execute({ sql: "INSERT INTO collection_history (collection_id, date, total_value) VALUES (?, '2026-09-07', 5)", args: [p.id] });
+    await c.execute({ sql: "INSERT INTO share_links (collection_id, token) VALUES (?, 'tok')", args: [p.id] });
+    expect(await deleteCollection("u1", p.id)).toBe(true);
+    expect((await c.execute({ sql: "SELECT COUNT(*) AS n FROM collection_history WHERE collection_id = ?", args: [p.id] })).rows[0].n).toBe(0);
+    expect((await c.execute({ sql: "SELECT COUNT(*) AS n FROM share_links WHERE collection_id = ?", args: [p.id] })).rows[0].n).toBe(0);
   });
 });
 
@@ -239,13 +239,13 @@ describe("seriesStats", () => {
 });
 
 describe("getCardHolders", () => {
-  it("lists the user's binders holding any printing of the card, most copies first", async () => {
-    const a = await createPortfolio("u3", "A"), b = await createPortfolio("u3", "B");
+  it("lists the user's collections holding any printing of the card, most copies first", async () => {
+    const a = await createCollection("u3", "A"), b = await createCollection("u3", "B");
     await addItem("u3", a.id, { printingId: seed.printings.pikachuNormal, quantity: 1, condition: "NM" });
     await addItem("u3", b.id, { printingId: seed.printings.pikachuNormal, quantity: 2, condition: "NM" });
     await addItem("u3", b.id, { printingId: seed.printings.pikachuReverse, quantity: 1, condition: "LP" });
     expect(await getCardHolders("u3", seed.cards.pikachu)).toEqual([
-      { portfolioId: b.id, name: "B", quantity: 3 }, { portfolioId: a.id, name: "A", quantity: 1 },
+      { collectionId: b.id, name: "B", quantity: 3 }, { collectionId: a.id, name: "A", quantity: 1 },
     ]);
     expect(await getCardHolders("someone-else", seed.cards.pikachu)).toEqual([]);
   });
@@ -291,7 +291,7 @@ export function rangeStart(range: Range, to: string): string {
 export interface Point { date: string; value: number | null }
 
 /** Where the chart's x-axis starts. Fixed ranges use the range start; "All" starts at the first
- *  point — portfolio_history begins the first night the nightly runs and a printing's snapshots
+ *  point — collection_history begins the first night the nightly runs and a printing's snapshots
  *  begin at its release — so the data fills the width instead of huddling at the right edge of a
  *  2024→today axis. `today` covers an empty series. */
 export function chartFrom(range: Range, from: string, points: Point[], today: string): string {
@@ -299,7 +299,7 @@ export function chartFrom(range: Range, from: string, points: Point[], today: st
 }
 
 /** `points` plus tonight's live value as a final `today` point, unless the nightly has already
- *  written today's row (a brand-new binder has no materialized rows yet but should still chart). */
+ *  written today's row (a brand-new collection has no materialized rows yet but should still chart). */
 export function withLivePoint(points: Point[], today: string, value: number): Point[] {
   const last = points[points.length - 1];
   return last && last.date >= today ? points : [...points, { date: today, value }];
@@ -319,15 +319,15 @@ export async function getPrintingHistory(printingId: number, from: string, to: s
   return points;
 }
 
-/** Nightly-materialized binder value (one row per day). Ownership is checked through
- *  portfolios.user_id like every other portfolio read; the share page passes the owner's id. */
-export async function getPortfolioHistory(userId: string, portfolioId: number, from: string, to: string): Promise<Point[]> {
+/** Nightly-materialized collection value (one row per day). Ownership is checked through
+ *  collections.user_id like every other collection read; the share page passes the owner's id. */
+export async function getCollectionHistory(userId: string, collectionId: number, from: string, to: string): Promise<Point[]> {
   const c = await db();
   const r = await c.execute({
-    sql: `SELECT ph.date, ph.total_value FROM portfolio_history ph
-          JOIN portfolios po ON po.id = ph.portfolio_id AND po.user_id = ?
-          WHERE ph.portfolio_id = ? AND ph.date >= ? AND ph.date <= ? ORDER BY ph.date`,
-    args: [userId, portfolioId, from, to],
+    sql: `SELECT ph.date, ph.total_value FROM collection_history ph
+          JOIN collections po ON po.id = ph.collection_id AND po.user_id = ?
+          WHERE ph.collection_id = ? AND ph.date >= ? AND ph.date <= ? ORDER BY ph.date`,
+    args: [userId, collectionId, from, to],
   });
   return r.rows.map((x) => ({ date: String(x.date), value: Number(x.total_value) }));
 }
@@ -346,13 +346,13 @@ export function seriesStats(points: Point[]): SeriesStats | null {
 ```
 
 - [x] **Step 5:** `npx vitest run tests/history.test.ts` → PASS. Full `npm test`, `npm run typecheck`, `npm run lint`.
-- [x] **Step 6: Commit** — `feat(history): portfolio_history/share_links/price_alerts schema, history read layer, card holders`
+- [x] **Step 6: Commit** — `feat(history): collection_history/share_links/price_alerts schema, history read layer, card holders`
 
 ---
 
 ### Task 2: `LineChart` + `RangePills` primitives, `Pill scroll`, `Button size`
 
-**Files:** create `components/ui/LineChart.tsx`, `components/ui/RangePills.tsx`, `tests/ui/line-chart.test.tsx`, `tests/ui/range-pills.test.tsx`; modify `components/ui/Pill.tsx`, `components/ui/Button.tsx`, `app/(app)/portfolios/[id]/HoldingsTable.tsx`, `tests/ui/primitives-a.test.tsx`, `components/ui/index.ts`, `app/dev/ui/page.tsx`, `docs/design/README.md`
+**Files:** create `components/ui/LineChart.tsx`, `components/ui/RangePills.tsx`, `tests/ui/line-chart.test.tsx`, `tests/ui/range-pills.test.tsx`; modify `components/ui/Pill.tsx`, `components/ui/Button.tsx`, `app/(app)/collections/[id]/HoldingsTable.tsx`, `tests/ui/primitives-a.test.tsx`, `components/ui/index.ts`, `app/dev/ui/page.tsx`, `docs/design/README.md`
 
 - [x] **Step 1: Failing tests.** `tests/ui/line-chart.test.tsx`:
 
@@ -425,7 +425,7 @@ describe("RangePills", () => {
 
 - [x] **Step 2: `Pill` scroll prop.** In `components/ui/Pill.tsx`: `type Props = ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean; href?: string; scroll?: boolean }`; destructure `scroll` alongside `href` (so it never reaches the `<button>`), and pass `scroll={scroll}` to `Link`. Doc: "`scroll={false}` keeps the page where it is — chart range pills sit mid-page."
 
-- [x] **Step 2b: `Button` size prop** (the 44px rule in `docs/design/README.md` — callers have been overriding `min-h-11` with `min-h-8`, which `twMerge` honours at every breakpoint, giving 32px targets on phones). Add `size?: "md" | "sm"` to both arms of `Props` in `components/ui/Button.tsx`; compute `cn(base, size === "sm" && "min-h-11 px-3 py-1 text-[13px] md:min-h-8", skin(variant), className)` (the `md:` variant has a different modifier so it survives beside `min-h-11`, exactly like `Pill`'s shape string); add `"size"` to the keys `domProps` strips. Sweep the three existing offenders in `app/(app)/portfolios/[id]/HoldingsTable.tsx` (the `−`/`+` steppers and Remove: drop `min-h-8 … py-1` from their `className`, add `size="sm"`, keep `px-2.5` on the steppers). Test in `tests/ui/primitives-a.test.tsx`: `render(<Button size="sm">x</Button>)` → `className` matches `/min-h-11/` and `/md:min-h-8/`; default has no `md:min-h-8`. README "Tap targets" paragraph becomes: "`Button` and `Input` are 44px everywhere (`min-h-11`); `Button size="sm"` and `Pill` are `min-h-11 md:min-h-8` — a thumb target on phones, the compact 32px control of the mockups from `md` up." Gallery: one `size="sm"` row. **Every Button in Tasks 3–7 below uses `size="sm"` instead of a `min-h-8` class override.**
+- [x] **Step 2b: `Button` size prop** (the 44px rule in `docs/design/README.md` — callers have been overriding `min-h-11` with `min-h-8`, which `twMerge` honours at every breakpoint, giving 32px targets on phones). Add `size?: "md" | "sm"` to both arms of `Props` in `components/ui/Button.tsx`; compute `cn(base, size === "sm" && "min-h-11 px-3 py-1 text-[13px] md:min-h-8", skin(variant), className)` (the `md:` variant has a different modifier so it survives beside `min-h-11`, exactly like `Pill`'s shape string); add `"size"` to the keys `domProps` strips. Sweep the three existing offenders in `app/(app)/collections/[id]/HoldingsTable.tsx` (the `−`/`+` steppers and Remove: drop `min-h-8 … py-1` from their `className`, add `size="sm"`, keep `px-2.5` on the steppers). Test in `tests/ui/primitives-a.test.tsx`: `render(<Button size="sm">x</Button>)` → `className` matches `/min-h-11/` and `/md:min-h-8/`; default has no `md:min-h-8`. README "Tap targets" paragraph becomes: "`Button` and `Input` are 44px everywhere (`min-h-11`); `Button size="sm"` and `Pill` are `min-h-11 md:min-h-8` — a thumb target on phones, the compact 32px control of the mockups from `md` up." Gallery: one `size="sm"` row. **Every Button in Tasks 3–7 below uses `size="sm"` instead of a `min-h-8` class override.**
 
 - [x] **Step 3: `LineChart`:**
 
@@ -536,9 +536,9 @@ export default function RangePills({ current, hrefFor, className }: { current: R
 
 ---
 
-### Task 3: Charts on the card and binder pages
+### Task 3: Charts on the card and collection pages
 
-**Files:** modify `app/(app)/cards/[id]/page.tsx`, `app/(app)/portfolios/[id]/page.tsx`
+**Files:** modify `app/(app)/cards/[id]/page.tsx`, `app/(app)/collections/[id]/page.tsx`
 
 - [x] **Step 1: Card detail.** Switch the page's props to `PageProps<"/cards/[id]">` (keep `type Params` for `generateMetadata`). Move the existing `primary` computation above the data loads. `primary` is `PrintingPrice | null` — ~4% of catalog cards (sealed products, promo sets) have **no printings yet** because printings are created by the price ingest — so the charted printing is nullable too. `searchParams` values are `string | string[] | undefined`, and `parseRouteId` takes a `string`, hence the `typeof` narrowing:
 
@@ -550,8 +550,8 @@ export default function RangePills({ current, hrefFor, className }: { current: R
   const requested = typeof rawP === "string" ? parseRouteId(rawP) : null;
   // PrintingPrice | null: `?p=` when it names one of this card's printings, else the headline one.
   const chartPrinting = printings.find((x) => x.printingId === requested) ?? primary;
-  const [portfolios, history, holders] = await Promise.all([
-    listPortfolios(userId),
+  const [collections, history, holders] = await Promise.all([
+    listCollections(userId),
     chartPrinting ? getPrintingHistory(chartPrinting.printingId, from, today) : Promise.resolve<Point[]>([]),
     getCardHolders(userId, card.id),
   ]);
@@ -560,7 +560,7 @@ export default function RangePills({ current, hrefFor, className }: { current: R
     `/cards/${card.id}?range=${r}${printingId === primary?.printingId ? "" : `&p=${printingId}`}`;
 ```
 
-(imports: `parseRange, rangeStart, chartFrom, seriesStats, RANGE_CAPTION, type Range, type Point` from `@/lib/history`; `getPrintingHistory` too; `getCardHolders` from `@/lib/portfolios`; `LineChart, RangePills, Pill, Button` from `@/components/ui`.) Replace the "Charts arrive in Phase 3" panel with:
+(imports: `parseRange, rangeStart, chartFrom, seriesStats, RANGE_CAPTION, type Range, type Point` from `@/lib/history`; `getPrintingHistory` too; `getCardHolders` from `@/lib/collections`; `LineChart, RangePills, Pill, Button` from `@/components/ui`.) Replace the "Charts arrive in Phase 3" panel with:
 
 ```tsx
         <Panel className="flex flex-col gap-3">
@@ -599,19 +599,19 @@ export default function RangePills({ current, hrefFor, className }: { current: R
 
 (`chartPrinting` is a `const`, so the narrowing survives into the arrow callbacks.)
 
-Under the printings panel add the "In your binders" block and the alert shortcut:
+Under the printings panel add the "In your collections" block and the alert shortcut:
 
 ```tsx
         <div className="flex flex-wrap items-center gap-3 text-[13px]">
           {holders.length === 0 ? (
-            <span className="text-dim">Not in any of your binders yet.</span>
+            <span className="text-dim">Not in any of your collections yet.</span>
           ) : (
             <span className="text-muted">
-              In your binders:{" "}
+              In your collections:{" "}
               {holders.map((h, i) => (
-                <span key={h.portfolioId}>
+                <span key={h.collectionId}>
                   {i > 0 && ", "}
-                  <Link href={`/portfolios/${h.portfolioId}`} className="text-ink">{h.name}</Link>
+                  <Link href={`/collections/${h.collectionId}`} className="text-ink">{h.name}</Link>
                   <span className="num text-dim"> ×{h.quantity}</span>
                 </span>
               ))}
@@ -627,10 +627,10 @@ Under the printings panel add the "In your binders" block and the alert shortcut
 
 The alerts page (Task 7) reads `?printing=`; until then the link lands on the placeholder — fine.
 
-- [x] **Step 2: Binder detail.** Same `searchParams` treatment (`PageProps<"/portfolios/[id]">`). Nothing populates `portfolio_history` until Task 6, so today every binder has an empty history — `withLivePoint` adds tonight's live value as the single point (and, once the nightly runs, only when today's row isn't there yet):
+- [x] **Step 2: Collection detail.** Same `searchParams` treatment (`PageProps<"/collections/[id]">`). Nothing populates `collection_history` until Task 6, so today every collection has an empty history — `withLivePoint` adds tonight's live value as the single point (and, once the nightly runs, only when today's row isn't there yet):
 
 ```ts
-  const history = withLivePoint(await getPortfolioHistory(userId, portfolioId, from, today), today, summary.value);
+  const history = withLivePoint(await getCollectionHistory(userId, collectionId, from, today), today, summary.value);
   const stats = seriesStats(history);
 ```
 
@@ -646,19 +646,19 @@ Under the `PriceDelta` add:
             from={chartFrom(range, from, history, today)}
             to={today}
             height={120}
-            label={`${portfolio.name} value, ${RANGE_CAPTION[range]}`}
+            label={`${collection.name} value, ${RANGE_CAPTION[range]}`}
           />
-          <RangePills current={range} hrefFor={(r) => `/portfolios/${portfolioId}?range=${r}`} />
+          <RangePills current={range} hrefFor={(r) => `/collections/${collectionId}?range=${r}`} />
         </div>
 ```
 
-- [x] **Step 3:** typecheck (`next typegen` runs first, so `PageProps` resolves), lint, test. Manually: `npm run dev`, sign in, open `/cards/22189?range=1y` (real snapshots), `/cards/31532` or any card with no printings (empty panel, no crash), `/portfolios/2?range=all` — must show a single flat line at today's value (one `M` in the path, end dot present), not "Not enough history yet." **Commit** — `feat(charts): price history on card detail (range + printing), binder value chart, card holders, alert shortcut`
+- [x] **Step 3:** typecheck (`next typegen` runs first, so `PageProps` resolves), lint, test. Manually: `npm run dev`, sign in, open `/cards/22189?range=1y` (real snapshots), `/cards/31532` or any card with no printings (empty panel, no crash), `/collections/2?range=all` — must show a single flat line at today's value (one `M` in the path, end dot present), not "Not enough history yet." **Commit** — `feat(charts): price history on card detail (range + printing), collection value chart, card holders, alert shortcut`
 
 ---
 
 ### Task 4: Share links
 
-**Files:** create `lib/share.ts`, `tests/share.test.ts`, `tests/share-actions.test.ts`, `app/(app)/portfolios/[id]/SharePanel.tsx`, `tests/ui/share-panel.test.tsx`, `app/s/[token]/page.tsx`; modify `app/(app)/portfolios/actions.ts`, `app/(app)/portfolios/[id]/page.tsx`, `tests/proxy.test.ts`
+**Files:** create `lib/share.ts`, `tests/share.test.ts`, `tests/share-actions.test.ts`, `app/(app)/collections/[id]/SharePanel.tsx`, `tests/ui/share-panel.test.tsx`, `app/s/[token]/page.tsx`; modify `app/(app)/collections/actions.ts`, `app/(app)/collections/[id]/page.tsx`, `tests/proxy.test.ts`
 
 - [x] **Step 1: Failing data-layer tests** — `tests/share.test.ts`:
 
@@ -668,14 +668,14 @@ import { tmpDb } from "./helpers/tmpdb";
 const tmp = tmpDb("share");
 import { closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
-import { createPortfolio, addItem } from "@/lib/portfolios";
-import { isShareToken, getShareLink, enableShare, regenerateShare, disableShare, getSharedPortfolio } from "@/lib/share";
+import { createCollection, addItem } from "@/lib/collections";
+import { isShareToken, getShareLink, enableShare, regenerateShare, disableShare, getSharedCollection } from "@/lib/share";
 
 let seed: Awaited<ReturnType<typeof seedMiniCatalog>>;
 let mine: number;
 beforeAll(async () => {
   seed = await seedMiniCatalog();
-  mine = (await createPortfolio("u1", "Main")).id;
+  mine = (await createCollection("u1", "Main")).id;
   await addItem("u1", mine, { printingId: seed.printings.umbreonHolo, quantity: 2, condition: "NM", acquiredPrice: 1000 });
 });
 afterAll(() => { closeDb(); tmp.clean(); });
@@ -683,14 +683,14 @@ afterAll(() => { closeDb(); tmp.clean(); });
 describe("share links", () => {
   it("starts with no link", async () => {
     expect(await getShareLink("u1", mine)).toBeNull();
-    expect(await getSharedPortfolio("nope")).toBeNull();
+    expect(await getSharedCollection("nope")).toBeNull();
   });
-  it("enable creates a 22-char base64url token that resolves to exactly that binder, cost basis stripped", async () => {
+  it("enable creates a 22-char base64url token that resolves to exactly that collection, cost basis stripped", async () => {
     const link = await enableShare("u1", mine);
     expect(link.enabled).toBe(true);
     expect(isShareToken(link.token)).toBe(true);
-    const shared = await getSharedPortfolio(link.token);
-    expect(shared).toMatchObject({ portfolioId: mine, ownerId: "u1", name: "Main", cards: 2, value: 2930 });
+    const shared = await getSharedCollection(link.token);
+    expect(shared).toMatchObject({ collectionId: mine, ownerId: "u1", name: "Main", cards: 2, value: 2930 });
     expect(shared!.holdings).toHaveLength(1);
     expect(shared!.holdings[0]).toMatchObject({ cardName: "Umbreon ex", quantity: 2, value: 2930 });
     expect(shared!.holdings[0]).not.toHaveProperty("acquiredPrice");
@@ -703,13 +703,13 @@ describe("share links", () => {
     const b = await regenerateShare("u1", mine);
     expect(b.token).not.toBe(a.token);
     expect(b.enabled).toBe(true);
-    expect(await getSharedPortfolio(a.token)).toBeNull();
-    expect((await getSharedPortfolio(b.token))?.portfolioId).toBe(mine);
+    expect(await getSharedCollection(a.token)).toBeNull();
+    expect((await getSharedCollection(b.token))?.collectionId).toBe(mine);
   });
   it("disable 404s the token but keeps it for re-enable", async () => {
     const before = (await getShareLink("u1", mine))!;
     expect(await disableShare("u1", mine)).toBe(true);
-    expect(await getSharedPortfolio(before.token)).toBeNull();
+    expect(await getSharedCollection(before.token)).toBeNull();
     expect((await getShareLink("u1", mine))?.enabled).toBe(false);
     expect((await enableShare("u1", mine)).token).toBe(before.token);
   });
@@ -722,7 +722,7 @@ describe("share links", () => {
   });
   it("rejects malformed tokens without touching the database", async () => {
     for (const t of ["", "short", "x".repeat(23), "has space here-------", "../../etc/passwd-------"]) expect(isShareToken(t)).toBe(false);
-    expect(await getSharedPortfolio("x".repeat(23))).toBeNull();
+    expect(await getSharedCollection("x".repeat(23))).toBeNull();
   });
 });
 ```
@@ -731,12 +731,12 @@ describe("share links", () => {
 
 ```ts
 // lib/share.ts
-// Read-only share links. One per binder; the token is the only credential (spec §9: token lookup
-// only, disabled links 404). A visitor sees the binder at market value — never cost basis or gain,
+// Read-only share links. One per collection; the token is the only credential (spec §9: token lookup
+// only, disabled links 404). A visitor sees the collection at market value — never cost basis or gain,
 // and nothing else about the owner.
 import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
-import { getPortfolioHoldings, getPortfolioSummary, type Holding } from "@/lib/portfolios";
+import { getCollectionHoldings, getCollectionSummary, type Holding } from "@/lib/collections";
 
 export interface ShareLink { token: string; enabled: boolean; createdAt: string }
 
@@ -744,19 +744,19 @@ const TOKEN_RE = /^[A-Za-z0-9_-]{22}$/; // 16 random bytes as base64url
 export const isShareToken = (s: string): boolean => TOKEN_RE.test(s);
 const newToken = () => randomBytes(16).toString("base64url");
 
-async function assertOwnsPortfolio(userId: string, portfolioId: number) {
+async function assertOwnsCollection(userId: string, collectionId: number) {
   const c = await db();
-  const r = await c.execute({ sql: "SELECT 1 FROM portfolios WHERE id = ? AND user_id = ?", args: [portfolioId, userId] });
-  if (r.rows.length === 0) throw new Error("Portfolio not found");
+  const r = await c.execute({ sql: "SELECT 1 FROM collections WHERE id = ? AND user_id = ?", args: [collectionId, userId] });
+  if (r.rows.length === 0) throw new Error("Collection not found");
 }
 
-export async function getShareLink(userId: string, portfolioId: number): Promise<ShareLink | null> {
+export async function getShareLink(userId: string, collectionId: number): Promise<ShareLink | null> {
   const c = await db();
   const r = await c.execute({
     sql: `SELECT sl.token, sl.enabled, sl.created_at FROM share_links sl
-          JOIN portfolios po ON po.id = sl.portfolio_id AND po.user_id = ?
-          WHERE sl.portfolio_id = ?`,
-    args: [userId, portfolioId],
+          JOIN collections po ON po.id = sl.collection_id AND po.user_id = ?
+          WHERE sl.collection_id = ?`,
+    args: [userId, collectionId],
   });
   if (r.rows.length === 0) return null;
   const x = r.rows[0];
@@ -764,90 +764,90 @@ export async function getShareLink(userId: string, portfolioId: number): Promise
 }
 
 /** Turns sharing on: creates the link on first use, re-enables the SAME token afterwards. */
-export async function enableShare(userId: string, portfolioId: number): Promise<ShareLink> {
-  await assertOwnsPortfolio(userId, portfolioId);
+export async function enableShare(userId: string, collectionId: number): Promise<ShareLink> {
+  await assertOwnsCollection(userId, collectionId);
   const c = await db();
   await c.execute({
-    sql: "INSERT INTO share_links (portfolio_id, token, enabled) VALUES (?, ?, 1) ON CONFLICT(portfolio_id) DO UPDATE SET enabled = 1",
-    args: [portfolioId, newToken()],
+    sql: "INSERT INTO share_links (collection_id, token, enabled) VALUES (?, ?, 1) ON CONFLICT(collection_id) DO UPDATE SET enabled = 1",
+    args: [collectionId, newToken()],
   });
-  return (await getShareLink(userId, portfolioId))!;
+  return (await getShareLink(userId, collectionId))!;
 }
 
 /** Replaces the token (every old URL stops working) and leaves sharing on. */
-export async function regenerateShare(userId: string, portfolioId: number): Promise<ShareLink> {
-  await assertOwnsPortfolio(userId, portfolioId);
+export async function regenerateShare(userId: string, collectionId: number): Promise<ShareLink> {
+  await assertOwnsCollection(userId, collectionId);
   const c = await db();
   await c.execute({
-    sql: `INSERT INTO share_links (portfolio_id, token, enabled) VALUES (?, ?, 1)
-          ON CONFLICT(portfolio_id) DO UPDATE SET token = excluded.token, enabled = 1`,
-    args: [portfolioId, newToken()],
+    sql: `INSERT INTO share_links (collection_id, token, enabled) VALUES (?, ?, 1)
+          ON CONFLICT(collection_id) DO UPDATE SET token = excluded.token, enabled = 1`,
+    args: [collectionId, newToken()],
   });
-  return (await getShareLink(userId, portfolioId))!;
+  return (await getShareLink(userId, collectionId))!;
 }
 
-export async function disableShare(userId: string, portfolioId: number): Promise<boolean> {
+export async function disableShare(userId: string, collectionId: number): Promise<boolean> {
   const c = await db();
   const r = await c.execute({
-    sql: "UPDATE share_links SET enabled = 0 WHERE portfolio_id = ? AND portfolio_id IN (SELECT id FROM portfolios WHERE user_id = ?)",
-    args: [portfolioId, userId],
+    sql: "UPDATE share_links SET enabled = 0 WHERE collection_id = ? AND collection_id IN (SELECT id FROM collections WHERE user_id = ?)",
+    args: [collectionId, userId],
   });
   return r.rowsAffected === 1;
 }
 
 /** What a visitor may see. Everything the owner paid is deliberately absent. */
 export type PublicHolding = Omit<Holding, "acquiredPrice" | "acquiredDate" | "cost">;
-export interface SharedPortfolio { ownerId: string; portfolioId: number; name: string; holdings: PublicHolding[]; value: number; cards: number; unpriced: number }
+export interface SharedCollection { ownerId: string; collectionId: number; name: string; holdings: PublicHolding[]; value: number; cards: number; unpriced: number }
 
 const toPublic = (h: Holding): PublicHolding => ({
   itemId: h.itemId, printingId: h.printingId, cardId: h.cardId, cardName: h.cardName, setName: h.setName, number: h.number,
   subtype: h.subtype, imageUrl: h.imageUrl, quantity: h.quantity, condition: h.condition, market: h.market, priceDate: h.priceDate, value: h.value,
 });
 
-/** The binder behind an enabled token, or null for unknown, malformed, or disabled tokens. */
-export async function getSharedPortfolio(token: string): Promise<SharedPortfolio | null> {
+/** The collection behind an enabled token, or null for unknown, malformed, or disabled tokens. */
+export async function getSharedCollection(token: string): Promise<SharedCollection | null> {
   if (!isShareToken(token)) return null;
   const c = await db();
   const r = await c.execute({
     sql: `SELECT po.id, po.user_id, po.name FROM share_links sl
-          JOIN portfolios po ON po.id = sl.portfolio_id
+          JOIN collections po ON po.id = sl.collection_id
           WHERE sl.token = ? AND sl.enabled = 1`,
     args: [token],
   });
   if (r.rows.length === 0) return null;
-  const ownerId = String(r.rows[0].user_id), portfolioId = Number(r.rows[0].id);
-  const [holdings, summary] = await Promise.all([getPortfolioHoldings(ownerId, portfolioId), getPortfolioSummary(ownerId, portfolioId)]);
-  return { ownerId, portfolioId, name: String(r.rows[0].name), holdings: holdings.map(toPublic), value: summary.value, cards: summary.cards, unpriced: summary.unpriced };
+  const ownerId = String(r.rows[0].user_id), collectionId = Number(r.rows[0].id);
+  const [holdings, summary] = await Promise.all([getCollectionHoldings(ownerId, collectionId), getCollectionSummary(ownerId, collectionId)]);
+  return { ownerId, collectionId, name: String(r.rows[0].name), holdings: holdings.map(toPublic), value: summary.value, cards: summary.cards, unpriced: summary.unpriced };
 }
 ```
 
 Run `tests/share.test.ts` → PASS.
 
-- [x] **Step 3: Actions.** Append to `app/(app)/portfolios/actions.ts`:
+- [x] **Step 3: Actions.** Append to `app/(app)/collections/actions.ts`:
 
 ```ts
-export async function enableShareAction(portfolioId: number) {
-  const r = await withUser((u) => S.enableShare(u, assertId(portfolioId)));
-  if (r.ok) revalidatePath(`/portfolios/${portfolioId}`);
+export async function enableShareAction(collectionId: number) {
+  const r = await withUser((u) => S.enableShare(u, assertId(collectionId)));
+  if (r.ok) revalidatePath(`/collections/${collectionId}`);
   return r;
 }
-export async function regenerateShareAction(portfolioId: number) {
-  const r = await withUser((u) => S.regenerateShare(u, assertId(portfolioId)));
-  if (r.ok) revalidatePath(`/portfolios/${portfolioId}`);
+export async function regenerateShareAction(collectionId: number) {
+  const r = await withUser((u) => S.regenerateShare(u, assertId(collectionId)));
+  if (r.ok) revalidatePath(`/collections/${collectionId}`);
   return r;
 }
-export async function disableShareAction(portfolioId: number) {
+export async function disableShareAction(collectionId: number) {
   const r = await withUser(async (u) => {
-    if (!(await S.disableShare(u, assertId(portfolioId)))) throw new Error("Portfolio not found");
+    if (!(await S.disableShare(u, assertId(collectionId)))) throw new Error("Collection not found");
   });
-  if (r.ok) revalidatePath(`/portfolios/${portfolioId}`);
+  if (r.ok) revalidatePath(`/collections/${collectionId}`);
   return r;
 }
 ```
 
-(`import * as S from "@/lib/share"`.) Test `tests/share-actions.test.ts` in the style of `tests/actions.test.ts`: no session → `Not signed in`; bad id → `Invalid id`; owner enable → `{ ok: true, data: { token, enabled: true } }` and `revalidatePath("/portfolios/<id>")`; other user → `Portfolio not found`; disable on a binder with no link → `Portfolio not found`.
+(`import * as S from "@/lib/share"`.) Test `tests/share-actions.test.ts` in the style of `tests/actions.test.ts`: no session → `Not signed in`; bad id → `Invalid id`; owner enable → `{ ok: true, data: { token, enabled: true } }` and `revalidatePath("/collections/<id>")`; other user → `Collection not found`; disable on a collection with no link → `Collection not found`.
 
-- [x] **Step 4: `SharePanel` (client)** — `app/(app)/portfolios/[id]/SharePanel.tsx`:
+- [x] **Step 4: `SharePanel` (client)** — `app/(app)/collections/[id]/SharePanel.tsx`:
 
 ```tsx
 "use client";
@@ -861,9 +861,9 @@ import { enableShareAction, regenerateShareAction, disableShareAction } from "..
 // for enable/regenerate and ActionResult<void> for disable, so `run` must be generic over the payload.
 type Result<T> = { ok: true; data?: T } | { ok: false; error: string };
 
-/** Share on/off for one binder. The link is shown as a path; "Copy" resolves it against the
+/** Share on/off for one collection. The link is shown as a path; "Copy" resolves it against the
  *  current origin at click time so preview deploys and localhost copy the right host. */
-export default function SharePanel({ portfolioId, link }: { portfolioId: number; link: ShareLink | null }) {
+export default function SharePanel({ collectionId, link }: { collectionId: number; link: ShareLink | null }) {
   const router = useRouter();
   const [current, setCurrent] = useState<ShareLink | null>(link);
   const [error, setError] = useState<string | null>(null);
@@ -909,18 +909,18 @@ export default function SharePanel({ portfolioId, link }: { portfolioId: number;
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={copy} disabled={busy}>Copy link</Button>
             <Button variant="secondary" size="sm" disabled={busy}
-              onClick={() => { if (window.confirm("Replace the link? The old one will stop working.")) void run(() => regenerateShareAction(portfolioId), (d) => setCurrent(d ?? null)); }}>
+              onClick={() => { if (window.confirm("Replace the link? The old one will stop working.")) void run(() => regenerateShareAction(collectionId), (d) => setCurrent(d ?? null)); }}>
               New link
             </Button>
             <Button variant="secondary" size="sm" disabled={busy}
-              onClick={() => run(() => disableShareAction(portfolioId), () => setCurrent((c) => (c ? { ...c, enabled: false } : c)))}>
+              onClick={() => run(() => disableShareAction(collectionId), () => setCurrent((c) => (c ? { ...c, enabled: false } : c)))}>
               Turn off
             </Button>
           </div>
         </>
       ) : (
-        <Button variant="secondary" className="self-start" disabled={busy} onClick={() => run(() => enableShareAction(portfolioId), (d) => setCurrent(d ?? null))}>
-          Share this binder
+        <Button variant="secondary" className="self-start" disabled={busy} onClick={() => run(() => enableShareAction(collectionId), (d) => setCurrent(d ?? null))}>
+          Share this collection
         </Button>
       )}
       {notice && <p className="text-[13px] text-gain">{notice}</p>}
@@ -930,7 +930,7 @@ export default function SharePanel({ portfolioId, link }: { portfolioId: number;
 }
 ```
 
-Test `tests/ui/share-panel.test.tsx` (mock the three actions and `next/navigation` as `holdings-table.test.tsx` does; stub `navigator.clipboard.writeText` with `vi.fn`): Off state shows "Share this binder" → click → `enableShareAction(7)` → shows `/s/<token>` and "Anyone with the link can view"; Copy → clipboard gets `http://localhost:3000/s/<token>` (jsdom origin) and "Link copied."; Turn off → `disableShareAction(7)` and back to Off; New link confirms first then `regenerateShareAction(7)` and shows the new token; an action error renders an alert.
+Test `tests/ui/share-panel.test.tsx` (mock the three actions and `next/navigation` as `holdings-table.test.tsx` does; stub `navigator.clipboard.writeText` with `vi.fn`): Off state shows "Share this collection" → click → `enableShareAction(7)` → shows `/s/<token>` and "Anyone with the link can view"; Copy → clipboard gets `http://localhost:3000/s/<token>` (jsdom origin) and "Link copied."; Turn off → `disableShareAction(7)` and back to Off; New link confirms first then `regenerateShareAction(7)` and shows the new token; an action error renders an alert.
 
 - [x] **Step 5: Public page** — `app/s/[token]/page.tsx` (outside `(app)`: no shell, no session):
 
@@ -938,8 +938,8 @@ Test `tests/ui/share-panel.test.tsx` (mock the three actions and `next/navigatio
 import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSharedPortfolio } from "@/lib/share";
-import { getPortfolioHistory, parseRange, rangeStart, chartFrom, withLivePoint, seriesStats, RANGE_CAPTION } from "@/lib/history";
+import { getSharedCollection } from "@/lib/share";
+import { getCollectionHistory, parseRange, rangeStart, chartFrom, withLivePoint, seriesStats, RANGE_CAPTION } from "@/lib/history";
 import { formatMoney } from "@/lib/format";
 import { SectionHeading, MoneyDisplay, PriceDelta, CardRow, LineChart, RangePills, EmptyState } from "@/components/ui";
 
@@ -948,7 +948,7 @@ export const dynamic = "force-dynamic";
 
 /** One lookup per request even though generateMetadata and the page both ask (same pattern as the
  *  other detail pages). */
-const load = cache((token: string) => getSharedPortfolio(token));
+const load = cache((token: string) => getSharedCollection(token));
 
 export async function generateMetadata({ params }: PageProps<"/s/[token]">) {
   const { token } = await params;
@@ -956,7 +956,7 @@ export async function generateMetadata({ params }: PageProps<"/s/[token]">) {
   return { title: shared ? `${shared.name} — Hitstreak` : "Hitstreak", robots: { index: false, follow: false } };
 }
 
-export default async function SharedPortfolioPage({ params, searchParams }: PageProps<"/s/[token]">) {
+export default async function SharedCollectionPage({ params, searchParams }: PageProps<"/s/[token]">) {
   const { token } = await params;
   const { range: rawRange } = await searchParams;
   const shared = await load(token);
@@ -964,14 +964,14 @@ export default async function SharedPortfolioPage({ params, searchParams }: Page
   const range = parseRange(rawRange);
   const today = new Date().toISOString().slice(0, 10);
   const from = rangeStart(range, today);
-  const history = withLivePoint(await getPortfolioHistory(shared.ownerId, shared.portfolioId, from, today), today, shared.value);
+  const history = withLivePoint(await getCollectionHistory(shared.ownerId, shared.collectionId, from, today), today, shared.value);
   const stats = seriesStats(history);
 
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex h-16 items-center gap-4 border-b border-hairline px-6 md:px-10">
         <Link href="/" className="font-display text-2xl text-ink">Hitstreak</Link>
-        <span className="text-[13px] text-dim">Shared binder · read-only</span>
+        <span className="text-[13px] text-dim">Shared collection · read-only</span>
       </header>
       <main className="grid grow gap-10 px-6 py-6 md:grid-cols-[380px_1fr] md:px-10">
         <div className="flex flex-col gap-4">
@@ -1022,8 +1022,8 @@ export default async function SharedPortfolioPage({ params, searchParams }: Page
 
 Add to `tests/proxy.test.ts`: `it("leaves public share pages alone", …)` → `proxy(req("/s/abcdefghijklmnopqrstuv"))` has no `location` header.
 
-- [x] **Step 6: Wire the panel.** In `app/(app)/portfolios/[id]/page.tsx` load `getShareLink(userId, portfolioId)` with the other reads and render `<SharePanel portfolioId={portfolioId} link={shareLink} />` at the bottom of the left column.
-- [x] **Step 7:** `npm test`, typecheck, lint. Manually: enable sharing on binder 2, open the `/s/…` URL in a private window (no cookie) → renders; `curl -si localhost:3000/s/AAAAAAAAAAAAAAAAAAAAAA` → 404. **Commit** — `feat(share): read-only binder share links (/s/[token]) with on/off/regenerate`
+- [x] **Step 6: Wire the panel.** In `app/(app)/collections/[id]/page.tsx` load `getShareLink(userId, collectionId)` with the other reads and render `<SharePanel collectionId={collectionId} link={shareLink} />` at the bottom of the left column.
+- [x] **Step 7:** `npm test`, typecheck, lint. Manually: enable sharing on collection 2, open the `/s/…` URL in a private window (no cookie) → renders; `curl -si localhost:3000/s/AAAAAAAAAAAAAAAAAAAAAA` → 404. **Commit** — `feat(share): read-only collection share links (/s/[token]) with on/off/regenerate`
 
 ---
 
@@ -1214,7 +1214,7 @@ export async function getAlertCard(userId: string, printingId: number): Promise<
 
 ---
 
-### Task 6: Nightly job — portfolio history + alert emails
+### Task 6: Nightly job — collection history + alert emails
 
 **Files:** create `ingest/mailer.ts`, `ingest/nightly.ts`, `tests/mailer.test.ts`, `tests/nightly.test.ts`; modify `.github/workflows/daily-ingest.yml`, `.env.example`
 
@@ -1288,9 +1288,9 @@ import { tmpDb } from "./helpers/tmpdb";
 const tmp = tmpDb("nightly");
 import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
-import { createPortfolio, addItem } from "@/lib/portfolios";
+import { createCollection, addItem } from "@/lib/collections";
 import { createAlert } from "@/lib/alerts";
-import { runNightly, materializePortfolioHistory } from "@/ingest/nightly";
+import { runNightly, materializeCollectionHistory } from "@/ingest/nightly";
 import type { Mail, Mailer } from "@/ingest/mailer";
 
 let seed: Awaited<ReturnType<typeof seedMiniCatalog>>;
@@ -1310,26 +1310,26 @@ beforeAll(async () => {
   seed = await seedMiniCatalog();
   await addUser("u1", "u1@example.com");
   await addUser("u2", "u2@example.com");
-  full = (await createPortfolio("u1", "Main")).id;
-  empty = (await createPortfolio("u2", "Empty")).id;
+  full = (await createCollection("u1", "Main")).id;
+  empty = (await createCollection("u2", "Empty")).id;
   await addItem("u1", full, { printingId: seed.printings.umbreonHolo, quantity: 2, condition: "NM" });   // 1465 as of 2026-09-01
   await addItem("u1", full, { printingId: seed.printings.pikachuNormal, quantity: 5, condition: "NM" }); // no snapshots → unpriced
 });
 afterAll(() => { closeDb(); tmp.clean(); });
 
-describe("materializePortfolioHistory", () => {
-  it("writes one row per binder valued from the snapshots as of that date, idempotently", async () => {
-    expect(await materializePortfolioHistory("2026-09-07")).toBe(2);
-    const rows = async () => (await (await db()).execute("SELECT portfolio_id, date, total_value FROM portfolio_history ORDER BY portfolio_id")).rows;
+describe("materializeCollectionHistory", () => {
+  it("writes one row per collection valued from the snapshots as of that date, idempotently", async () => {
+    expect(await materializeCollectionHistory("2026-09-07")).toBe(2);
+    const rows = async () => (await (await db()).execute("SELECT collection_id, date, total_value FROM collection_history ORDER BY collection_id")).rows;
     expect(await rows()).toEqual([
-      { portfolio_id: full, date: "2026-09-07", total_value: 2930 },
-      { portfolio_id: empty, date: "2026-09-07", total_value: 0 },
+      { collection_id: full, date: "2026-09-07", total_value: 2930 },
+      { collection_id: empty, date: "2026-09-07", total_value: 0 },
     ]);
-    await materializePortfolioHistory("2026-09-07");
+    await materializeCollectionHistory("2026-09-07");
     expect((await rows()).length).toBe(2);
     // an earlier date uses the price in force then (1100 on 2026-08-01)
-    await materializePortfolioHistory("2026-08-01");
-    expect((await rows()).find((r) => r.portfolio_id === full && r.date === "2026-08-01")?.total_value).toBe(2200);
+    await materializeCollectionHistory("2026-08-01");
+    expect((await rows()).find((r) => r.collection_id === full && r.date === "2026-08-01")?.total_value).toBe(2200);
   });
 });
 
@@ -1338,7 +1338,7 @@ describe("runNightly alerts", () => {
     const id = await createAlert("u1", { printingId: seed.printings.umbreonHolo, direction: "above", threshold: 1450 });
     const { sent, mailer } = capture();
     const s1 = await runNightly({ date: "2026-09-07", mailer, appUrl: "https://hitstreak.test", now: () => "2026-09-07T21:06:00Z" });
-    expect(s1).toMatchObject({ portfolios: 2, alerts: 1, fired: 1, rearmed: 0, emailFailed: 0, skippedNoMailer: 0, emailDisabled: false });
+    expect(s1).toMatchObject({ collections: 2, alerts: 1, fired: 1, rearmed: 0, emailFailed: 0, skippedNoMailer: 0, emailDisabled: false });
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe("u1@example.com");
     expect(sent[0].subject).toContain("Umbreon ex");
@@ -1386,7 +1386,7 @@ describe("runNightly alerts", () => {
 
 ```ts
 // Nightly job, run by the "Daily price ingest" workflow right after ingest/daily.ts:
-//   1. materialize portfolio_history for `date` (every binder, every user — one statement),
+//   1. materialize collection_history for `date` (every collection, every user — one statement),
 //   2. evaluate every price alert against the market price in force on `date` and email crossings.
 // Idempotent per date (spec §9): history rows are upserted, and an alert that already fired stays
 // disarmed until the price crosses back, so a re-run never emails twice. An email that fails — or
@@ -1404,22 +1404,22 @@ export interface NightlyOptions {
 }
 
 export interface NightlySummary {
-  date: string; portfolios: number; alerts: number; fired: number; rearmed: number;
+  date: string; collections: number; alerts: number; fired: number; rearmed: number;
   emailFailed: number; skippedNoMailer: number; emailDisabled: boolean; elapsedMs: number;
 }
 
-/** INSERT … SELECT over all binders: value = Σ quantity × market in force on `date` (the newest
- *  snapshot at or before it). Unpriced copies contribute nothing; an empty binder is 0. */
-export async function materializePortfolioHistory(date: string): Promise<number> {
+/** INSERT … SELECT over all collections: value = Σ quantity × market in force on `date` (the newest
+ *  snapshot at or before it). Unpriced copies contribute nothing; an empty collection is 0. */
+export async function materializeCollectionHistory(date: string): Promise<number> {
   const c = await db();
   const r = await c.execute({
-    sql: `INSERT INTO portfolio_history (portfolio_id, date, total_value)
+    sql: `INSERT INTO collection_history (collection_id, date, total_value)
           SELECT po.id, ?, COALESCE(SUM(ci.quantity * (
                    SELECT ps.market FROM price_snapshots ps
                    WHERE ps.printing_id = ci.printing_id AND ps.date <= ? ORDER BY ps.date DESC LIMIT 1)), 0)
-          FROM portfolios po LEFT JOIN collection_items ci ON ci.portfolio_id = po.id
+          FROM collections po LEFT JOIN collection_items ci ON ci.collection_id = po.id
           WHERE true GROUP BY po.id
-          ON CONFLICT(portfolio_id, date) DO UPDATE SET total_value = excluded.total_value`,
+          ON CONFLICT(collection_id, date) DO UPDATE SET total_value = excluded.total_value`,
     args: [date, date],
   });
   return r.rowsAffected;
@@ -1455,10 +1455,10 @@ export async function runNightly(opts: NightlyOptions): Promise<NightlySummary> 
   if (!isCalendarDate(opts.date)) throw new Error(`runNightly: date must be YYYY-MM-DD, got ${opts.date}`);
   const startedAt = Date.now();
   const now = opts.now ?? (() => new Date().toISOString());
-  const s: NightlySummary = { date: opts.date, portfolios: 0, alerts: 0, fired: 0, rearmed: 0, emailFailed: 0, skippedNoMailer: 0, emailDisabled: opts.mailer === null, elapsedMs: 0 };
+  const s: NightlySummary = { date: opts.date, collections: 0, alerts: 0, fired: 0, rearmed: 0, emailFailed: 0, skippedNoMailer: 0, emailDisabled: opts.mailer === null, elapsedMs: 0 };
 
-  s.portfolios = await materializePortfolioHistory(opts.date);
-  console.log(`[nightly] portfolio_history: ${s.portfolios} binders valued as of ${opts.date}`);
+  s.collections = await materializeCollectionHistory(opts.date);
+  console.log(`[nightly] collection_history: ${s.collections} collections valued as of ${opts.date}`);
 
   const c = await db();
   const alerts = await loadAlerts(opts.date);
@@ -1525,7 +1525,7 @@ if (isMain) {
 ```yaml
       # Runs even when the ingest step failed part-way: whatever prices did land are worth
       # materializing, and the job is already red from the step above.
-      - name: Nightly — binder history + price alerts
+      - name: Nightly — collection history + price alerts
         if: ${{ !cancelled() }}
         run: npx tsx ingest/nightly.ts
         env:
@@ -1548,15 +1548,15 @@ ALERT_FROM_EMAIL=Hitstreak <alerts@hitstreak.app>
 APP_URL=
 ```
 
-- [x] **Step 5:** tests, typecheck, lint. Locally: `$env:TURSO_DATABASE_URL='file:hitstreak.local.db'; $env:APP_URL='http://localhost:3000'; npx tsx ingest/nightly.ts` → `NIGHTLY_SUMMARY` with `portfolios ≥ 1`, then `/portfolios/2` shows a materialized point. **Commit** — `feat(nightly): materialize portfolio_history and evaluate/email price alerts after the daily ingest`
+- [x] **Step 5:** tests, typecheck, lint. Locally: `$env:TURSO_DATABASE_URL='file:hitstreak.local.db'; $env:APP_URL='http://localhost:3000'; npx tsx ingest/nightly.ts` → `NIGHTLY_SUMMARY` with `collections ≥ 1`, then `/collections/2` shows a materialized point. **Commit** — `feat(nightly): materialize collection_history and evaluate/email price alerts after the daily ingest`
 
 ---
 
 ### Task 7: Alerts UI
 
-**Files:** create `lib/action-utils.ts`, `app/(app)/alerts/actions.ts`, `app/(app)/alerts/AlertList.tsx`, `app/(app)/alerts/NewAlertForm.tsx`, `components/ui/useCardSearch.ts`, `tests/alert-actions.test.ts`, `tests/ui/alert-list.test.tsx`, `tests/ui/new-alert-form.test.tsx`, `tests/ui/card-row-tone.test.tsx`; modify `app/(app)/alerts/page.tsx`, `app/(app)/portfolios/actions.ts`, `app/(app)/portfolios/[id]/AddItemDialog.tsx`, `components/ui/CardRow.tsx`, `components/ui/index.ts`, `app/dev/ui/page.tsx`, `docs/design/README.md`
+**Files:** create `lib/action-utils.ts`, `app/(app)/alerts/actions.ts`, `app/(app)/alerts/AlertList.tsx`, `app/(app)/alerts/NewAlertForm.tsx`, `components/ui/useCardSearch.ts`, `tests/alert-actions.test.ts`, `tests/ui/alert-list.test.tsx`, `tests/ui/new-alert-form.test.tsx`, `tests/ui/card-row-tone.test.tsx`; modify `app/(app)/alerts/page.tsx`, `app/(app)/collections/actions.ts`, `app/(app)/collections/[id]/AddItemDialog.tsx`, `components/ui/CardRow.tsx`, `components/ui/index.ts`, `app/dev/ui/page.tsx`, `docs/design/README.md`
 
-- [x] **Step 1: Shared action helpers.** Create `lib/action-utils.ts` with `ActionResult`, `assertId`, `withUser` moved verbatim from `app/(app)/portfolios/actions.ts` (no `"use server"` in this file — it exports non-async values); the portfolios action file imports them. `tests/actions.test.ts` must still pass unchanged.
+- [x] **Step 1: Shared action helpers.** Create `lib/action-utils.ts` with `ActionResult`, `assertId`, `withUser` moved verbatim from `app/(app)/collections/actions.ts` (no `"use server"` in this file — it exports non-async values); the collections action file imports them. `tests/actions.test.ts` must still pass unchanged.
 
 - [x] **Step 2: Alert actions** — `app/(app)/alerts/actions.ts`:
 
@@ -2013,22 +2013,22 @@ SIGNUP_ALLOWLIST=
 
 ### Task 9: Docs, spec amendments, plan bookkeeping, merge prep
 
-- [x] README: Status → Phase 3 complete (charts, nightly, share links, alerts, gate); Screens: `/s/[token]`, `/alerts` real, `/cards/[id]` + `/portfolios/[id]` charts; Ingestion: `ingest/nightly.ts` line + secrets `RESEND_API_KEY`, `ALERT_FROM_EMAIL`, `APP_URL`; Auth: `SIGNUP_ALLOWLIST`; a "Before going public" checklist (set `SIGNUP_ALLOWLIST`, Resend domain, secrets).
+- [x] README: Status → Phase 3 complete (charts, nightly, share links, alerts, gate); Screens: `/s/[token]`, `/alerts` real, `/cards/[id]` + `/collections/[id]` charts; Ingestion: `ingest/nightly.ts` line + secrets `RESEND_API_KEY`, `ALERT_FROM_EMAIL`, `APP_URL`; Auth: `SIGNUP_ALLOWLIST`; a "Before going public" checklist (set `SIGNUP_ALLOWLIST`, Resend domain, secrets).
 - [x] Spec amendments (edit in place, keep the date-stamped note):
   - §4 table row "Nightly compute": **GitHub Actions step after the daily ingest** (`ingest/nightly.ts`) — not Vercel Cron → endpoint. Reason: the Actions job already holds the DB credentials and runs immediately after the prices land; no shared secret, no function duration cap, and no deployed app required for history to accumulate.
   - §6 step 5 rewritten accordingly.
   - §7 Sharing: note cost basis/gain are excluded from the public view. Card detail: printing pills on the chart. Alerts: "v1 has no edit — changing a threshold or direction is delete + recreate (which re-arms and drops `last_fired_at`)"; an alert whose line is already crossed when created emails on the first nightly.
-  - §13: strike "Gate sign-up" (done: `SIGNUP_ALLOWLIST`); add new follow-ups: email verification before public launch (alerts email whatever address was registered — with the allowlist unset, anyone could point alerts at a third party's inbox; `requireEmailVerification` + a Resend sender closes it); `listAlerts` does two queries per alert for the 30-day change; `materializePortfolioHistory` is one statement over all binders (fine for hundreds of users, revisit at thousands); alert send + disarm are two non-transactional writes (a DB failure right after a successful send re-emails next night — at-least-once by design); no per-user daily email cap beyond `MAX_ALERTS_PER_USER`; share page has no rate limit (128-bit tokens make enumeration infeasible, but add one before public); `RangePills` scroll position depends on `Pill scroll={false}` (Next `Link`); the alerts form threshold hint rounds to whole percent; `Button size="sm"` replaced ad-hoc `min-h-8` overrides — grep for any new ones in review.
+  - §13: strike "Gate sign-up" (done: `SIGNUP_ALLOWLIST`); add new follow-ups: email verification before public launch (alerts email whatever address was registered — with the allowlist unset, anyone could point alerts at a third party's inbox; `requireEmailVerification` + a Resend sender closes it); `listAlerts` does two queries per alert for the 30-day change; `materializeCollectionHistory` is one statement over all collections (fine for hundreds of users, revisit at thousands); alert send + disarm are two non-transactional writes (a DB failure right after a successful send re-emails next night — at-least-once by design); no per-user daily email cap beyond `MAX_ALERTS_PER_USER`; share page has no rate limit (128-bit tokens make enumeration infeasible, but add one before public); `RangePills` scroll position depends on `Pill scroll={false}` (Next `Link`); the alerts form threshold hint rounds to whole percent; `Button size="sm"` replaced ad-hoc `min-h-8` overrides — grep for any new ones in review.
 - [x] `docs/design/README.md` "Implemented as": `LineChart`, `RangePills`, `CardRow tone="inverted"`.
 - [x] Tick this plan's boxes; add "Executed — deviations" like Phase 2b's.
 - [ ] Final whole-branch review → fix → push → CI green → merge to `main`.
 
 ## Self-review notes
 
-- Spec coverage: §5 tables ✔ (T1); §6 step 5 nightly ✔ (T6, as an Actions step — amended); §7 portfolios chart ✔ (T3), card detail chart + holders + alert shortcut ✔ (T3), sharing `/s/[token]` + toggle/regenerate ✔ (T4), alerts create/list/delete + email content ✔ (T5–T7; no update — recorded in the §7 amendment); §9 idempotent nightly / retry-on-failure / disabled links 404 ✔ (T6, T4); §10 alert threshold/re-arm unit tests ✔ (T5), share boundary tests ✔ (T4), auth boundary on new tables ✔ (T1, T4, T5); §13 gate sign-up ✔ (T8).
-- Type consistency: `Point`/`Range` from `lib/history` used by `LineChart`, `RangePills`, three pages; `chartFrom`/`withLivePoint`/`RANGE_CAPTION` used identically on the card, binder and share pages; `ShareLink` shared by data layer, actions, `SharePanel` (whose `run<T>` is generic because `disableShareAction` returns `ActionResult<void>`); `AlertCard`/`Direction`/`Alert`/`CreateAlertInput` from `lib/alerts` used by nightly, actions, form, list; `Mailer`/`Mail` from `ingest/mailer`; `withUser`/`assertId` from `lib/action-utils` used by both action files.
+- Spec coverage: §5 tables ✔ (T1); §6 step 5 nightly ✔ (T6, as an Actions step — amended); §7 collections chart ✔ (T3), card detail chart + holders + alert shortcut ✔ (T3), sharing `/s/[token]` + toggle/regenerate ✔ (T4), alerts create/list/delete + email content ✔ (T5–T7; no update — recorded in the §7 amendment); §9 idempotent nightly / retry-on-failure / disabled links 404 ✔ (T6, T4); §10 alert threshold/re-arm unit tests ✔ (T5), share boundary tests ✔ (T4), auth boundary on new tables ✔ (T1, T4, T5); §13 gate sign-up ✔ (T8).
+- Type consistency: `Point`/`Range` from `lib/history` used by `LineChart`, `RangePills`, three pages; `chartFrom`/`withLivePoint`/`RANGE_CAPTION` used identically on the card, collection and share pages; `ShareLink` shared by data layer, actions, `SharePanel` (whose `run<T>` is generic because `disableShareAction` returns `ActionResult<void>`); `AlertCard`/`Direction`/`Alert`/`CreateAlertInput` from `lib/alerts` used by nightly, actions, form, list; `Mailer`/`Mail` from `ingest/mailer`; `withUser`/`assertId` from `lib/action-utils` used by both action files.
 - Reviewed 2026-09-07 by four independent reviewers + adversarial verification before execution; 16 confirmed findings folded in (SharePanel generic `run`, Better Auth before-hook error surfacing in tests, nullable `chartPrinting`, `All`-range axis anchoring, live point on empty history, `Button size="sm"` for the 44px rule, pinned `asOf` in the alerts test, copy fixes).
-- Ownership: every new read/write joins `portfolios.user_id` or filters `price_alerts.user_id`; the share token authorizes exactly one binder and the public shape strips cost; the nightly is the only cross-user reader and runs outside the app.
+- Ownership: every new read/write joins `collections.user_id` or filters `price_alerts.user_id`; the share token authorizes exactly one collection and the public shape strips cost; the nightly is the only cross-user reader and runs outside the app.
 
 ## Executed 2026-09-08 — deviations
 
@@ -2060,12 +2060,12 @@ differs from the plan above:
   (`alerts: 3, fired: 1` — the Shanks alert left armed by the failing-mailer test fires here; the
   Booster Bundle row is untouched), as the plan asked.
 - **Manual browser checks were substituted.** Task 3: a throwaway jsdom render test (deleted before
-  commit) covering `?range=1y`, a printing-less card and a binder at `?range=all`. Task 4: a scratch
+  commit) covering `?range=1y`, a printing-less card and a collection at `?range=all`. Task 4: a scratch
   copy of the repo on a throwaway DB under `next dev --webpack -p 3112`, not the running dev server.
-  Task 6: the `/portfolios/2` check became a direct `getPortfolioHistory` call after the CLI run.
+  Task 6: the `/collections/2` check became a direct `getCollectionHistory` call after the CLI run.
   Task 7: the running dev server with the already-signed-in browser pane, `window.confirm` stubbed
   for the cleanup delete, and the nightly run via `node --env-file=.env.local --import tsx
-  ingest/nightly.ts`; local DB side effects net to zero apart from today's `portfolio_history` row.
+  ingest/nightly.ts`; local DB side effects net to zero apart from today's `collection_history` row.
 - **Task 9's design-README item needed no edit** — Tasks 2 and 7 had already added the `LineChart`,
   `RangePills` and `CardRow tone="inverted"` rows and the `Button size="sm"` tap-target sentence.
 
@@ -2075,7 +2075,7 @@ The whole-branch review that closes Task 9 found these; fixed on this branch in
 `fix: pre-merge review — …` / `docs: pre-merge review — …` commits:
 
 - **Alerts are evaluated against `latest_prices`, not the run date's snapshot.** `loadAlerts` used the
-  same as-of-`date` subquery as `materializePortfolioHistory` — right for history, wrong for the alert
+  same as-of-`date` subquery as `materializeCollectionHistory` — right for history, wrong for the alert
   state machine, which is not order-aware. Re-running a failed night N (the workflow's `date` input)
   after night N+1 had fired an alert would have re-armed it on N's older price, and night N+2 would
   have emailed a duplicate; symmetrically an armed alert could fire on N's stale price and say
@@ -2095,7 +2095,7 @@ The whole-branch review that closes Task 9 found these; fixed on this branch in
   already made those edits). The branch is never force-pushed, so: drop "design README" from the
   squash-merge message.
 - **`APP_URL` is required only once Resend is configured.** The CLI used to exit 2 without it before
-  materializing anything, so a missing secret would have cost a night of `portfolio_history` even
+  materializing anything, so a missing secret would have cost a night of `collection_history` even
   with email disabled (when the URL is never used). Now it exits 2 only when a mailer exists and
   there is no origin for the email links; README and `.env.example` say so.
 
@@ -2108,13 +2108,13 @@ Also recorded in spec §13.
   `"server-only"` in `lib/db.ts` is still to do.
 - `listAlerts` issues two queries per alert for the 30-day change (`thirtyDayChange`) — ~200 at the
   100-alert cap. `createAlert`'s cap is COUNT-then-INSERT, not atomic.
-- `getSharedPortfolio` reads holdings twice (`getPortfolioSummary` re-reads them).
-- `materializePortfolioHistory` is one `INSERT … SELECT` over all binders; alert send + disarm are two
+- `getSharedCollection` reads holdings twice (`getCollectionSummary` re-reads them).
+- `materializeCollectionHistory` is one `INSERT … SELECT` over all collections; alert send + disarm are two
   non-transactional writes (at-least-once by design); no per-user daily email cap beyond
   `MAX_ALERTS_PER_USER`; `/s/[token]` has no rate limit.
 - `HoldingsTable`'s Remove button still carries `ml-1 text-[13px] font-normal` — `text-[13px]` is
   redundant with `size="sm"`.
-- On the binder page the range `PriceDelta` renders directly under the "vs. paid" one with no spacing
+- On the collection page the range `PriceDelta` renders directly under the "vs. paid" one with no spacing
   element (cosmetic).
 - The alerts form's threshold hint rounds to a whole percent; `RangePills` keeps the scroll position
   only through `Pill scroll={false}`.

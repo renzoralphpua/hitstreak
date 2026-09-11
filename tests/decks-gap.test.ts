@@ -4,7 +4,7 @@ const tmp = tmpDb("decks-gap");
 import { closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import { seedDeckFixtures } from "./helpers/decks";
-import { createPortfolio, addItem } from "@/lib/portfolios";
+import { createCollection, addItem } from "@/lib/collections";
 import { loadOwnedByKey, analyzeGap } from "@/lib/decks/gap";
 import type { DeckDetail } from "@/lib/decks/data";
 
@@ -20,16 +20,16 @@ const deck = (cards: DeckDetail["cards"], gameSlug: DeckDetail["gameSlug"] = "po
 beforeAll(async () => {
   await seedMiniCatalog();
   f = await seedDeckFixtures();
-  const a = await createPortfolio(U, "A"), b = await createPortfolio(U, "B");
+  const a = await createCollection(U, "A"), b = await createCollection(U, "B");
   await addItem(U, a.id, { printingId: f.printings.rareCandySvi, quantity: 2, condition: "NM" }); // Rare Candy (SVI reprint, "Rare Candy - 191/198")
   await addItem(U, b.id, { printingId: f.printings.rareCandyObf, quantity: 1, condition: "LP" }); // Rare Candy (OBF)
   await addItem(U, a.id, { printingId: f.printings.namiAlt, quantity: 3, condition: "NM" });      // Nami alt art
-  await createPortfolio("other", "Not mine").then((p) => addItem("other", p.id, { printingId: f.printings.charizardEx, quantity: 4, condition: "NM" })); // Charizard ex, someone else's
+  await createCollection("other", "Not mine").then((p) => addItem("other", p.id, { printingId: f.printings.charizardEx, quantity: 4, condition: "NM" })); // Charizard ex, someone else's
 });
 afterAll(() => { closeDb(); tmp.clean(); });
 
 describe("loadOwnedByKey", () => {
-  it("aggregates the user's copies across all binders by identity key", async () => {
+  it("aggregates the user's copies across all collections by identity key", async () => {
     const owned = await loadOwnedByKey(U, "pokemon");
     expect(owned.get("name:rare candy")).toBe(3);
     expect(owned.get("name:charizard ex")).toBeUndefined();

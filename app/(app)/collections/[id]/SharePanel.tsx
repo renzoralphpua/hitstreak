@@ -9,9 +9,9 @@ import { enableShareAction, regenerateShareAction, disableShareAction } from "..
 // for enable/regenerate and ActionResult<void> for disable, so `run` must be generic over the payload.
 type Result<T> = { ok: true; data?: T } | { ok: false; error: string };
 
-/** Share on/off for one binder. The link is shown as a path; "Copy" resolves it against the
+/** Share on/off for one collection. The link is shown as a path; "Copy" resolves it against the
  *  current origin at click time so preview deploys and localhost copy the right host. */
-export default function SharePanel({ portfolioId, link }: { portfolioId: number; link: ShareLink | null }) {
+export default function SharePanel({ collectionId, link }: { collectionId: number; link: ShareLink | null }) {
   const router = useRouter();
   const [current, setCurrent] = useState<ShareLink | null>(link);
   const [error, setError] = useState<string | null>(null);
@@ -57,18 +57,18 @@ export default function SharePanel({ portfolioId, link }: { portfolioId: number;
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={copy} disabled={busy}>Copy link</Button>
             <Button variant="secondary" size="sm" disabled={busy}
-              onClick={() => { if (window.confirm("Replace the link? The old one will stop working.")) void run(() => regenerateShareAction(portfolioId), (d) => setCurrent(d ?? null)); }}>
+              onClick={() => { if (window.confirm("Replace the link? The old one will stop working.")) void run(() => regenerateShareAction(collectionId), (d) => setCurrent(d ?? null)); }}>
               New link
             </Button>
             <Button variant="secondary" size="sm" disabled={busy}
-              onClick={() => run(() => disableShareAction(portfolioId), () => setCurrent((c) => (c ? { ...c, enabled: false } : c)))}>
+              onClick={() => run(() => disableShareAction(collectionId), () => setCurrent((c) => (c ? { ...c, enabled: false } : c)))}>
               Turn off
             </Button>
           </div>
         </>
       ) : (
-        <Button variant="secondary" className="self-start" disabled={busy} onClick={() => run(() => enableShareAction(portfolioId), (d) => setCurrent(d ?? null))}>
-          Share this binder
+        <Button variant="secondary" className="self-start" disabled={busy} onClick={() => run(() => enableShareAction(collectionId), (d) => setCurrent(d ?? null))}>
+          Share this collection
         </Button>
       )}
       {notice && <p className="text-base text-gain">{notice}</p>}

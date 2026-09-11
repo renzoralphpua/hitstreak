@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Binder tokens — the single source of truth. Values from docs/design/README.md.
+/* Collection tokens — the single source of truth. Values from docs/design/README.md.
    Light is default; dark reassigns the same variables under the dark theme attribute below. */
 :root {
   --ground: #f6f1e8;
@@ -67,7 +67,7 @@
   --shadow-art: var(--art-shadow);
   /* Two content ceilings, because the two kinds of screen want opposite things on a wide monitor.
      A screen you READ (card detail, alerts) has to keep its line length sane; a screen you SCAN
-     (binder grid, set grid) should cash an ultrawide in for more columns. `max-w-scan` is also the
+     (collection grid, set grid) should cash an ultrawide in for more columns. `max-w-scan` is also the
      outer bound on `main`, so nothing is ever truly unbounded. */
   --container-read: 1200px;
   --container-scan: 1800px;
@@ -90,7 +90,7 @@
   --text-wordmark: 24px;   /* the brand mark in a bar — not a heading size */
   --text-section: 26px;    /* section headings, and the standalone wordmark lockup */
   --text-price: 32px;      /* a card's price */
-  --text-hero: 56px;       /* a binder or portfolio total */
+  --text-hero: 56px;       /* a collection total */
   --tracking-label: 0.06em;
 }
 

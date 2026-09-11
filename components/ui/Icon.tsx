@@ -62,8 +62,8 @@ export type IconSize = keyof typeof SIZES;
  */
 const ICONS = {
   // — navigation ————————————————————————————————————————————————
-  /** Binder: a ring-bound album, spine on the left. */
-  binder: { d: "M4 3 h16 a2 2 0 0 1 2 2 v14 a2 2 0 0 1 -2 2 H4 Z M8 3 V21", round: true },
+  /** Collection: a ring-bound album, spine on the left. */
+  collection: { d: "M4 3 h16 a2 2 0 0 1 2 2 v14 a2 2 0 0 1 -2 2 H4 Z M8 3 V21", round: true },
   /** Sets: four cards laid out as a page. */
   grid: { d: "M3 3 h8 v8 h-8 Z M13 3 h8 v8 h-8 Z M3 13 h8 v8 h-8 Z M13 13 h8 v8 h-8 Z", round: true },
   /** Decks: two stacked cards, the back one fanned. */
@@ -74,15 +74,15 @@ const ICONS = {
   // — controls ——————————————————————————————————————————————————
   /** Search: magnifier, handle to the lower right. */
   search: { d: "M11 4 a7 7 0 1 0 0 14 a7 7 0 0 0 0 -14 Z M16 16 L21 21" },
-  /** List: the counterpart to `grid` in the binder view toggle. */
+  /** List: the counterpart to `grid` in the collection view toggle. */
   list: { d: "M4 6 H20 M4 12 H20 M4 18 H20" },
-  /** Plus: add a card, add a binder, add a lot. */
+  /** Plus: add a card, add a collection, add a lot. */
   plus: { d: "M12 5 V19 M5 12 H19" },
   /** Minus: the quantity stepper's other half. */
   minus: { d: "M5 12 H19" },
   /** Close: dismiss a dialog or clear a field. */
   close: { d: "M6 6 L18 18 M18 6 L6 18" },
-  /** Chevron down: a dropdown that opens downward — the binder switcher. */
+  /** Chevron down: a dropdown that opens downward — the collection switcher. */
   "chevron-down": { d: "M6 9 L12 15 L18 9" },
   /** Chevron right: a disclosure that expands in place — a holding into its lots. */
   "chevron-right": { d: "M9 6 L15 12 L9 18" },

@@ -8,7 +8,7 @@ import { SectionHeading, Pill, EmptyState, Button } from "@/components/ui";
 import DeckSummaryPanel from "./DeckSummaryPanel";
 
 export const metadata = { title: "Decks — Hitstreak" };
-// Gap analysis is against the signed-in user's binders: never prerender or cache across users.
+// Gap analysis is against the signed-in user's collections: never prerender or cache across users.
 export const dynamic = "force-dynamic";
 
 const DEFAULT_GAME = "pokemon";

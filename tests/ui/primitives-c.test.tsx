@@ -20,11 +20,11 @@ describe("EmptyState", () => {
 
 describe("Input", () => {
   it("carries the field classes, merges className last, and forwards input props", () => {
-    render(<Input aria-label="Binder name" className="max-w-xs" placeholder="New binder…" maxLength={80} />);
-    const input = screen.getByLabelText("Binder name");
+    render(<Input aria-label="Collection name" className="max-w-xs" placeholder="New collection…" maxLength={80} />);
+    const input = screen.getByLabelText("Collection name");
     expect(input.className).toMatch(/border-hairline/);
     expect(input.className).toMatch(/max-w-xs$/);
-    expect(input).toHaveAttribute("placeholder", "New binder…");
+    expect(input).toHaveAttribute("placeholder", "New collection…");
     expect(input).toHaveAttribute("maxlength", "80");
   });
 

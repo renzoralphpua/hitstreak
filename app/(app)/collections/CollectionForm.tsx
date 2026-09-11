@@ -2,12 +2,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@/components/ui";
-import { createPortfolioAction, renamePortfolioAction } from "./actions";
+import { createCollectionAction, renameCollectionAction } from "./actions";
 
 type Props = { mode: "create" } | { mode: "rename"; id: number; name: string; onDone?: () => void };
 
-/** Create a binder, or rename one inline. Errors from the action surface as role="alert". */
-export default function PortfolioForm(props: Props) {
+/** Create a collection, or rename one inline. Errors from the action surface as role="alert". */
+export default function CollectionForm(props: Props) {
   const router = useRouter();
   const [name, setName] = useState(props.mode === "rename" ? props.name : "");
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +20,8 @@ export default function PortfolioForm(props: Props) {
     try {
       const res =
         props.mode === "create"
-          ? await createPortfolioAction(name.trim())
-          : await renamePortfolioAction(props.id, name.trim());
+          ? await createCollectionAction(name.trim())
+          : await renameCollectionAction(props.id, name.trim());
       if (!res.ok) {
         setError(res.error);
         return;
@@ -41,15 +41,15 @@ export default function PortfolioForm(props: Props) {
       <div className="flex items-center gap-2">
         <Input
           className="max-w-xs"
-          aria-label="Binder name"
-          placeholder="New binder…"
+          aria-label="Collection name"
+          placeholder="New collection…"
           maxLength={80}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         {props.mode === "create" ? (
           <Button type="submit" disabled={busy} className="shrink-0">
-            Create binder
+            Create collection
           </Button>
         ) : (
           <>
@@ -74,7 +74,7 @@ export default function PortfolioForm(props: Props) {
 /** "Rename" button that swaps itself for the inline rename form. */
 export function RenameToggle({ id, name }: { id: number; name: string }) {
   const [open, setOpen] = useState(false);
-  if (open) return <PortfolioForm mode="rename" id={id} name={name} onDone={() => setOpen(false)} />;
+  if (open) return <CollectionForm mode="rename" id={id} name={name} onDone={() => setOpen(false)} />;
   return (
     <Button variant="secondary" onClick={() => setOpen(true)}>
       Rename

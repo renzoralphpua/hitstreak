@@ -6,8 +6,8 @@ import { Button, Pill, Panel, SectionHeading, StatTile, PriceDelta, ProgressBar 
 describe("Button", () => {
   it("renders primary by default and secondary on request, forwards clicks", () => {
     const onClick = vi.fn();
-    render(<Button onClick={onClick}>Add to binder</Button>);
-    const b = screen.getByRole("button", { name: "Add to binder" });
+    render(<Button onClick={onClick}>Add to collection</Button>);
+    const b = screen.getByRole("button", { name: "Add to collection" });
     expect(b.className).toMatch(/bg-chip/);
     fireEvent.click(b);
     expect(onClick).toHaveBeenCalled();

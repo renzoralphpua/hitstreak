@@ -13,14 +13,14 @@ Phase 2a complete: design tokens + `components/ui/` primitives (`BottomTabBar`, 
 `/dev/ui` primitives gallery (dev only); Better Auth (email + password) with sign-in/sign-up and a
 protected app shell.
 
-Phase 2b complete: binders with live valuation from `latest_prices`; the add-card flow with type-ahead
+Phase 2b complete: collections with live valuation from `latest_prices`; the add-card flow with type-ahead
 search; the set browser with completion tracking and tap-to-own; card detail with printings and 30-day
 change; `/decks` and `/alerts` placeholders so the nav does not 404.
 
-Phase 3 complete: price-history charts on the card page (range + printing pills) and the binder page
+Phase 3 complete: price-history charts on the card page (range + printing pills) and the collection page
 (value chart with a 7D · 30D · 90D · 1Y · All row); `ingest/nightly.ts` as a second step of the daily
-ingest job (materializes `portfolio_history`, evaluates price alerts, emails crossings via Resend);
-read-only binder share links (`/s/[token]`, on/off/regenerate); the alerts page (Triggered / Watching,
+ingest job (materializes `collection_history`, evaluates price alerts, emails crossings via Resend);
+read-only collection share links (`/s/[token]`, on/off/regenerate); the alerts page (Triggered / Watching,
 create, delete); and a sign-up gate (`SIGNUP_ALLOWLIST`).
 
 Phase 4 complete: decks — `decks` / `deck_cards` schema; per-game legality validators (Pokémon, One Piece,
@@ -36,16 +36,16 @@ steps to phases; plans live in `docs/superpowers/plans/`).
 ### Screens
 
 - `/` — landing (anonymous); signed-in visitors are redirected to `/home`
-- `/home` — everything you own: total vs paid, value against cost basis (`?range=`), per-binder breakdown, winners and losers, decks, triggered alerts. Reached from the wordmark; deliberately not a nav item
+- `/home` — everything you own: total vs paid, value against cost basis (`?range=`), per-collection breakdown, winners and losers, decks, triggered alerts. Reached from the wordmark; deliberately not a nav item
 - `/sign-in`, `/sign-up` — email + password
-- `/binders` — binder list with value, gain, and create/rename/delete
-- `/binders/[id]` — grid (default) or list of holdings (`?view=`), valued from latest prices, value-history chart (`?range=`), add-card dialog, quantity edits, share-link panel
+- `/collections` — collection list with value, gain, and create/rename/delete
+- `/collections/[id]` — grid (default) or list of holdings (`?view=`), valued from latest prices, value-history chart (`?range=`), add-card dialog, quantity edits, share-link panel
 - `/sets` — game pills and each set's completion bar
 - `/sets/[id]` — the set's cards as owned/missing tiles; tap a tile to add one copy
-- `/cards/[id]` — art, market price, 30-day change, price-history chart (`?range=` + `?p=` printing pills), printings table, "in your binders", add to a binder, set-alert shortcut
+- `/cards/[id]` — art, market price, 30-day change, price-history chart (`?range=` + `?p=` printing pills), printings table, "in your collections", add to a collection, set-alert shortcut
 - `/alerts` — Triggered / Watching lists, new-alert form (search → printing → direction → price; `?printing=` preselects one), delete
-- `/s/[token]` — public read-only binder view (no sign-in, market value only, `noindex`); unknown or disabled tokens 404
-- `/decks` — curated meta-deck browser: game pills (`?game=`), decks grouped by tier, each panel showing owned/total and cost-to-complete against your binders
+- `/s/[token]` — public read-only collection view (no sign-in, market value only, `noindex`); unknown or disabled tokens 404
+- `/decks` — curated meta-deck browser: game pills (`?game=`), decks grouped by tier, each panel showing owned/total and cost-to-complete against your collections
 - `/decks/[id]` — deck detail: missing cards priced, the full list by zone, and the game's legality checklist; "Copy to my decks" on a curated deck
 - `/decks/mine` — your decks (create, rename, delete), each marked Draft or Legal
 - `/decks/mine/[id]` — the builder: search-add into zones, quantity steppers, live legality and live gap, save as legal or draft
@@ -109,7 +109,7 @@ TURSO_DATABASE_URL=file:hitstreak.local.db npx tsx scripts/import-deck.mts \
 ## Ingestion
 
 - `ingest/daily.ts [YYYY-MM-DD]` — daily sync (GitHub Actions "Daily price ingest", 21:00 UTC): catalog upsert + write-on-change prices. Pass a date to re-run a failed night under its own date. Exits 1 if any game or group failed; prints a final `DAILY_SUMMARY {json}` line.
-- `ingest/nightly.ts [YYYY-MM-DD]` — second step of the same "Daily price ingest" job, right after `ingest/daily.ts` (and even when that step failed part-way — whatever prices landed are worth valuing). Materializes `portfolio_history` for the date (one row per binder: Σ quantity × the market price in force on that date) and evaluates every price alert against the current price (`latest_prices`, not the date's snapshot — so re-running an older night cannot re-arm a fired alert or fire one on a stale price), emailing crossings via Resend. Idempotent per date. Prints a final `NIGHTLY_SUMMARY {json}` line. Exits 2 when Resend is configured but `APP_URL` (or `BETTER_AUTH_URL`) is not — the emails need an origin for their links; without Resend the URL is unused and history still materializes. Exits 1 if an email failed, or, in CI, if a crossing is pending while Resend is unconfigured, so the gap is noticed rather than only logged.
+- `ingest/nightly.ts [YYYY-MM-DD]` — second step of the same "Daily price ingest" job, right after `ingest/daily.ts` (and even when that step failed part-way — whatever prices landed are worth valuing). Materializes `collection_history` for the date (one row per collection: Σ quantity × the market price in force on that date) and evaluates every price alert against the current price (`latest_prices`, not the date's snapshot — so re-running an older night cannot re-arm a fired alert or fire one on a stale price), emailing crossings via Resend. Idempotent per date. Prints a final `NIGHTLY_SUMMARY {json}` line. Exits 2 when Resend is configured but `APP_URL` (or `BETTER_AUTH_URL`) is not — the emails need an origin for their links; without Resend the URL is unused and history still materializes. Exits 1 if an email failed, or, in CI, if a crossing is pending while Resend is unconfigured, so the gap is noticed rather than only logged.
 - `ingest/backfill.ts <from> <to>` — one-time archive replay from 2024-02-08 (GitHub Actions "Historical price backfill", manual). Run oldest-first in chunks; see the Turso write-budget note in the Phase 1 plan before dispatching.
 - Raw tcgcsv responses are archived to R2 under `raw/tcgplayer/<date>/<category>/` BEFORE processing; an archive failure aborts the affected group for the day (or the whole game if the groups listing itself fails to archive); the run exits non-zero either way.
 
@@ -118,7 +118,7 @@ Env vars: see `.env.example`. CI secrets: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKE
 `ALERT_FROM_EMAIL`, `APP_URL`.
 
 `RESEND_API_KEY` / `ALERT_FROM_EMAIL` can come later — until both are set, alerts are logged instead of
-emailed (a pending crossing still makes the CI job red so it does not go unnoticed) and `portfolio_history`
+emailed (a pending crossing still makes the CI job red so it does not go unnoticed) and `collection_history`
 accumulates regardless. Set `APP_URL` together with the Resend secrets: once Resend is configured the
 nightly step exits 2 without it, because the emails need an origin for their links.
 
@@ -182,4 +182,4 @@ applies to previews too, not just the production environment.
 
 - Spec: `docs/superpowers/specs/2026-09-05-hitstreak-design.md`
 - Plans: `docs/superpowers/plans/`
-- Design system (Binder): `docs/design/README.md`
+- Design system (Collection): `docs/design/README.md`

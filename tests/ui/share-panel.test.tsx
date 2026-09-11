@@ -6,12 +6,12 @@ import type { ShareLink } from "@/lib/share";
 const { enable, regenerate, disable, refresh } = vi.hoisted(() => ({
   enable: vi.fn(), regenerate: vi.fn(), disable: vi.fn(), refresh: vi.fn(),
 }));
-vi.mock("@/app/(app)/binders/actions", () => ({
+vi.mock("@/app/(app)/collections/actions", () => ({
   enableShareAction: enable, regenerateShareAction: regenerate, disableShareAction: disable,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import SharePanel from "@/app/(app)/binders/[id]/SharePanel";
+import SharePanel from "@/app/(app)/collections/[id]/SharePanel";
 
 const TOKEN = "abcdefghijklmnopqrstuv";
 const NEW_TOKEN = "ZYXWVUTSRQPONMLKJIHGFE";
@@ -31,10 +31,10 @@ afterEach(() => { vi.restoreAllMocks(); });
 
 describe("SharePanel", () => {
   it("is Off with no link and turns on through enableShareAction", async () => {
-    render(<SharePanel portfolioId={7} link={null} />);
+    render(<SharePanel collectionId={7} link={null} />);
     expect(screen.getByText("Off")).toBeInTheDocument();
     expect(screen.queryByLabelText("Share link")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Share this binder" }));
+    fireEvent.click(screen.getByRole("button", { name: "Share this collection" }));
     await waitFor(() => expect(enable).toHaveBeenCalledWith(7));
     await waitFor(() => expect(screen.getByLabelText("Share link")).toHaveTextContent(`/s/${TOKEN}`));
     expect(screen.getByText("Anyone with the link can view")).toBeInTheDocument();
@@ -42,15 +42,15 @@ describe("SharePanel", () => {
   });
 
   it("treats a disabled link as Off and re-enables it", async () => {
-    render(<SharePanel portfolioId={7} link={link({ enabled: false })} />);
+    render(<SharePanel collectionId={7} link={link({ enabled: false })} />);
     expect(screen.getByText("Off")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Share this binder" }));
+    fireEvent.click(screen.getByRole("button", { name: "Share this collection" }));
     await waitFor(() => expect(enable).toHaveBeenCalledWith(7));
     await waitFor(() => expect(screen.getByText("Anyone with the link can view")).toBeInTheDocument());
   });
 
   it("Copy link writes the absolute URL for the current origin and confirms", async () => {
-    render(<SharePanel portfolioId={7} link={link()} />);
+    render(<SharePanel collectionId={7} link={link()} />);
     fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(`http://localhost:3000/s/${TOKEN}`));
     await waitFor(() => expect(screen.getByText("Link copied.")).toBeInTheDocument());
@@ -61,24 +61,24 @@ describe("SharePanel", () => {
 
   it("explains when the clipboard is unavailable", async () => {
     writeText.mockRejectedValueOnce(new Error("denied"));
-    render(<SharePanel portfolioId={7} link={link()} />);
+    render(<SharePanel collectionId={7} link={link()} />);
     fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/couldn.t copy/i));
   });
 
   it("Turn off calls disableShareAction and goes back to Off", async () => {
-    render(<SharePanel portfolioId={7} link={link()} />);
+    render(<SharePanel collectionId={7} link={link()} />);
     fireEvent.click(screen.getByRole("button", { name: "Turn off" }));
     await waitFor(() => expect(disable).toHaveBeenCalledWith(7));
     await waitFor(() => expect(screen.getByText("Off")).toBeInTheDocument());
     expect(screen.queryByLabelText("Share link")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Share this binder" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Share this collection" })).toBeInTheDocument();
     expect(refresh).toHaveBeenCalled();
   });
 
   it("New link confirms first, then regenerates and shows the new token", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<SharePanel portfolioId={7} link={link()} />);
+    render(<SharePanel collectionId={7} link={link()} />);
     fireEvent.click(screen.getByRole("button", { name: "New link" }));
     expect(confirm).toHaveBeenCalledWith("Replace the link? The old one will stop working.");
     await waitFor(() => expect(regenerate).toHaveBeenCalledWith(7));
@@ -88,24 +88,24 @@ describe("SharePanel", () => {
 
   it("New link does nothing when the confirm is dismissed", () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<SharePanel portfolioId={7} link={link()} />);
+    render(<SharePanel collectionId={7} link={link()} />);
     fireEvent.click(screen.getByRole("button", { name: "New link" }));
     expect(regenerate).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Share link")).toHaveTextContent(`/s/${TOKEN}`);
   });
 
   it("surfaces an action error as an alert and keeps the current state", async () => {
-    enable.mockResolvedValueOnce({ ok: false, error: "Portfolio not found" });
-    render(<SharePanel portfolioId={7} link={null} />);
-    fireEvent.click(screen.getByRole("button", { name: "Share this binder" }));
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Portfolio not found"));
+    enable.mockResolvedValueOnce({ ok: false, error: "Collection not found" });
+    render(<SharePanel collectionId={7} link={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Share this collection" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Collection not found"));
     expect(screen.getByText("Off")).toBeInTheDocument();
     expect(refresh).not.toHaveBeenCalled();
   });
 
   it("reports a thrown action as a network problem", async () => {
     disable.mockRejectedValueOnce(new Error("boom"));
-    render(<SharePanel portfolioId={7} link={link()} />);
+    render(<SharePanel collectionId={7} link={link()} />);
     fireEvent.click(screen.getByRole("button", { name: "Turn off" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/could not reach the server/i));
     expect(screen.getByLabelText("Share link")).toHaveTextContent(`/s/${TOKEN}`);

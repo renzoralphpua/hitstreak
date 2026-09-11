@@ -3,15 +3,15 @@ import { tmpDb } from "./helpers/tmpdb";
 const tmp = tmpDb("share-actions");
 import { closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
-import { createPortfolio } from "@/lib/portfolios";
-import { getShareLink, getSharedPortfolio, isShareToken } from "@/lib/share";
+import { createCollection } from "@/lib/collections";
+import { getShareLink, getSharedCollection, isShareToken } from "@/lib/share";
 
 // Same seam as tests/actions.test.ts: the session and Next's cache are mocked, everything else is real.
 const { getSession, revalidatePath } = vi.hoisted(() => ({ getSession: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock("@/lib/session", () => ({ getSession }));
 vi.mock("next/cache", () => ({ revalidatePath }));
 
-import { enableShareAction, regenerateShareAction, disableShareAction } from "@/app/(app)/binders/actions";
+import { enableShareAction, regenerateShareAction, disableShareAction } from "@/app/(app)/collections/actions";
 
 const U1 = "user_1", U2 = "user_2";
 const signedIn = (id: string) => getSession.mockResolvedValue({ user: { id } });
@@ -22,9 +22,9 @@ let unshared: number;
 
 beforeAll(async () => {
   await seedMiniCatalog();
-  mine = (await createPortfolio(U1, "Main")).id;
-  unshared = (await createPortfolio(U1, "Never shared")).id;
-  other = (await createPortfolio(U2, "Not yours")).id;
+  mine = (await createCollection(U1, "Main")).id;
+  unshared = (await createCollection(U1, "Never shared")).id;
+  other = (await createCollection(U2, "Not yours")).id;
 });
 afterAll(() => { closeDb(); tmp.clean(); });
 beforeEach(() => { getSession.mockReset(); revalidatePath.mockReset(); });
@@ -48,15 +48,15 @@ describe("share server actions", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("the owner can enable sharing and the binder page is revalidated", async () => {
+  it("the owner can enable sharing and the collection page is revalidated", async () => {
     signedIn(U1);
     const r = await enableShareAction(mine);
     expect(r).toEqual({ ok: true, data: { token: expect.any(String), enabled: true, createdAt: expect.any(String) } });
     if (r.ok) {
       expect(isShareToken(r.data!.token)).toBe(true);
-      expect((await getSharedPortfolio(r.data!.token))?.portfolioId).toBe(mine);
+      expect((await getSharedCollection(r.data!.token))?.collectionId).toBe(mine);
     }
-    expect(revalidatePath).toHaveBeenCalledWith(`/binders/${mine}`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/collections/${mine}`);
   });
 
   it("regenerate hands back a fresh, enabled token and revalidates", async () => {
@@ -68,30 +68,30 @@ describe("share server actions", () => {
       expect(r.data!.enabled).toBe(true);
       expect(r.data!.token).not.toBe(before.token);
     }
-    expect(await getSharedPortfolio(before.token)).toBeNull();
-    expect(revalidatePath).toHaveBeenCalledWith(`/binders/${mine}`);
+    expect(await getSharedCollection(before.token)).toBeNull();
+    expect(revalidatePath).toHaveBeenCalledWith(`/collections/${mine}`);
   });
 
   it("disable turns the link off and revalidates", async () => {
     signedIn(U1);
     expect(await disableShareAction(mine)).toEqual({ ok: true, data: undefined });
     expect((await getShareLink(U1, mine))?.enabled).toBe(false);
-    expect(revalidatePath).toHaveBeenCalledWith(`/binders/${mine}`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/collections/${mine}`);
   });
 
-  it("another user gets 'Portfolio not found' for every action and nothing changes", async () => {
+  it("another user gets 'Collection not found' for every action and nothing changes", async () => {
     signedIn(U2);
-    expect(await enableShareAction(mine)).toEqual({ ok: false, error: "Portfolio not found" });
-    expect(await regenerateShareAction(mine)).toEqual({ ok: false, error: "Portfolio not found" });
-    expect(await disableShareAction(mine)).toEqual({ ok: false, error: "Portfolio not found" });
+    expect(await enableShareAction(mine)).toEqual({ ok: false, error: "Collection not found" });
+    expect(await regenerateShareAction(mine)).toEqual({ ok: false, error: "Collection not found" });
+    expect(await disableShareAction(mine)).toEqual({ ok: false, error: "Collection not found" });
     expect(revalidatePath).not.toHaveBeenCalled();
     expect((await getShareLink(U1, mine))?.enabled).toBe(false);
     expect(await getShareLink(U2, other)).toBeNull();
   });
 
-  it("disabling a binder that was never shared is 'Portfolio not found'", async () => {
+  it("disabling a collection that was never shared is 'Collection not found'", async () => {
     signedIn(U1);
-    expect(await disableShareAction(unshared)).toEqual({ ok: false, error: "Portfolio not found" });
+    expect(await disableShareAction(unshared)).toEqual({ ok: false, error: "Collection not found" });
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });

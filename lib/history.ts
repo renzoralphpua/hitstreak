@@ -24,15 +24,15 @@ export async function getPrintingHistory(printingId: number, from: string, to: s
   return points;
 }
 
-/** Nightly-materialized binder value (one row per day). Ownership is checked through
- *  portfolios.user_id like every other portfolio read; the share page passes the owner's id. */
-export async function getPortfolioHistory(userId: string, portfolioId: number, from: string, to: string): Promise<Point[]> {
+/** Nightly-materialized collection value (one row per day). Ownership is checked through
+ *  collections.user_id like every other collection read; the share page passes the owner's id. */
+export async function getCollectionHistory(userId: string, collectionId: number, from: string, to: string): Promise<Point[]> {
   const c = await db();
   const r = await c.execute({
-    sql: `SELECT ph.date, ph.total_value FROM portfolio_history ph
-          JOIN portfolios po ON po.id = ph.portfolio_id AND po.user_id = ?
-          WHERE ph.portfolio_id = ? AND ph.date >= ? AND ph.date <= ? ORDER BY ph.date`,
-    args: [userId, portfolioId, from, to],
+    sql: `SELECT ph.date, ph.total_value FROM collection_history ph
+          JOIN collections po ON po.id = ph.collection_id AND po.user_id = ?
+          WHERE ph.collection_id = ? AND ph.date >= ? AND ph.date <= ? ORDER BY ph.date`,
+    args: [userId, collectionId, from, to],
   });
   return r.rows.map((x) => ({ date: String(x.date), value: Number(x.total_value) }));
 }

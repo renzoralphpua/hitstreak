@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
 import { getCardDetail } from "@/lib/catalog";
-import { getCardHolders, listPortfolios } from "@/lib/portfolios";
+import { getCardHolders, listCollections } from "@/lib/collections";
 import {
   parseRange,
   rangeStart,
@@ -27,7 +27,7 @@ import {
   Pill,
   Button,
 } from "@/components/ui";
-import AddToBinder from "./AddToBinder";
+import AddToCollection from "./AddToCollection";
 
 // "You own" counts are per-user: never prerender or cache across users.
 export const dynamic = "force-dynamic";
@@ -76,8 +76,8 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
   const requested = typeof rawP === "string" ? parseRouteId(rawP) : null;
   // PrintingPrice | null: `?p=` when it names one of this card's printings, else the headline one.
   const chartPrinting = printings.find((x) => x.printingId === requested) ?? primary;
-  const [portfolios, history, holders] = await Promise.all([
-    listPortfolios(userId),
+  const [collections, history, holders] = await Promise.all([
+    listCollections(userId),
     chartPrinting ? getPrintingHistory(chartPrinting.printingId, from, today) : Promise.resolve<Point[]>([]),
     getCardHolders(userId, card.id),
   ]);
@@ -85,7 +85,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
   const hrefFor = (r: Range, printingId: number) =>
     `/cards/${card.id}?range=${r}${printingId === primary?.printingId ? "" : `&p=${printingId}`}`;
 
-  // Follows the range pills, exactly as the binder page does — a 1Y chart with a "past 30 days"
+  // Follows the range pills, exactly as the collection page does — a 1Y chart with a "past 30 days"
   // delta beside it was the old behaviour. Falls back to the printing's stored 30-day change when
   // the window holds too little history to derive one.
   const change = stats?.change ?? primary?.change30d ?? null;
@@ -111,8 +111,8 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
               : undefined
           }
         />
-        <AddToBinder
-          portfolios={portfolios}
+        <AddToCollection
+          collections={collections}
           card={{
             name: card.name,
             subtitle: `${card.setName} · ${card.number ?? ""}`,
@@ -167,14 +167,14 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
 
         <div className="flex flex-wrap items-center gap-3 text-caption">
           {holders.length === 0 ? (
-            <span className="text-dim">Not in any of your binders yet.</span>
+            <span className="text-dim">Not in any of your collections yet.</span>
           ) : (
             <span className="text-muted">
-              In your binders:{" "}
+              In your collections:{" "}
               {holders.map((h, i) => (
-                <span key={h.portfolioId}>
+                <span key={h.collectionId}>
                   {i > 0 && ", "}
-                  <Link href={`/binders/${h.portfolioId}`} className="text-ink">
+                  <Link href={`/collections/${h.collectionId}`} className="text-ink">
                     {h.name}
                   </Link>
                   <span className="num text-dim"> ×{h.quantity}</span>

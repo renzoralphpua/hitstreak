@@ -1,8 +1,8 @@
 import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSharedPortfolio } from "@/lib/share";
-import { getPortfolioHistory, parseRange, rangeStart, chartFrom, withLivePoint, seriesStats, RANGE_CAPTION } from "@/lib/history";
+import { getSharedCollection } from "@/lib/share";
+import { getCollectionHistory, parseRange, rangeStart, chartFrom, withLivePoint, seriesStats, RANGE_CAPTION } from "@/lib/history";
 import { formatMoney } from "@/lib/format";
 import { SectionHeading, MoneyDisplay, PriceDelta, CardRow, LineChart, RangePills, EmptyState } from "@/components/ui";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 /** One lookup per request even though generateMetadata and the page both ask (same pattern as the
  *  other detail pages). */
-const load = cache((token: string) => getSharedPortfolio(token));
+const load = cache((token: string) => getSharedCollection(token));
 
 export async function generateMetadata({ params }: PageProps<"/s/[token]">) {
   const { token } = await params;
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PageProps<"/s/[token]">) {
   return { title: shared ? `${shared.name} — Hitstreak` : "Hitstreak", robots: { index: false, follow: false } };
 }
 
-export default async function SharedPortfolioPage({ params, searchParams }: PageProps<"/s/[token]">) {
+export default async function SharedCollectionPage({ params, searchParams }: PageProps<"/s/[token]">) {
   const { token } = await params;
   const { range: rawRange } = await searchParams;
   const shared = await load(token);
@@ -27,14 +27,14 @@ export default async function SharedPortfolioPage({ params, searchParams }: Page
   const range = parseRange(rawRange);
   const today = new Date().toISOString().slice(0, 10);
   const from = rangeStart(range, today);
-  const history = withLivePoint(await getPortfolioHistory(shared.ownerId, shared.portfolioId, from, today), today, shared.value);
+  const history = withLivePoint(await getCollectionHistory(shared.ownerId, shared.collectionId, from, today), today, shared.value);
   const stats = seriesStats(history);
 
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex h-16 items-center gap-4 border-b border-hairline px-6 md:px-10">
         <Link href="/" className="font-display text-wordmark text-ink">Hitstreak</Link>
-        <span className="text-caption text-dim">Shared binder · read-only</span>
+        <span className="text-caption text-dim">Shared collection · read-only</span>
       </header>
       <main className="grid grow gap-10 px-6 py-6 md:grid-cols-[380px_1fr] md:px-10">
         <div className="flex flex-col gap-4">

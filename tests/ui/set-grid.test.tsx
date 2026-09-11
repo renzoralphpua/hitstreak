@@ -2,10 +2,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { SetCard } from "@/lib/catalog";
-import type { Portfolio } from "@/lib/portfolios";
+import type { Collection } from "@/lib/collections";
 
 const { addItem, refresh } = vi.hoisted(() => ({ addItem: vi.fn(), refresh: vi.fn() }));
-vi.mock("@/app/(app)/binders/actions", () => ({ addItemAction: addItem }));
+vi.mock("@/app/(app)/collections/actions", () => ({ addItemAction: addItem }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
 import SetGrid from "@/app/(app)/sets/[id]/SetGrid";
@@ -29,8 +29,8 @@ const charmander = card({ cardId: 2, name: "Charmander", number: "004" });
 const pikachu = card({ cardId: 3, name: "Pikachu", number: "005" });
 const cards = [umbreon, charmander, pikachu];
 
-const binders: Portfolio[] = [
-  { id: 2, name: "Main Binder", createdAt: "2026-09-01" },
+const collections: Collection[] = [
+  { id: 2, name: "Main Collection", createdAt: "2026-09-01" },
   { id: 5, name: "Trades", createdAt: "2026-09-02" },
 ];
 
@@ -41,7 +41,7 @@ beforeEach(() => {
 
 describe("SetGrid", () => {
   it("counts owned and missing cards on the filter pills and filters the grid", () => {
-    render(<SetGrid cards={cards} portfolios={binders} />);
+    render(<SetGrid cards={cards} collections={collections} />);
     expect(screen.getByRole("button", { name: "All 3" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Owned 1" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Missing 2" })).toBeInTheDocument();
@@ -58,8 +58,8 @@ describe("SetGrid", () => {
     expect(screen.getByRole("button", { name: /Pikachu/ })).toBeInTheDocument();
   });
 
-  it("tapping a missing tile adds the first printing to the target binder and shows ×1 at once", async () => {
-    render(<SetGrid cards={cards} portfolios={binders} />);
+  it("tapping a missing tile adds the first printing to the target collection and shows ×1 at once", async () => {
+    render(<SetGrid cards={cards} collections={collections} />);
     expect(screen.getByText("×2")).toBeInTheDocument(); // the already-owned card
 
     fireEvent.click(screen.getByRole("button", { name: /Charmander/ }));
@@ -71,9 +71,9 @@ describe("SetGrid", () => {
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
 
-  it("switching the target binder pill changes the portfolio the action is called with", async () => {
-    render(<SetGrid cards={cards} portfolios={binders} />);
-    expect(screen.getByRole("button", { name: "Main Binder" })).toHaveAttribute("aria-pressed", "true");
+  it("switching the target collection pill changes the collection the action is called with", async () => {
+    render(<SetGrid cards={cards} collections={collections} />);
+    expect(screen.getByRole("button", { name: "Main Collection" })).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(screen.getByRole("button", { name: "Trades" }));
     expect(screen.getByRole("button", { name: "Trades" })).toHaveAttribute("aria-pressed", "true");
@@ -84,21 +84,21 @@ describe("SetGrid", () => {
     );
   });
 
-  it("without a binder the tiles are not tappable and it points at /binders", () => {
-    render(<SetGrid cards={cards} portfolios={[]} />);
-    const hint = screen.getByRole("link", { name: "Create a binder to start marking cards owned" });
-    expect(hint).toHaveAttribute("href", "/binders");
+  it("without a collection the tiles are not tappable and it points at /collections", () => {
+    render(<SetGrid cards={cards} collections={[]} />);
+    const hint = screen.getByRole("link", { name: "Create a collection to start marking cards owned" });
+    expect(hint).toHaveAttribute("href", "/collections");
     expect(screen.queryByText("Add to:")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Charmander/ })).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Charmander" })).toBeInTheDocument();
   });
 
   it("surfaces an action error as an alert and reverts the optimistic copy", async () => {
-    addItem.mockResolvedValueOnce({ ok: false, error: "Portfolio not found" });
-    render(<SetGrid cards={cards} portfolios={binders} />);
+    addItem.mockResolvedValueOnce({ ok: false, error: "Collection not found" });
+    render(<SetGrid cards={cards} collections={collections} />);
 
     fireEvent.click(screen.getByRole("button", { name: /Charmander/ }));
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Portfolio not found"));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Collection not found"));
     expect(screen.queryByText("×1")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Owned 1" })).toBeInTheDocument();
     expect(refresh).not.toHaveBeenCalled();

@@ -3,9 +3,9 @@ import { tmpDb } from "./helpers/tmpdb";
 const tmp = tmpDb("nightly");
 import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
-import { createPortfolio, addItem } from "@/lib/portfolios";
+import { createCollection, addItem } from "@/lib/collections";
 import { createAlert } from "@/lib/alerts";
-import { runNightly, materializePortfolioHistory } from "@/ingest/nightly";
+import { runNightly, materializeCollectionHistory } from "@/ingest/nightly";
 import type { Mail, Mailer } from "@/ingest/mailer";
 
 let seed: Awaited<ReturnType<typeof seedMiniCatalog>>;
@@ -25,26 +25,26 @@ beforeAll(async () => {
   seed = await seedMiniCatalog();
   await addUser("u1", "u1@example.com");
   await addUser("u2", "u2@example.com");
-  full = (await createPortfolio("u1", "Main")).id;
-  empty = (await createPortfolio("u2", "Empty")).id;
+  full = (await createCollection("u1", "Main")).id;
+  empty = (await createCollection("u2", "Empty")).id;
   await addItem("u1", full, { printingId: seed.printings.umbreonHolo, quantity: 2, condition: "NM" });   // 1465 as of 2026-09-01
   await addItem("u1", full, { printingId: seed.printings.pikachuNormal, quantity: 5, condition: "NM" }); // no snapshots → unpriced
 });
 afterAll(() => { closeDb(); tmp.clean(); });
 
-describe("materializePortfolioHistory", () => {
-  it("writes one row per binder valued from the snapshots as of that date, idempotently", async () => {
-    expect(await materializePortfolioHistory("2026-09-07")).toBe(2);
-    const rows = async () => (await (await db()).execute("SELECT portfolio_id, date, total_value FROM portfolio_history ORDER BY portfolio_id")).rows;
+describe("materializeCollectionHistory", () => {
+  it("writes one row per collection valued from the snapshots as of that date, idempotently", async () => {
+    expect(await materializeCollectionHistory("2026-09-07")).toBe(2);
+    const rows = async () => (await (await db()).execute("SELECT collection_id, date, total_value FROM collection_history ORDER BY collection_id")).rows;
     expect(await rows()).toEqual([
-      { portfolio_id: full, date: "2026-09-07", total_value: 2930 },
-      { portfolio_id: empty, date: "2026-09-07", total_value: 0 },
+      { collection_id: full, date: "2026-09-07", total_value: 2930 },
+      { collection_id: empty, date: "2026-09-07", total_value: 0 },
     ]);
-    await materializePortfolioHistory("2026-09-07");
+    await materializeCollectionHistory("2026-09-07");
     expect((await rows()).length).toBe(2);
     // an earlier date uses the price in force then (1100 on 2026-08-01)
-    await materializePortfolioHistory("2026-08-01");
-    expect((await rows()).find((r) => r.portfolio_id === full && r.date === "2026-08-01")?.total_value).toBe(2200);
+    await materializeCollectionHistory("2026-08-01");
+    expect((await rows()).find((r) => r.collection_id === full && r.date === "2026-08-01")?.total_value).toBe(2200);
   });
 });
 
@@ -53,7 +53,7 @@ describe("runNightly alerts", () => {
     const id = await createAlert("u1", { printingId: seed.printings.umbreonHolo, direction: "above", threshold: 1450 });
     const { sent, mailer } = capture();
     const s1 = await runNightly({ date: "2026-09-07", mailer, appUrl: "https://hitstreak.test", now: () => "2026-09-07T21:06:00Z" });
-    expect(s1).toMatchObject({ portfolios: 2, alerts: 1, fired: 1, rearmed: 0, emailFailed: 0, skippedNoMailer: 0, emailDisabled: false });
+    expect(s1).toMatchObject({ collections: 2, alerts: 1, fired: 1, rearmed: 0, emailFailed: 0, skippedNoMailer: 0, emailDisabled: false });
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe("u1@example.com");
     expect(sent[0].subject).toContain("Umbreon ex");
@@ -113,7 +113,7 @@ describe("runNightly alerts", () => {
     expect(sent).toHaveLength(0);
     expect(Number((await alertRow(fired)).armed)).toBe(0);
     expect(await alertRow(below)).toEqual({ armed: 1, last_fired_at: null, last_fired_price: null });
-    const h = (await c.execute({ sql: "SELECT total_value FROM portfolio_history WHERE portfolio_id = ? AND date = '2026-09-08'", args: [full] })).rows[0];
+    const h = (await c.execute({ sql: "SELECT total_value FROM collection_history WHERE collection_id = ? AND date = '2026-09-08'", args: [full] })).rows[0];
     expect(h.total_value).toBe(2800);
   });
   it("rejects a malformed date", async () => {

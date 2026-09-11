@@ -8,7 +8,7 @@
 
 A Collectr-style TCG collection and market-value tracker for **Pokémon, One Piece Card Game, and Riftbound**, with a deck-building and meta-deck layer no competitor combines across these three games.
 
-Core loop: add cards you own to portfolios → the app tracks each card's market value daily → see portfolio value, history charts, and gain/loss → browse curated meta decks and see what you're missing and what it costs → build your own legality-validated decks.
+Core loop: add cards you own to collections → the app tracks each card's market value daily → see collection value, history charts, and gain/loss → browse curated meta decks and see what you're missing and what it costs → build your own legality-validated decks.
 
 **Audience:** single user (Renzo) first, but architected to become a public app — real auth, user-scoped data, and horizontally scalable services from the first migration.
 
@@ -16,13 +16,13 @@ Core loop: add cards you own to portfolios → the app tracks each card's market
 
 ### In v1
 
-- Flexible, user-named **portfolios**; a collection item lives in exactly one portfolio
+- Flexible, user-named **collections**; a collection item lives in exactly one collection
 - **Search & add** (type-ahead by name/number/set, pick printing, quantity, condition)
 - **Set browsing** — visual card grid per set with owned-overlay (doubles as set-completion tracking)
-- **Daily market values** per printing + **value history charts** (portfolio and per-card), backfilled from Feb 2024
-- **Gain/loss** vs. recorded acquisition price (per item, per portfolio)
+- **Daily market values** per printing + **value history charts** (collection and per-card), backfilled from Feb 2024
+- **Gain/loss** vs. recorded acquisition price (per item, per collection)
 - **Email price alerts** (threshold crossing per printing)
-- **Read-only share links** per portfolio (unguessable token, toggleable, no login to view)
+- **Read-only share links** per collection (unguessable token, toggleable, no login to view)
 - **Purchase date + since-purchase tracking** (cards and sealed) — *added 2026-09-08, Phase 5 (§11 step 13)*
 - **Sealed products** tracked and browsable alongside singles — *added 2026-09-08, Phase 5 (§11 step 14)*
 - **Meta deck browser** — curated decks per game with tier/archetype, plus **gap analysis**: owned vs. missing cards and market cost to complete
@@ -73,7 +73,7 @@ Pattern proven in license-hub (Vercel + Turso + R2), adapted:
 | Database | **Turso (libSQL)** | Free tier: 5 GB, 10M row-writes/mo (we need ~3.6M worst case, less with write-on-change). Async client, self-initializing schema, no pooling needed |
 | Object storage | **Cloudflare R2** | Raw daily ingest archives + cached card images; free egress |
 | Ingestion | **GitHub Actions** scheduled workflow | Daily sync is 10–20 min — beyond Vercel function limits, trivial in Actions' 2,000 free min/mo |
-| Nightly compute | **GitHub Actions step after the daily ingest** (`ingest/nightly.ts`) — *amended 2026-09-08; was Vercel Cron (daily) → authenticated internal endpoint* | Portfolio materialization + alert evaluation (light work). The Actions job already holds the DB credentials and runs right after the prices land: no shared secret, no function duration cap, and no deployed app is required for history to accumulate |
+| Nightly compute | **GitHub Actions step after the daily ingest** (`ingest/nightly.ts`) — *amended 2026-09-08; was Vercel Cron (daily) → authenticated internal endpoint* | Collection materialization + alert evaluation (light work). The Actions job already holds the DB credentials and runs right after the prices land: no shared secret, no function duration cap, and no deployed app is required for history to accumulate |
 | Auth | **Better Auth** (libSQL adapter) | Multi-user from day one; admin role flag for curation |
 | Email | **Resend** | Free tier 3,000/mo, 100/day |
 | Tests | **vitest** against local `file:` libSQL DB | Never `:memory:` (cross-connection schema loss — license-hub lesson) |
@@ -101,10 +101,10 @@ Two deliberate decisions (from Task 2's review):
 
 **Users & collections:**
 - Better Auth tables (`users`, sessions, etc.) + `is_admin` flag
-- `portfolios` — id, user_id, name, created_at
-- `collection_items` — id, portfolio_id, printing_id, quantity, condition (recorded though not priced in v1), acquired_price, acquired_date
-- `portfolio_history` — portfolio_id, date, total_value. Materialized nightly. Unique `(portfolio_id, date)`.
-- `share_links` — id, portfolio_id, token (unguessable), enabled, created_at
+- `collections` — id, user_id, name, created_at
+- `collection_items` — id, collection_id, printing_id, quantity, condition (recorded though not priced in v1), acquired_price, acquired_date
+- `collection_history` — collection_id, date, total_value. Materialized nightly. Unique `(collection_id, date)`.
+- `share_links` — id, collection_id, token (unguessable), enabled, created_at
 
 **Alerts:**
 - `price_alerts` — id, user_id, printing_id, direction (above/below), threshold, `armed` (1 = emails on the next crossing; 0 = fired, waiting to re-arm), last_fired_at, last_fired_price, created_at. Re-arms only after price crosses back over the threshold (columns as shipped 2026-09-08).
@@ -112,7 +112,7 @@ Two deliberate decisions (from Task 2's review):
 **Decks:**
 - `decks` — id, game_id, owner_user_id (**NULL = curated meta deck**), name, archetype, tier (1–4, meta decks only), format, source_note, `is_draft`, created_at, updated_at. `is_draft` = a personal deck saved with validation errors; a curated deck is never a draft (columns as shipped 2026-09-09).
 - `deck_cards` — deck_id, card_id, zone, quantity, **primary key `(deck_id, card_id, zone)`** — the same card may appear in two zones of one deck but never twice in the same zone; quantity carries the copies. Zones as shipped: main / leader / legend / champion / rune / battlefield (`ZONES` in `lib/decks/types.ts` says which of them each game uses). Lines reference `cards`, not `printings`: a deck says *which card*, and ownership is matched by the per-game identity key (§7).
-- Gap analysis is computed at read time: `deck_cards` diffed against the user's aggregated collection (across all their portfolios), missing cards priced from latest snapshots. No denormalized tables.
+- Gap analysis is computed at read time: `deck_cards` diffed against the user's aggregated collection (across all their collections), missing cards priced from latest snapshots. No denormalized tables.
 
 ## 6. Ingestion pipeline (GitHub Actions)
 
@@ -121,7 +121,7 @@ Two deliberate decisions (from Task 2's review):
 2. Upload raw JSON responses to R2 (`raw/tcgplayer/YYYY-MM-DD/<category>/…`) **before** processing
 3. Upsert `sets`/`cards`/`printings` keyed on TCGplayer IDs (new sets appear automatically)
 4. Insert `price_snapshots` via write-on-change diff against each printing's last stored price
-5. Run `ingest/nightly.ts` as a second step of the same job (it runs even when the ingest step failed part-way — whatever prices landed are worth valuing): materialize `portfolio_history` for the date, evaluate every alert against the current price (`latest_prices` — never the re-run date's snapshot: the alert state machine is not order-aware, so an older price could re-arm a fired alert or fire one on a stale price), send Resend emails. Idempotent — re-running a date overwrites its rows. An email failure, or Resend not being configured, leaves the alert armed so it is retried the next night. *(Amended 2026-09-08 — was "call the app's authenticated `/api/internal/nightly` endpoint (shared-secret header)"; see §4.)*
+5. Run `ingest/nightly.ts` as a second step of the same job (it runs even when the ingest step failed part-way — whatever prices landed are worth valuing): materialize `collection_history` for the date, evaluate every alert against the current price (`latest_prices` — never the re-run date's snapshot: the alert state machine is not order-aware, so an older price could re-arm a fired alert or fire one on a stale price), send Resend emails. Idempotent — re-running a date overwrites its rows. An email failure, or Resend not being configured, leaves the alert armed so it is retried the next night. *(Amended 2026-09-08 — was "call the app's authenticated `/api/internal/nightly` endpoint (shared-secret header)"; see §4.)*
 6. Idempotent per day — safe to re-run; a missed day self-heals (diff is against last-stored, not literally yesterday)
 
 **Failure notification:** GitHub emails on workflow failure (free, built-in).
@@ -135,9 +135,9 @@ Two deliberate decisions (from Task 2's review):
 Route groups (Next.js App Router):
 
 - **Catalog:** `/search` type-ahead (name/number/set, filter by game); `/sets/[id]` visual grid with owned-count overlay (set completion)
-- **Portfolios:** list + CRUD; `/portfolios/[id]` holdings table (qty, condition, cost basis, current value, gain/loss), value history chart, add-item flow (search → pick printing → qty/condition/price paid)
-- **Card detail:** `/cards/[id]` printings, price history chart (printing pills on the chart switch the charted printing; `?range=` + `?p=` links, so the chart is server-rendered), which portfolios hold it ("In your binders"), alert shortcut ("Set a price alert" → `/alerts?printing=`) — *detailed 2026-09-08*
-- **Sharing:** `/s/[token]` public read-only portfolio view (no auth, no other-user data reachable); market value only — cost basis and gain are excluded from the public view; one token per binder; turning sharing off keeps the token (the URL 404s while off), regenerate replaces it and kills the old URL — *detailed 2026-09-08*
+- **Collections:** list + CRUD; `/collections/[id]` holdings table (qty, condition, cost basis, current value, gain/loss), value history chart, add-item flow (search → pick printing → qty/condition/price paid)
+- **Card detail:** `/cards/[id]` printings, price history chart (printing pills on the chart switch the charted printing; `?range=` + `?p=` links, so the chart is server-rendered), which collections hold it ("In your collections"), alert shortcut ("Set a price alert" → `/alerts?printing=`) — *detailed 2026-09-08*
+- **Sharing:** `/s/[token]` public read-only collection view (no auth, no other-user data reachable); market value only — cost basis and gain are excluded from the public view; one token per collection; turning sharing off keeps the token (the URL 404s while off), regenerate replaces it and kills the old URL — *detailed 2026-09-08*
 - **Alerts:** create / list (Triggered vs. Watching) / delete; email contains card, threshold, current price, link. v1 has no edit — changing a threshold or direction is delete + recreate (which re-arms and drops `last_fired_at`); an alert whose line is already crossed when it is created emails on the first nightly — *amended 2026-09-08*
 - **Decks:** `/decks` is the curated browser (game pills via `?game=`, grouped by tier) — *amended 2026-09-09; the route is `/decks`, not `/decks/meta`, so the nav's existing entry became the real screen*; `/decks/[id]` deck detail with decklist, gap analysis (owned n/total, missing cards priced, cost-to-complete), a rules checklist, and "Copy to my decks"; `/decks/mine` the personal deck list (create, rename, delete, Draft/Legal); `/decks/mine/[id]` the builder — search-add cards into zones, live validation and live gap, save (valid or draft). Gap analysis matches a deck line to what you own by a **per-game identity key** (`lib/decks/identity.ts`): base name for Pokémon and Riftbound (printing suffixes and alt-art parentheticals stripped, so any printing counts), `attrs.Number` for One Piece (alt arts share it). The same key is what the copy limits count.
 - **Admin:** `/admin/decks` curation — paste/enter decklist, resolve card names against catalog (exact match → cheapest printing; anything else offers candidates to pick from), set game/archetype/tier/format, edit and delete curated decks. Gated by `isAdminUser`: a signed-in non-admin gets **404, not a redirect** (the route should not announce itself), and every action re-checks admin against the DB rather than trusting the page render — *detailed 2026-09-09*.
@@ -176,7 +176,7 @@ Pure functions over catalog data (card `attrs`), run live in the builder UI and 
 
 - **Unit (heaviest):** deck validators per game (happy path + every rule violation); gap-analysis/cost-to-complete math; write-on-change diff logic; alert threshold/re-arm logic
 - **Ingestion:** parsers against checked-in fixture files (real tcgcsv samples per game, including extendedData variants)
-- **Integration:** data layer + API routes against throwaway `file:` libSQL DBs; auth boundary tests (user A cannot read user B's portfolios; share token exposes exactly one portfolio read-only)
+- **Integration:** data layer + API routes against throwaway `file:` libSQL DBs; auth boundary tests (user A cannot read user B's collections; share token exposes exactly one collection read-only)
 - **CI:** vitest in GitHub Actions on push
 
 ## 11. Build order
@@ -184,9 +184,9 @@ Pure functions over catalog data (card `attrs`), run live in the builder UI and 
 1. Repo scaffolding: Next.js + TypeScript + Tailwind, Turso client, schema, vitest harness
 2. Ingestion workflow + R2 archiving (start accumulating live data immediately)
 3. Backfill from tcgcsv archive
-4. Auth (Better Auth) + portfolios + collection items CRUD
+4. Auth (Better Auth) + collections + collection items CRUD
 5. Search & set browsing with owned-overlay
-6. Price charts (per-card, per-portfolio) + gain/loss
+6. Price charts (per-card, per-collection) + gain/loss
 7. Nightly materialization + share links
 8. Email alerts (Resend)
 9. Decks: schema + meta browser + gap analysis — **done 2026-09-09 (Phase 4)**
@@ -200,10 +200,10 @@ Pure functions over catalog data (card `attrs`), run live in the builder UI and 
 
 ## 12. Visual design
 
-Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art as the hero, DM Serif Display for values and headings, DM Sans body, terracotta accent; light is the default theme with a dark (warm charcoal) toggle. Tokens, conventions (owned vs missing, selected state, nav, icons) and the per-screen mockups live in `docs/design/README.md` and the `docs/design/*.dc.html` artboards; the live canvas is linked from that README. Screens covered: portfolio home, set browser, card detail, meta decks + gap analysis, deck builder + validation, alerts, phone layout, dark-mode reference.
+Approved 2026-09-05: the **"Collection"** direction — warm paper ground, card art as the hero, DM Serif Display for values and headings, DM Sans body, terracotta accent; light is the default theme with a dark (warm charcoal) toggle. Tokens, conventions (owned vs missing, selected state, nav, icons) and the per-screen mockups live in `docs/design/README.md` and the `docs/design/*.dc.html` artboards; the live canvas is linked from that README. Screens covered: collection home, set browser, card detail, meta decks + gap analysis, deck builder + validation, alerts, phone layout, dark-mode reference.
 
 **Implementation approach (binding for Phase 2+):** the mockups are the reference, not the code. The app is built from a small reusable component library so any visual change is made once and lands on every screen:
-- **Tokens** live in one place — `app/globals.css` via Tailwind v4 `@theme` (the scaffold already ships Tailwind 4). Every Binder color/font/radius is a CSS variable exposed as a Tailwind utility (`bg-ground`, `bg-surface`, `text-ink`, `text-muted`, `text-dim`, `text-accent`, `text-gain`, `border-hairline`, `font-display`, `font-body`). Dark mode is a `[data-theme="dark"]` block reassigning the same variables; light is default.
+- **Tokens** live in one place — `app/globals.css` via Tailwind v4 `@theme` (the scaffold already ships Tailwind 4). Every Collection color/font/radius is a CSS variable exposed as a Tailwind utility (`bg-ground`, `bg-surface`, `text-ink`, `text-muted`, `text-dim`, `text-accent`, `text-gain`, `border-hairline`, `font-display`, `font-body`). Dark mode is a `[data-theme="dark"]` block reassigning the same variables; light is default.
 - **Primitives** in `components/ui/`, one component per file, small typed props: `TopNav`, `Pill` (tab/filter chip; selected = inverted ink), `Panel`, `StatTile`, `PriceDelta`, `ProgressBar`, `CardTile` (owned/missing states + `×N` chip), `CardRow`, `SectionHeading`, `SearchField`, `Input` (text field, optional label), `Button` (primary/secondary; `href` renders a link in the same skin), `TierBadge`, `ValidationList`, `BottomTabBar` (phone), `EmptyState` (nothing-here panels), `MoneyDisplay` (serif whole dollars, dim cents).
 - **Screens compose primitives only** — no ad-hoc styling in route files. Each primitive gets a Storybook-free "gallery" route (`/dev/ui`, dev-only) so all variants can be reviewed on one page.
 
@@ -214,7 +214,7 @@ Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art 
 - ~~`lib/history.ts` is imported by client components (`RangePills`, via the `"use client"` `/dev/ui` gallery and any client page that imports from `components/ui`) and statically imports `lib/db` → `@libsql/client`. It builds today via the package's browser export condition; move the db-free exports (`RANGES`, `RANGE_LABEL`, `RANGE_CAPTION`, `parseRange`, `rangeStart`, `chartFrom`, `withLivePoint`, `seriesStats`, `Point`, `Range`) into a db-free module (e.g. `lib/ranges.ts`, re-exported by `lib/history.ts`) before adding `"server-only"` to `lib/db.ts` *(2026-09-08)*~~ — **done 2026-09-08 (pre-merge review):** the db-free exports live in `lib/ranges.ts` (re-exported by `lib/history.ts`); `RangePills` and `LineChart` import from `lib/ranges`, and `tests/ranges.test.ts` fails if anything under `components/ui` imports `lib/db` or `lib/history`. Adding `"server-only"` to `lib/db.ts` is still open.
 - `listAlerts` issues two queries per alert for the 30-day change (~200 at the 100-alert cap) *(2026-09-08)*
 - `createAlert`'s per-user cap is COUNT-then-INSERT, not atomic *(2026-09-08)*
-- `materializePortfolioHistory` is one `INSERT … SELECT` over all binders — fine for hundreds of users, revisit at thousands *(2026-09-08)*
+- `materializeCollectionHistory` is one `INSERT … SELECT` over all collections — fine for hundreds of users, revisit at thousands *(2026-09-08)*
 - Alert send + disarm are two non-transactional writes: a DB failure right after a successful send re-emails the next night (at-least-once by design) *(2026-09-08)*
 - No per-user daily email cap beyond `MAX_ALERTS_PER_USER` (100) *(2026-09-08)*
 - The share page has no rate limit — 128-bit tokens make enumeration infeasible, but add one before public *(2026-09-08)*
@@ -222,7 +222,7 @@ Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art 
 - The alerts form's threshold hint rounds to a whole percent *(2026-09-08)*
 - `Button size="sm"` replaced the ad-hoc `min-h-8` overrides — grep for new ones in review *(2026-09-08)*
 - The vitest auth tests carry explicit 20s timeouts because scrypt competes with per-file worker startup; if it flakes again the levers are a `maxWorkers` cap or `isolate: false` *(2026-09-08)*
-- On the binder page the range `PriceDelta` sits directly under the "vs. paid" one with no spacing element (cosmetic) *(2026-09-08)*
+- On the collection page the range `PriceDelta` sits directly under the "vs. paid" one with no spacing element (cosmetic) *(2026-09-08)*
 - **Future `/api/*` routes must call `getSession()` themselves** — `proxy.ts` excludes `/api` from the optimistic redirect so Better Auth's handler stays reachable.
 - ~~Riftbound deck-construction rules — verify against official Riot rules (step 10)~~ — **resolved 2026-09-08 (Phase 4);** the verified rules are written out in §8.
 - ~~Exact per-game `extendedData` field shapes~~ — **resolved 2026-09-05 against real data:** all three games expose `Number` and `Rarity` (Pokémon also HP/Stage/Attacks; One Piece: Color/CardType/Life/Power/Attribute; Riftbound: Energy Cost/Power Cost/Might/Card Type/Tag/Domain). Sealed products (~10% of rows) have neither, and correctly land with null number/rarity.
@@ -233,7 +233,7 @@ Approved 2026-09-05: the **"Binder"** direction — warm paper ground, card art 
 - `listSetsWithCompletion` is unbenchmarked at scale — correlated subqueries per set/user, untested against a large catalog
 - Primitive candidates surfaced by repeated page patterns: `BackLink` (the recurring `← X` link), `DetailLayout` (the shared detail-page shell), `CardImage` (wraps the `url(...)`-quoted background-image treatment), and a `--text-caption` token to replace the ~25 ad-hoc `text-[13px]` uses. Added by the Phase 3 pre-merge review *(2026-09-08)*: a `GroupLabel` for the uppercase tracked group label (`text-xs font-semibold uppercase tracking-[0.06em] text-muted`, from `Alerts.dc.html`; today inline in `AlertList`'s Triggered / Watching headers — `tracking-[0.06em]` has no primitive and no row in the design README), and a 22px panel-heading size for `SectionHeading` (the `font-display text-[22px] leading-none` `<h2>` duplicated in `NewAlertForm` and `AddItemDialog`; `SectionHeading` only has the 26px size). **Phase 4 raised `GroupLabel` to four sites** *(2026-09-09)* — `AlertList`, the `/decks` tier headings, the builder's zone headings and the `/admin/decks` per-game headings all repeat the same inline span; promote it in Phase 5.
 - `ConfirmDialog` primitive to replace the raw `window.confirm` currently used for destructive actions (e.g. removing a holding)
-- `getPortfolioSummary` re-reads holdings independently rather than sharing a query with `getPortfolioHoldings` — fine for now, worth collapsing if it becomes a hot path. `getSharedPortfolio` (Phase 3) inherits this and runs the holdings query twice per share-page view *(2026-09-08)*
+- `getCollectionSummary` re-reads holdings independently rather than sharing a query with `getCollectionHoldings` — fine for now, worth collapsing if it becomes a hot path. `getSharedCollection` (Phase 3) inherits this and runs the holdings query twice per share-page view *(2026-09-08)*
 - No automated check that every `/api/*` route actually calls `getSession()` — today it's a convention documented above, not enforced by a test or lint rule
 
 Phase 4 (decks) follow-ups, all *2026-09-09*:

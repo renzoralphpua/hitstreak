@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Holding } from "@/lib/portfolios";
+import type { Holding } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { Button, CardRow, PriceDelta } from "@/components/ui";
 import { addItemAction, decrementHoldingAction, removeHoldingAction } from "../actions";
@@ -10,7 +10,7 @@ import { addItemAction, decrementHoldingAction, removeHoldingAction } from "../a
 const keyOf = (h: Holding) => `${h.printingId}|${h.condition}`;
 
 /**
- * One binder's cards, value first. A row is a HOLDING — every lot of that printing and condition
+ * One collection's cards, value first. A row is a HOLDING — every lot of that printing and condition
  * folded together — so its controls are holding-level.
  *
  * `+` records a NEW LOT with no purchase price rather than bumping an existing one. Bumping would
@@ -18,7 +18,7 @@ const keyOf = (h: Holding) => `${h.printingId}|${h.condition}`;
  * acquisitions lots in the first place; an uncosted lot is honest and the UI can prompt for the
  * price later. `−` takes a copy off the newest lot. Per-lot editing lives on the card page.
  */
-export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: number; holdings: Holding[] }) {
+export default function HoldingsTable({ collectionId, holdings }: { collectionId: number; holdings: Holding[] }) {
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -47,15 +47,15 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
 
   const addCopy = (h: Holding) =>
     run(keyOf(h), () =>
-      addItemAction(portfolioId, { printingId: h.printingId, quantity: 1, condition: h.condition })
+      addItemAction(collectionId, { printingId: h.printingId, quantity: 1, condition: h.condition })
     );
   const removeCopy = (h: Holding) =>
-    run(keyOf(h), () => decrementHoldingAction(portfolioId, h.printingId, h.condition));
+    run(keyOf(h), () => decrementHoldingAction(collectionId, h.printingId, h.condition));
 
   function remove(h: Holding) {
     const lots = h.lots.length > 1 ? ` (${h.lots.length} purchases)` : "";
-    if (!window.confirm(`Remove ${h.quantity} × ${h.cardName}${lots} from this binder?`)) return;
-    return run(keyOf(h), () => removeHoldingAction(portfolioId, h.printingId, h.condition));
+    if (!window.confirm(`Remove ${h.quantity} × ${h.cardName}${lots} from this collection?`)) return;
+    return run(keyOf(h), () => removeHoldingAction(collectionId, h.printingId, h.condition));
   }
 
   return (
@@ -114,7 +114,7 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                     </Button>
                     <Button
                       variant="secondary"
-                      aria-label={`Remove ${h.cardName} from binder`}
+                      aria-label={`Remove ${h.cardName} from collection`}
                       size="sm"
                       className="ml-1 text-caption font-normal"
                       disabled={busy}

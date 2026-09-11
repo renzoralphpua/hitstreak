@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
 import { parseView } from "@/lib/view-mode";
-import { getPortfolio, getPortfolioHoldings, getPortfolioSummary } from "@/lib/portfolios";
+import { getCollection, getCollectionHoldings, getCollectionSummary } from "@/lib/collections";
 import { getShareLink } from "@/lib/share";
 import {
   parseRange,
@@ -12,7 +12,7 @@ import {
   chartFrom,
   seriesStats,
   withLivePoint,
-  getPortfolioHistory,
+  getCollectionHistory,
   RANGE_CAPTION,
 } from "@/lib/history";
 import { formatMoney } from "@/lib/format";
@@ -27,7 +27,7 @@ import {
   Pill,
 } from "@/components/ui";
 import HoldingsTable from "./HoldingsTable";
-import BinderGrid from "./BinderGrid";
+import CollectionGrid from "./CollectionGrid";
 import AddItemDialog from "./AddItemDialog";
 import SharePanel from "./SharePanel";
 
@@ -36,52 +36,52 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
-/** The binder id and the owner, or `notFound()`. `cache` makes this one query per request even
+/** The collection id and the owner, or `notFound()`. `cache` makes this one query per request even
  *  though both `generateMetadata` and the page ask for it. */
 const load = cache(async (id: string) => {
-  const portfolioId = parseRouteId(id);
-  if (portfolioId == null) notFound();
+  const collectionId = parseRouteId(id);
+  if (collectionId == null) notFound();
   const session = await getSession();
   if (!session) redirect("/sign-in"); // the layout already gates; this is for the user id
-  const portfolio = await getPortfolio(session.user.id, portfolioId);
-  if (!portfolio) notFound();
-  return { userId: session.user.id, portfolioId, portfolio };
+  const collection = await getCollection(session.user.id, collectionId);
+  if (!collection) notFound();
+  return { userId: session.user.id, collectionId, collection };
 });
 
 export async function generateMetadata({ params }: Params) {
   const { id } = await params;
-  const { portfolio } = await load(id);
-  return { title: `${portfolio.name} — Hitstreak` };
+  const { collection } = await load(id);
+  return { title: `${collection.name} — Hitstreak` };
 }
 
-export default async function PortfolioDetailPage({ params, searchParams }: PageProps<"/binders/[id]">) {
+export default async function CollectionDetailPage({ params, searchParams }: PageProps<"/collections/[id]">) {
   const { id } = await params;
-  const { userId, portfolioId, portfolio } = await load(id);
+  const { userId, collectionId, collection } = await load(id);
   const { range: rawRange, view: rawView } = await searchParams;
   const range = parseRange(rawRange);
   const view = parseView(rawView);
   const today = new Date().toISOString().slice(0, 10);
   const from = rangeStart(range, today);
   const [holdings, summary, shareLink] = await Promise.all([
-    getPortfolioHoldings(userId, portfolioId),
-    getPortfolioSummary(userId, portfolioId),
-    getShareLink(userId, portfolioId),
+    getCollectionHoldings(userId, collectionId),
+    getCollectionSummary(userId, collectionId),
+    getShareLink(userId, collectionId),
   ]);
-  // portfolio_history is materialized nightly; tonight's live value is the final point until then.
-  const history = withLivePoint(await getPortfolioHistory(userId, portfolioId, from, today), today, summary.value);
+  // collection_history is materialized nightly; tonight's live value is the final point until then.
+  const history = withLivePoint(await getCollectionHistory(userId, collectionId, from, today), today, summary.value);
   const stats = seriesStats(history);
   const gainSign = summary.gain >= 0 ? "+" : "−";
 
   return (
     <div className="grid gap-10 md:grid-cols-[380px_1fr]">
       <div className="flex flex-col gap-4">
-        <Link href="/binders" className="text-caption text-muted hover:text-ink">
-          ← Binders
+        <Link href="/collections" className="text-caption text-muted hover:text-ink">
+          ← Collections
         </Link>
 
         <SectionHeading
           as="h1"
-          title={portfolio.name}
+          title={collection.name}
           caption={`${summary.cards} card${summary.cards === 1 ? "" : "s"}`}
         />
 
@@ -100,9 +100,9 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
             from={chartFrom(range, from, history, today)}
             to={today}
             height={120}
-            label={`${portfolio.name} value, ${RANGE_CAPTION[range]}`}
+            label={`${collection.name} value, ${RANGE_CAPTION[range]}`}
           />
-          <RangePills current={range} hrefFor={(r) => `/binders/${portfolioId}?range=${r}&view=${view}`} />
+          <RangePills current={range} hrefFor={(r) => `/collections/${collectionId}?range=${r}&view=${view}`} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -123,9 +123,9 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
           </p>
         )}
 
-        {holdings.length > 0 && <AddItemDialog portfolioId={portfolioId} />}
+        {holdings.length > 0 && <AddItemDialog collectionId={collectionId} />}
 
-        <SharePanel portfolioId={portfolioId} link={shareLink} />
+        <SharePanel collectionId={collectionId} link={shareLink} />
       </div>
 
       <div className="flex flex-col gap-4">
@@ -138,10 +138,10 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
                 {/* Grid is for recognising a card, the list is for changing it — which is why the
                     stepper and Remove exist only in the list. `scroll={false}` keeps your place
                     when you flip between them. */}
-                <Pill href={`/binders/${portfolioId}?range=${range}&view=grid`} selected={view === "grid"} scroll={false}>
+                <Pill href={`/collections/${collectionId}?range=${range}&view=grid`} selected={view === "grid"} scroll={false}>
                   Grid
                 </Pill>
-                <Pill href={`/binders/${portfolioId}?range=${range}&view=list`} selected={view === "list"} scroll={false}>
+                <Pill href={`/collections/${collectionId}?range=${range}&view=list`} selected={view === "list"} scroll={false}>
                   List
                 </Pill>
               </div>
@@ -151,13 +151,13 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
         {holdings.length === 0 ? (
           <EmptyState
             title="Nothing here yet"
-            body="Add a card to start tracking this binder's value."
-            action={<AddItemDialog portfolioId={portfolioId} label="Add your first card" />}
+            body="Add a card to start tracking this collection's value."
+            action={<AddItemDialog collectionId={collectionId} label="Add your first card" />}
           />
         ) : view === "grid" ? (
-          <BinderGrid holdings={holdings} />
+          <CollectionGrid holdings={holdings} />
         ) : (
-          <HoldingsTable portfolioId={portfolioId} holdings={holdings} />
+          <HoldingsTable collectionId={collectionId} holdings={holdings} />
         )}
       </div>
     </div>

@@ -5,7 +5,7 @@ import { NAV_ITEMS, isActive } from "./nav-items";
 import Icon, { type IconName } from "./Icon";
 import { cn } from "./cn";
 
-const ICONS: Record<string, IconName> = { Binder: "binder", Sets: "grid", Decks: "decks", Alerts: "bell" };
+const ICONS: Record<string, IconName> = { Collection: "collection", Sets: "grid", Decks: "decks", Alerts: "bell" };
 
 /** Phone navigation. Leaves the system status-bar area alone; safe-area padding at the bottom. */
 export default function BottomTabBar() {

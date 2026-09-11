@@ -3,14 +3,14 @@ import { tmpDb } from "./helpers/tmpdb";
 const tmp = tmpDb("share");
 import { closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
-import { createPortfolio, addItem } from "@/lib/portfolios";
-import { isShareToken, getShareLink, enableShare, regenerateShare, disableShare, getSharedPortfolio } from "@/lib/share";
+import { createCollection, addItem } from "@/lib/collections";
+import { isShareToken, getShareLink, enableShare, regenerateShare, disableShare, getSharedCollection } from "@/lib/share";
 
 let seed: Awaited<ReturnType<typeof seedMiniCatalog>>;
 let mine: number;
 beforeAll(async () => {
   seed = await seedMiniCatalog();
-  mine = (await createPortfolio("u1", "Main")).id;
+  mine = (await createCollection("u1", "Main")).id;
   await addItem("u1", mine, { printingId: seed.printings.umbreonHolo, quantity: 2, condition: "NM", acquiredPrice: 1000 });
 });
 afterAll(() => { closeDb(); tmp.clean(); });
@@ -18,14 +18,14 @@ afterAll(() => { closeDb(); tmp.clean(); });
 describe("share links", () => {
   it("starts with no link", async () => {
     expect(await getShareLink("u1", mine)).toBeNull();
-    expect(await getSharedPortfolio("nope")).toBeNull();
+    expect(await getSharedCollection("nope")).toBeNull();
   });
-  it("enable creates a 22-char base64url token that resolves to exactly that binder, cost basis stripped", async () => {
+  it("enable creates a 22-char base64url token that resolves to exactly that collection, cost basis stripped", async () => {
     const link = await enableShare("u1", mine);
     expect(link.enabled).toBe(true);
     expect(isShareToken(link.token)).toBe(true);
-    const shared = await getSharedPortfolio(link.token);
-    expect(shared).toMatchObject({ portfolioId: mine, ownerId: "u1", name: "Main", cards: 2, value: 2930 });
+    const shared = await getSharedCollection(link.token);
+    expect(shared).toMatchObject({ collectionId: mine, ownerId: "u1", name: "Main", cards: 2, value: 2930 });
     expect(shared!.holdings).toHaveLength(1);
     expect(shared!.holdings[0]).toMatchObject({ cardName: "Umbreon ex", quantity: 2, value: 2930 });
     expect(shared!.holdings[0]).not.toHaveProperty("acquiredPrice");
@@ -38,13 +38,13 @@ describe("share links", () => {
     const b = await regenerateShare("u1", mine);
     expect(b.token).not.toBe(a.token);
     expect(b.enabled).toBe(true);
-    expect(await getSharedPortfolio(a.token)).toBeNull();
-    expect((await getSharedPortfolio(b.token))?.portfolioId).toBe(mine);
+    expect(await getSharedCollection(a.token)).toBeNull();
+    expect((await getSharedCollection(b.token))?.collectionId).toBe(mine);
   });
   it("disable 404s the token but keeps it for re-enable", async () => {
     const before = (await getShareLink("u1", mine))!;
     expect(await disableShare("u1", mine)).toBe(true);
-    expect(await getSharedPortfolio(before.token)).toBeNull();
+    expect(await getSharedCollection(before.token)).toBeNull();
     expect((await getShareLink("u1", mine))?.enabled).toBe(false);
     expect((await enableShare("u1", mine)).token).toBe(before.token);
   });
@@ -57,6 +57,6 @@ describe("share links", () => {
   });
   it("rejects malformed tokens without touching the database", async () => {
     for (const t of ["", "short", "x".repeat(23), "has space here-------", "../../etc/passwd-------"]) expect(isShareToken(t)).toBe(false);
-    expect(await getSharedPortfolio("x".repeat(23))).toBeNull();
+    expect(await getSharedCollection("x".repeat(23))).toBeNull();
   });
 });

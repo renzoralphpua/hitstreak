@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { getCollectionSummary, getMovers, getCollectionHistory } from "@/lib/home";
+import { getHomeSummary, getMovers, getHomeHistory } from "@/lib/home";
 import { listMyDecks } from "@/lib/decks/data";
 import { listAlerts } from "@/lib/alerts";
 import { parseRange, rangeStart, chartFrom, RANGE_CAPTION } from "@/lib/history";
@@ -21,7 +21,7 @@ const DECKS_SHOWN = 3;
 
 /**
  * Home is what you READ (decision 1). Nothing on this page edits anything — every control is a link
- * to the screen that owns the change. The binder rows are a breakdown, not a switcher, which is why
+ * to the screen that owns the change. The collection rows are a breakdown, not a switcher, which is why
  * none of them is drawn as the selected ink chip.
  *
  * Every figure is against cost basis (decision 1a). The range pills move the CHART's window only:
@@ -39,19 +39,19 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
   const from = rangeStart(range, today);
 
   const [summary, movers, history, myDecks, alerts] = await Promise.all([
-    getCollectionSummary(userId),
+    getHomeSummary(userId),
     getMovers(userId, MOVERS_PER_COLUMN),
-    getCollectionHistory(userId, from, today),
+    getHomeHistory(userId, from, today),
     listMyDecks(userId),
     listAlerts(userId),
   ]);
 
-  if (summary.binders === 0) {
+  if (summary.collections === 0) {
     return (
       <EmptyState
         title="Nothing tracked yet"
-        body="Create a binder and add the first card you own. Everything on this page is measured against what you paid, so add what it cost you and the rest follows."
-        action={<Button href="/binders">Create a binder</Button>}
+        body="Create a collection and add the first card you own. Everything on this page is measured against what you paid, so add what it cost you and the rest follows."
+        action={<Button href="/collections">Create a collection</Button>}
       />
     );
   }
@@ -65,7 +65,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
           <span className="num text-caption text-muted">
-            Everything you own · {summary.binders} binder{summary.binders === 1 ? "" : "s"} · {summary.cards} card
+            Everything you own · {summary.collections} collection{summary.collections === 1 ? "" : "s"} · {summary.cards} card
             {summary.cards === 1 ? "" : "s"}
           </span>
           <MoneyDisplay size="lg" amount={summary.value} />
@@ -87,7 +87,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
         <div className="grid grid-cols-2 gap-3">
           <StatTile label="Paid" value={formatMoney(summary.cost)} />
           {/* Not "Gain" — that is the headline above, and a stat tile restating its own headline is
-              the duplication the UI audit already flagged on the binder page. */}
+              the duplication the UI audit already flagged on the collection page. */}
           <StatTile
             label="In profit"
             value={summary.comparable === 0 ? "—" : `${summary.inProfit} of ${summary.comparable}`}
@@ -102,12 +102,12 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
         )}
 
         <div className="flex flex-col gap-2.5">
-          <span className="text-caption font-semibold uppercase tracking-label text-muted">By binder</span>
+          <span className="text-caption font-semibold uppercase tracking-label text-muted">By collection</span>
           <div className="flex flex-col gap-2">
             {summary.lines.map((l) => (
               <Link
-                key={l.portfolioId}
-                href={`/binders/${l.portfolioId}`}
+                key={l.collectionId}
+                href={`/collections/${l.collectionId}`}
                 className="flex items-center gap-3 rounded-tile border border-hairline bg-surface px-3.5 py-2.5 hover:border-hairline-strong"
               >
                 <span className="flex min-w-0 flex-col">

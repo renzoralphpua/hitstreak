@@ -1,12 +1,12 @@
-// lib/portfolios.ts
-// User collections. Every function takes userId first and scopes through portfolios.user_id;
+// lib/collections.ts
+// User collections. Every function takes userId first and scopes through collections.user_id;
 // a wrong owner sees "not found" (false / empty), never someone else's data.
 import { db } from "@/lib/db";
 
 export const CONDITIONS = ["NM", "LP", "MP", "HP", "DMG"] as const;
 export type Condition = (typeof CONDITIONS)[number];
 
-export interface Portfolio { id: number; name: string; createdAt: string }
+export interface Collection { id: number; name: string; createdAt: string }
 
 /**
  * One acquisition. Buying the same card twice at different prices makes two lots, because that is
@@ -35,62 +35,62 @@ export interface Holding {
   uncostedQuantity: number;
   lots: Lot[];            // newest first
 }
-export interface PortfolioSummary { cards: number; value: number; cost: number; gain: number; unpriced: number }
+export interface CollectionSummary { cards: number; value: number; cost: number; gain: number; unpriced: number }
 
 const NAME_MAX = 80;
 function cleanName(name: string): string {
   const n = name.trim();
-  if (n.length === 0 || n.length > NAME_MAX) throw new Error(`Portfolio name must be 1–${NAME_MAX} characters`);
+  if (n.length === 0 || n.length > NAME_MAX) throw new Error(`Collection name must be 1–${NAME_MAX} characters`);
   return n;
 }
 
-export async function listPortfolios(userId: string): Promise<Portfolio[]> {
+export async function listCollections(userId: string): Promise<Collection[]> {
   const c = await db();
-  const r = await c.execute({ sql: "SELECT id, name, created_at FROM portfolios WHERE user_id = ? ORDER BY created_at, id", args: [userId] });
+  const r = await c.execute({ sql: "SELECT id, name, created_at FROM collections WHERE user_id = ? ORDER BY created_at, id", args: [userId] });
   return r.rows.map((x) => ({ id: Number(x.id), name: String(x.name), createdAt: String(x.created_at) }));
 }
 
-export async function getPortfolio(userId: string, id: number): Promise<Portfolio | null> {
+export async function getCollection(userId: string, id: number): Promise<Collection | null> {
   const c = await db();
-  const r = await c.execute({ sql: "SELECT id, name, created_at FROM portfolios WHERE id = ? AND user_id = ?", args: [id, userId] });
+  const r = await c.execute({ sql: "SELECT id, name, created_at FROM collections WHERE id = ? AND user_id = ?", args: [id, userId] });
   if (r.rows.length === 0) return null;
   const x = r.rows[0];
   return { id: Number(x.id), name: String(x.name), createdAt: String(x.created_at) };
 }
 
-export async function createPortfolio(userId: string, name: string): Promise<Portfolio> {
+export async function createCollection(userId: string, name: string): Promise<Collection> {
   const c = await db();
-  const r = await c.execute({ sql: "INSERT INTO portfolios (user_id, name) VALUES (?, ?) RETURNING id, name, created_at", args: [userId, cleanName(name)] });
+  const r = await c.execute({ sql: "INSERT INTO collections (user_id, name) VALUES (?, ?) RETURNING id, name, created_at", args: [userId, cleanName(name)] });
   const x = r.rows[0];
   return { id: Number(x.id), name: String(x.name), createdAt: String(x.created_at) };
 }
 
-export async function renamePortfolio(userId: string, id: number, name: string): Promise<boolean> {
+export async function renameCollection(userId: string, id: number, name: string): Promise<boolean> {
   const c = await db();
-  const r = await c.execute({ sql: "UPDATE portfolios SET name = ? WHERE id = ? AND user_id = ?", args: [cleanName(name), id, userId] });
+  const r = await c.execute({ sql: "UPDATE collections SET name = ? WHERE id = ? AND user_id = ?", args: [cleanName(name), id, userId] });
   return r.rowsAffected === 1;
 }
 
-export async function deletePortfolio(userId: string, id: number): Promise<boolean> {
+export async function deleteCollection(userId: string, id: number): Promise<boolean> {
   const c = await db();
-  const own = await c.execute({ sql: "SELECT 1 FROM portfolios WHERE id = ? AND user_id = ?", args: [id, userId] });
+  const own = await c.execute({ sql: "SELECT 1 FROM collections WHERE id = ? AND user_id = ?", args: [id, userId] });
   if (own.rows.length === 0) return false;
   await c.batch(
     [
-      { sql: "DELETE FROM collection_items WHERE portfolio_id = ?", args: [id] },
-      { sql: "DELETE FROM portfolio_history WHERE portfolio_id = ?", args: [id] },
-      { sql: "DELETE FROM share_links WHERE portfolio_id = ?", args: [id] },
-      { sql: "DELETE FROM portfolios WHERE id = ? AND user_id = ?", args: [id, userId] },
+      { sql: "DELETE FROM collection_items WHERE collection_id = ?", args: [id] },
+      { sql: "DELETE FROM collection_history WHERE collection_id = ?", args: [id] },
+      { sql: "DELETE FROM share_links WHERE collection_id = ?", args: [id] },
+      { sql: "DELETE FROM collections WHERE id = ? AND user_id = ?", args: [id, userId] },
     ],
     "write"
   );
   return true;
 }
 
-async function assertOwnsPortfolio(userId: string, portfolioId: number) {
+async function assertOwnsCollection(userId: string, collectionId: number) {
   const c = await db();
-  const r = await c.execute({ sql: "SELECT 1 FROM portfolios WHERE id = ? AND user_id = ?", args: [portfolioId, userId] });
-  if (r.rows.length === 0) throw new Error("Portfolio not found");
+  const r = await c.execute({ sql: "SELECT 1 FROM collections WHERE id = ? AND user_id = ?", args: [collectionId, userId] });
+  if (r.rows.length === 0) throw new Error("Collection not found");
 }
 
 /** Ceiling on a single lot AND on a holding's total across lots. */
@@ -129,8 +129,8 @@ export interface AddItemInput { printingId: number; quantity: number; condition:
  * The 9999 ceiling now applies to the holding's total across lots rather than to one row, and it
  * rejects instead of silently clamping — quietly dropping copies is the same class of bug.
  */
-export async function addItem(userId: string, portfolioId: number, input: AddItemInput): Promise<void> {
-  await assertOwnsPortfolio(userId, portfolioId);
+export async function addItem(userId: string, collectionId: number, input: AddItemInput): Promise<void> {
+  await assertOwnsCollection(userId, collectionId);
   checkQuantity(input.quantity);
   const condition = checkCondition(input.condition);
   const price = checkPrice(input.acquiredPrice);
@@ -139,16 +139,16 @@ export async function addItem(userId: string, portfolioId: number, input: AddIte
   const c = await db();
   const held = await c.execute({
     sql: `SELECT COALESCE(SUM(quantity), 0) AS n FROM collection_items
-          WHERE portfolio_id = ? AND printing_id = ? AND condition = ?`,
-    args: [portfolioId, input.printingId, condition],
+          WHERE collection_id = ? AND printing_id = ? AND condition = ?`,
+    args: [collectionId, input.printingId, condition],
   });
   if (Number(held.rows[0].n) + input.quantity > QUANTITY_MAX) {
     throw new Error(`That would take this holding past ${QUANTITY_MAX} copies`);
   }
   await c.execute({
-    sql: `INSERT INTO collection_items (portfolio_id, printing_id, quantity, condition, acquired_price, acquired_date)
+    sql: `INSERT INTO collection_items (collection_id, printing_id, quantity, condition, acquired_price, acquired_date)
           VALUES (?, ?, ?, ?, ?, ?)`,
-    args: [portfolioId, input.printingId, input.quantity, condition, price, acquiredDate],
+    args: [collectionId, input.printingId, input.quantity, condition, price, acquiredDate],
   });
 }
 
@@ -159,14 +159,14 @@ export async function addItem(userId: string, portfolioId: number, input: AddIte
  * most recently recorded. Removing a copy needs no price, which is why this exists as a holding-level
  * operation while *adding* one does not — an addition is an acquisition and goes through `addItem`.
  */
-export async function decrementHolding(userId: string, portfolioId: number, printingId: number, condition: string): Promise<boolean> {
-  await assertOwnsPortfolio(userId, portfolioId);
+export async function decrementHolding(userId: string, collectionId: number, printingId: number, condition: string): Promise<boolean> {
+  await assertOwnsCollection(userId, collectionId);
   const c = await db();
   const r = await c.execute({
     sql: `SELECT id, quantity FROM collection_items
-          WHERE portfolio_id = ? AND printing_id = ? AND condition = ?
+          WHERE collection_id = ? AND printing_id = ? AND condition = ?
           ORDER BY created_at DESC, id DESC LIMIT 1`,
-    args: [portfolioId, printingId, checkCondition(condition)],
+    args: [collectionId, printingId, checkCondition(condition)],
   });
   if (r.rows.length === 0) return false;
   const id = Number(r.rows[0].id);
@@ -180,12 +180,12 @@ export async function decrementHolding(userId: string, portfolioId: number, prin
 }
 
 /** Removes a whole holding — every lot of that printing+condition. */
-export async function removeHolding(userId: string, portfolioId: number, printingId: number, condition: string): Promise<boolean> {
-  await assertOwnsPortfolio(userId, portfolioId);
+export async function removeHolding(userId: string, collectionId: number, printingId: number, condition: string): Promise<boolean> {
+  await assertOwnsCollection(userId, collectionId);
   const c = await db();
   const r = await c.execute({
-    sql: "DELETE FROM collection_items WHERE portfolio_id = ? AND printing_id = ? AND condition = ?",
-    args: [portfolioId, printingId, checkCondition(condition)],
+    sql: "DELETE FROM collection_items WHERE collection_id = ? AND printing_id = ? AND condition = ?",
+    args: [collectionId, printingId, checkCondition(condition)],
   });
   return r.rowsAffected > 0;
 }
@@ -200,7 +200,7 @@ export async function updateItem(userId: string, itemId: number, patch: { quanti
             quantity = COALESCE(?, quantity),
             acquired_price = CASE WHEN ? THEN ? ELSE acquired_price END,
             acquired_date = CASE WHEN ? THEN ? ELSE acquired_date END
-          WHERE id = ? AND portfolio_id IN (SELECT id FROM portfolios WHERE user_id = ?)`,
+          WHERE id = ? AND collection_id IN (SELECT id FROM collections WHERE user_id = ?)`,
     args: [patch.quantity ?? null, price !== undefined ? 1 : 0, price ?? null, date !== undefined ? 1 : 0, date ?? null, itemId, userId],
   });
   return r.rowsAffected === 1;
@@ -208,28 +208,28 @@ export async function updateItem(userId: string, itemId: number, patch: { quanti
 
 export async function removeItem(userId: string, itemId: number): Promise<boolean> {
   const c = await db();
-  const r = await c.execute({ sql: "DELETE FROM collection_items WHERE id = ? AND portfolio_id IN (SELECT id FROM portfolios WHERE user_id = ?)", args: [itemId, userId] });
+  const r = await c.execute({ sql: "DELETE FROM collection_items WHERE id = ? AND collection_id IN (SELECT id FROM collections WHERE user_id = ?)", args: [itemId, userId] });
   return r.rowsAffected === 1;
 }
 
-export async function getPortfolioHoldings(userId: string, portfolioId: number): Promise<Holding[]> {
+export async function getCollectionHoldings(userId: string, collectionId: number): Promise<Holding[]> {
   const c = await db();
   const r = await c.execute({
     sql: `SELECT ci.id AS item_id, ci.printing_id, ci.quantity, ci.condition, ci.acquired_price, ci.acquired_date,
                  ca.id AS card_id, ca.name AS card_name, ca.number, ca.image_url, se.name AS set_name, p.subtype,
                  lp.market, lp.date AS price_date
           FROM collection_items ci
-          JOIN portfolios po ON po.id = ci.portfolio_id AND po.user_id = ?
+          JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
           JOIN printings p ON p.id = ci.printing_id
           JOIN cards ca ON ca.id = p.card_id
           JOIN sets se ON se.id = ca.set_id
           LEFT JOIN latest_prices lp ON lp.printing_id = p.id
-          WHERE ci.portfolio_id = ?
+          WHERE ci.collection_id = ?
           ORDER BY ci.created_at DESC, ci.id DESC`,
-    args: [userId, portfolioId],
+    args: [userId, collectionId],
   });
 
-  // Rows are lots; the binder shows one row per printing+condition, so fold them here and keep the
+  // Rows are lots; the collection shows one row per printing+condition, so fold them here and keep the
   // lots reachable underneath. Sorting by value has to happen after the fold — a single lot's value
   // says nothing about what the holding is worth.
   const byHolding = new Map<string, Holding>();
@@ -275,8 +275,8 @@ export async function getPortfolioHoldings(userId: string, portfolioId: number):
   return holdings;
 }
 
-export async function getPortfolioSummary(userId: string, portfolioId: number): Promise<PortfolioSummary> {
-  const h = await getPortfolioHoldings(userId, portfolioId);
+export async function getCollectionSummary(userId: string, collectionId: number): Promise<CollectionSummary> {
+  const h = await getCollectionHoldings(userId, collectionId);
   let cards = 0, value = 0, cost = 0, unpriced = 0;
   for (const x of h) {
     cards += x.quantity;
@@ -287,13 +287,13 @@ export async function getPortfolioSummary(userId: string, portfolioId: number): 
 }
 
 export interface CardHolder {
-  portfolioId: number; name: string; quantity: number;
+  collectionId: number; name: string; quantity: number;
   /** Summed over lots that have a price. Null when none does. */
   cost: number | null;
   /** Copies with no recorded purchase price — `cost` does not cover these. */
   uncostedQuantity: number;
 }
-/** The signed-in user's binders that hold any printing of `cardId`, with copies and what they cost. */
+/** The signed-in user's collections that hold any printing of `cardId`, with copies and what they cost. */
 export async function getCardHolders(userId: string, cardId: number): Promise<CardHolder[]> {
   const c = await db();
   const r = await c.execute({
@@ -305,14 +305,14 @@ export async function getCardHolders(userId: string, cardId: number): Promise<Ca
                  SUM(CASE WHEN ci.acquired_price IS NULL THEN ci.quantity ELSE 0 END) AS uncosted,
                  SUM(CASE WHEN ci.acquired_price IS NULL THEN 0 ELSE 1 END) AS priced_lots
           FROM collection_items ci
-          JOIN portfolios po ON po.id = ci.portfolio_id AND po.user_id = ?
+          JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
           JOIN printings p ON p.id = ci.printing_id
           WHERE p.card_id = ?
           GROUP BY po.id ORDER BY quantity DESC, po.name`,
     args: [userId, cardId],
   });
   return r.rows.map((x) => ({
-    portfolioId: Number(x.id),
+    collectionId: Number(x.id),
     name: String(x.name),
     quantity: Number(x.quantity),
     cost: Number(x.priced_lots) === 0 ? null : Number(x.cost),

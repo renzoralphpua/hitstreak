@@ -1,19 +1,19 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import type { Holding } from "@/lib/portfolios";
+import type { Holding } from "@/lib/collections";
 
 const { add, decrement, removeHolding, refresh } = vi.hoisted(() => ({
   add: vi.fn(), decrement: vi.fn(), removeHolding: vi.fn(), refresh: vi.fn(),
 }));
 // A row is a holding now, so its controls are holding-level. `+` goes through addItemAction
 // because adding a copy is an acquisition, not an edit to an existing lot.
-vi.mock("@/app/(app)/binders/actions", () => ({
+vi.mock("@/app/(app)/collections/actions", () => ({
   addItemAction: add, decrementHoldingAction: decrement, removeHoldingAction: removeHolding,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import HoldingsTable from "@/app/(app)/binders/[id]/HoldingsTable";
+import HoldingsTable from "@/app/(app)/collections/[id]/HoldingsTable";
 
 const holding = (over: Partial<Holding>): Holding => ({
   printingId: 1, cardId: 1, cardName: "Umbreon ex", setName: "Prismatic Evolutions",
@@ -48,7 +48,7 @@ beforeEach(() => {
 
 describe("HoldingsTable", () => {
   it("renders each holding with its subtitle, value and gain", () => {
-    render(<HoldingsTable portfolioId={7} holdings={[priced]} />);
+    render(<HoldingsTable collectionId={7} holdings={[priced]} />);
     expect(screen.getByText("Umbreon ex")).toBeInTheDocument();
     expect(screen.getByText("Prismatic Evolutions · 161/131 · Holofoil · NM")).toBeInTheDocument();
     expect(screen.getByText("$1,465.00")).toBeInTheDocument();
@@ -56,14 +56,14 @@ describe("HoldingsTable", () => {
   });
 
   it("shows an em dash and 'no price' for an unpriced holding", () => {
-    render(<HoldingsTable portfolioId={7} holdings={[unpriced]} />);
+    render(<HoldingsTable collectionId={7} holdings={[unpriced]} />);
     expect(screen.getByText("no price")).toBeInTheDocument();
     // one dash for the value, one for the unknown delta
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
   });
 
   it("the + stepper records a NEW uncosted lot rather than bumping an existing one", async () => {
-    render(<HoldingsTable portfolioId={7} holdings={[priced]} />);
+    render(<HoldingsTable collectionId={7} holdings={[priced]} />);
     fireEvent.click(screen.getByRole("button", { name: "Add one Umbreon ex" }));
     // No acquiredPrice: bumping the existing lot would value this copy at the older copy’s
     // price, which is the bug that made acquisitions lots in the first place.
@@ -74,14 +74,14 @@ describe("HoldingsTable", () => {
   });
 
   it("the − stepper is disabled at one copy and decrements the holding above it", async () => {
-    render(<HoldingsTable portfolioId={7} holdings={[priced, unpriced]} />);
+    render(<HoldingsTable collectionId={7} holdings={[priced, unpriced]} />);
     expect(screen.getByRole("button", { name: "Remove one Umbreon ex" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Remove one Booster Bundle" }));
     await waitFor(() => expect(decrement).toHaveBeenCalledWith(7, 4, "NM"));
   });
 
   it("says how many copies have no recorded cost, because the gain excludes them", () => {
-    render(<HoldingsTable portfolioId={7} holdings={[unpriced, holding({
+    render(<HoldingsTable collectionId={7} holdings={[unpriced, holding({
       printingId: 5, cardName: "Shanks", quantity: 5, cost: 20, uncostedQuantity: 3, value: 100,
       lots: [
         { itemId: 21, quantity: 3, acquiredPrice: null, acquiredDate: null, cost: null },
@@ -94,32 +94,32 @@ describe("HoldingsTable", () => {
 
   it("Remove confirms first, then removes the whole holding", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<HoldingsTable portfolioId={7} holdings={[priced]} />);
-    fireEvent.click(screen.getByRole("button", { name: "Remove Umbreon ex from binder" }));
-    expect(confirm).toHaveBeenCalledWith("Remove 1 × Umbreon ex from this binder?");
+    render(<HoldingsTable collectionId={7} holdings={[priced]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Remove Umbreon ex from collection" }));
+    expect(confirm).toHaveBeenCalledWith("Remove 1 × Umbreon ex from this collection?");
     await waitFor(() => expect(removeHolding).toHaveBeenCalledWith(7, 1, "NM"));
     confirm.mockRestore();
   });
 
   it("warns that a multi-lot holding is several purchases before removing it", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<HoldingsTable portfolioId={7} holdings={[twoLots]} />);
-    fireEvent.click(screen.getByRole("button", { name: "Remove Pikachu from binder" }));
-    expect(confirm).toHaveBeenCalledWith("Remove 5 × Pikachu (2 purchases) from this binder?");
+    render(<HoldingsTable collectionId={7} holdings={[twoLots]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Remove Pikachu from collection" }));
+    expect(confirm).toHaveBeenCalledWith("Remove 5 × Pikachu (2 purchases) from this collection?");
     confirm.mockRestore();
   });
 
   it("Remove does nothing when the confirm is dismissed", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<HoldingsTable portfolioId={7} holdings={[priced]} />);
-    fireEvent.click(screen.getByRole("button", { name: "Remove Umbreon ex from binder" }));
+    render(<HoldingsTable collectionId={7} holdings={[priced]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Remove Umbreon ex from collection" }));
     expect(removeHolding).not.toHaveBeenCalled();
     confirm.mockRestore();
   });
 
   it("surfaces an action error as an alert", async () => {
     add.mockResolvedValueOnce({ ok: false, error: "Item not found" });
-    render(<HoldingsTable portfolioId={7} holdings={[priced]} />);
+    render(<HoldingsTable collectionId={7} holdings={[priced]} />);
     fireEvent.click(screen.getByRole("button", { name: "Add one Umbreon ex" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Item not found"));
     expect(refresh).not.toHaveBeenCalled();

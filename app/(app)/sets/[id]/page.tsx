@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
 import { getSetDetail } from "@/lib/catalog";
-import { listPortfolios } from "@/lib/portfolios";
+import { listCollections } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { SectionHeading, ProgressBar } from "@/components/ui";
 import SetGrid from "./SetGrid";
@@ -36,7 +36,7 @@ export default async function SetDetailPage({ params }: Params) {
   const { id } = await params;
   const { userId, detail } = await load(id);
   const { set, stats } = detail;
-  const portfolios = await listPortfolios(userId);
+  const collections = await listCollections(userId);
   const ratio = stats.totalCards > 0 ? stats.ownedCards / stats.totalCards : 0;
   const pct = Math.round(ratio * 100);
 
@@ -81,7 +81,7 @@ export default async function SetDetailPage({ params }: Params) {
         </div>
       </div>
 
-      <SetGrid cards={detail.cards} portfolios={portfolios} />
+      <SetGrid cards={detail.cards} collections={collections} />
     </div>
   );
 }

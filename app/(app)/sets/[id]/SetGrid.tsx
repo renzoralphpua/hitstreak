@@ -3,10 +3,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SetCard } from "@/lib/catalog";
-import type { Portfolio } from "@/lib/portfolios";
+import type { Collection } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { CardTile, EmptyState, Pill } from "@/components/ui";
-import { addItemAction } from "../../binders/actions";
+import { addItemAction } from "../../collections/actions";
 
 type Filter = "all" | "owned" | "missing";
 
@@ -17,13 +17,13 @@ const FILTERS: Array<{ key: Filter; label: string }> = [
 ];
 
 /** The set's cards as owned/missing tiles. Tapping a tile adds one NM copy of its first printing
- *  to the target binder: the count bumps immediately, then `router.refresh()` re-reads the truth
+ *  to the target collection: the count bumps immediately, then `router.refresh()` re-reads the truth
  *  (the optimistic bumps are dropped as soon as new server data arrives). A failed add is reverted
  *  and reported above the grid. */
-export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portfolios: Portfolio[] }) {
+export default function SetGrid({ cards, collections }: { cards: SetCard[]; collections: Collection[] }) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
-  const [targetPortfolioId, setTargetPortfolioId] = useState<number | null>(portfolios[0]?.id ?? null);
+  const [targetCollectionId, setTargetCollectionId] = useState<number | null>(collections[0]?.id ?? null);
   // Local "+1"s are tagged with the `cards` array they were counted on top of, so the first render
   // after `router.refresh()` (a new array, already including those copies) simply ignores them —
   // no effect, no double counting.
@@ -47,11 +47,11 @@ export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portf
     filter === "all" ? true : filter === "owned" ? quantityOf(c) > 0 : quantityOf(c) === 0
   );
 
-  const canAdd = targetPortfolioId != null;
+  const canAdd = targetCollectionId != null;
 
   async function add(card: SetCard) {
     const printingId = card.printings[0]?.printingId;
-    if (targetPortfolioId == null || printingId == null) return;
+    if (targetCollectionId == null || printingId == null) return;
     const bump = (by: number) =>
       setAdded((a) => {
         const counts = a.base === cards ? { ...a.counts } : {};
@@ -61,7 +61,7 @@ export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portf
     setError(null);
     bump(1);
     try {
-      const res = await addItemAction(targetPortfolioId, { printingId, quantity: 1, condition: "NM" });
+      const res = await addItemAction(targetCollectionId, { printingId, quantity: 1, condition: "NM" });
       if (!res.ok) {
         bump(-1);
         setError(res.error);
@@ -84,18 +84,18 @@ export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portf
         ))}
 
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          {portfolios.length === 0 ? (
-            <Link href="/binders" className="text-caption text-accent">
-              Create a binder to start marking cards owned
+          {collections.length === 0 ? (
+            <Link href="/collections" className="text-caption text-accent">
+              Create a collection to start marking cards owned
             </Link>
           ) : (
             <>
               <span className="text-caption text-dim">Add to:</span>
-              {portfolios.map((p) => (
+              {collections.map((p) => (
                 <Pill
                   key={p.id}
-                  selected={p.id === targetPortfolioId}
-                  onClick={() => setTargetPortfolioId(p.id)}
+                  selected={p.id === targetCollectionId}
+                  onClick={() => setTargetCollectionId(p.id)}
                 >
                   {p.name}
                 </Pill>

@@ -1,5 +1,5 @@
 // Nightly job, run by the "Daily price ingest" workflow right after ingest/daily.ts:
-//   1. materialize portfolio_history for `date` (every binder, every user — one statement),
+//   1. materialize collection_history for `date` (every collection, every user — one statement),
 //   2. evaluate every price alert against the CURRENT price (latest_prices) and email crossings.
 // History is valued as of `date` so a failed night can be re-run under its own date; alerts
 // deliberately are NOT. The state machine is not order-aware, so judging a fired alert by an older
@@ -15,29 +15,29 @@ import { evaluateAlert, type Direction } from "@/lib/alerts";
 import { alertEmail, mailerFromEnv, type Mailer } from "./mailer";
 
 export interface NightlyOptions {
-  date: string;          // YYYY-MM-DD — the date portfolio_history is valued as of (alerts always use the current price)
+  date: string;          // YYYY-MM-DD — the date collection_history is valued as of (alerts always use the current price)
   mailer: Mailer | null; // null = email disabled (logs what it would have sent)
   appUrl: string;        // origin for links in emails
   now?: () => string;    // ISO timestamp for last_fired_at; tests pin it
 }
 
 export interface NightlySummary {
-  date: string; portfolios: number; alerts: number; fired: number; rearmed: number;
+  date: string; collections: number; alerts: number; fired: number; rearmed: number;
   emailFailed: number; skippedNoMailer: number; emailDisabled: boolean; elapsedMs: number;
 }
 
-/** INSERT … SELECT over all binders: value = Σ quantity × market in force on `date` (the newest
- *  snapshot at or before it). Unpriced copies contribute nothing; an empty binder is 0. */
-export async function materializePortfolioHistory(date: string): Promise<number> {
+/** INSERT … SELECT over all collections: value = Σ quantity × market in force on `date` (the newest
+ *  snapshot at or before it). Unpriced copies contribute nothing; an empty collection is 0. */
+export async function materializeCollectionHistory(date: string): Promise<number> {
   const c = await db();
   const r = await c.execute({
-    sql: `INSERT INTO portfolio_history (portfolio_id, date, total_value)
+    sql: `INSERT INTO collection_history (collection_id, date, total_value)
           SELECT po.id, ?, COALESCE(SUM(ci.quantity * (
                    SELECT ps.market FROM price_snapshots ps
                    WHERE ps.printing_id = ci.printing_id AND ps.date <= ? ORDER BY ps.date DESC LIMIT 1)), 0)
-          FROM portfolios po LEFT JOIN collection_items ci ON ci.portfolio_id = po.id
+          FROM collections po LEFT JOIN collection_items ci ON ci.collection_id = po.id
           WHERE true GROUP BY po.id
-          ON CONFLICT(portfolio_id, date) DO UPDATE SET total_value = excluded.total_value`,
+          ON CONFLICT(collection_id, date) DO UPDATE SET total_value = excluded.total_value`,
     args: [date, date],
   });
   return r.rowsAffected;
@@ -74,10 +74,10 @@ export async function runNightly(opts: NightlyOptions): Promise<NightlySummary> 
   if (!isCalendarDate(opts.date)) throw new Error(`runNightly: date must be YYYY-MM-DD, got ${opts.date}`);
   const startedAt = Date.now();
   const now = opts.now ?? (() => new Date().toISOString());
-  const s: NightlySummary = { date: opts.date, portfolios: 0, alerts: 0, fired: 0, rearmed: 0, emailFailed: 0, skippedNoMailer: 0, emailDisabled: opts.mailer === null, elapsedMs: 0 };
+  const s: NightlySummary = { date: opts.date, collections: 0, alerts: 0, fired: 0, rearmed: 0, emailFailed: 0, skippedNoMailer: 0, emailDisabled: opts.mailer === null, elapsedMs: 0 };
 
-  s.portfolios = await materializePortfolioHistory(opts.date);
-  console.log(`[nightly] portfolio_history: ${s.portfolios} binders valued as of ${opts.date}`);
+  s.collections = await materializeCollectionHistory(opts.date);
+  console.log(`[nightly] collection_history: ${s.collections} collections valued as of ${opts.date}`);
 
   const c = await db();
   const alerts = await loadAlerts();
@@ -123,7 +123,7 @@ if (isMain) {
     process.exit(2);
   }
   // The origin is only used for links inside alert emails, so it is required only once Resend is
-  // configured — a missing APP_URL must never cost a night of portfolio_history.
+  // configured — a missing APP_URL must never cost a night of collection_history.
   const mailer = mailerFromEnv();
   const appUrl = process.env.APP_URL ?? process.env.BETTER_AUTH_URL;
   if (mailer && !appUrl) {

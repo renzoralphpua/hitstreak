@@ -1,5 +1,5 @@
 "use server";
-// Mutations for email price alerts. Same contract as the portfolio actions: the session is
+// Mutations for email price alerts. Same contract as the collection actions: the session is
 // re-checked, ids are validated before SQL, and failures come back as { ok: false, error }.
 import { revalidatePath } from "next/cache";
 import { withUser, assertId } from "@/lib/action-utils";

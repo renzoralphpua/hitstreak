@@ -5,7 +5,7 @@ import { listGames, listSetsWithCompletion, type SetCompletion } from "@/lib/cat
 import { SectionHeading, Panel, Pill, ProgressBar, EmptyState } from "@/components/ui";
 
 export const metadata = { title: "Sets — Hitstreak" };
-// Completion counts come from the signed-in user's binders: never prerender or cache across users.
+// Completion counts come from the signed-in user's collections: never prerender or cache across users.
 export const dynamic = "force-dynamic";
 
 const DEFAULT_GAME = "pokemon";

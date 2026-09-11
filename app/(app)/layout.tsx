@@ -9,7 +9,7 @@ import ThemeToggle from "@/components/theme/ThemeToggle";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) {
-    const path = (await headers()).get("x-pathname") ?? "/binders";
+    const path = (await headers()).get("x-pathname") ?? "/collections";
     redirect(`/sign-in?next=${encodeURIComponent(path)}`);
   }
   return (
@@ -23,7 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         }
       />
       {/* Width is a per-screen call, so `main` only pads. A screen you READ (card detail,
-          alerts) wraps its content in `max-w-read`; a screen you SCAN (binder grid, sets)
+          alerts) wraps its content in `max-w-read`; a screen you SCAN (collection grid, sets)
           uses `max-w-scan`, which earns the extra columns an ultrawide gives it. */}
       <main className="mx-auto w-full max-w-scan grow px-6 py-6 md:px-10">{children}</main>
       <BottomTabBar />

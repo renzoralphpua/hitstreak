@@ -6,25 +6,25 @@ scrollback. Artboards live in `docs/design/`; the canvas is linked from `docs/de
 
 ---
 
-## 1. Home and Binder are two screens
+## 1. Home and Collection are two screens
 
 **Settled 2026-09-10.** Artboard: `docs/design/Dashboard.dc.html`.
 
-The approved `Main.dc.html` drew a single screen that merged a binder's value, chart and a binder
-switcher with that binder's cards. We shipped it as two (`/binders`, `/binders/[id]`). Rather
-than collapse them back, Home becomes a genuine portfolio-level screen — the one that answers "what
+The approved `Main.dc.html` drew a single screen that merged a collection's value, chart and a collection
+switcher with that collection's cards. We shipped it as two (`/collections`, `/collections/[id]`). Rather
+than collapse them back, Home becomes a genuine collection-level screen — the one that answers "what
 is my whole collection worth", which nothing answered before.
 
-- **Home is what you read.** Total across binders, its chart, winners and losers, deck progress,
+- **Home is what you read.** Total across collections, its chart, winners and losers, deck progress,
   alerts that fired. Nothing on it edits anything.
-- **Binder is what you change.** Add and remove cards, purchase price, rename, delete.
-- **Binder switching** moves into a dropdown in the Binder header. `/binders` keeps its role as
-  the management surface (create, rename, delete) and does not auto-jump to the last binder used.
-- The by-binder rows on Home are therefore a *breakdown*, not a switcher, and are drawn as plain
+- **Collection is what you change.** Add and remove cards, purchase price, rename, delete.
+- **Collection switching** moves into a dropdown in the Collection header. `/collections` keeps its role as
+  the management surface (create, rename, delete) and does not auto-jump to the last collection used.
+- The by-collection rows on Home are therefore a *breakdown*, not a switcher, and are drawn as plain
   rows — never the selected dark chip, which means "selected" everywhere else in the system.
 
 **Home has no nav item.** The wordmark links to it, on desktop and in the phone header alike. The
-primary nav stays at four (Binder · Sets · Decks · Alerts), so no existing artboard's top bar
+primary nav stays at four (Collection · Sets · Decks · Alerts), so no existing artboard's top bar
 changes, and on Home no tab is lit.
 
 ### 1a. One measure, app-wide: vs paid
@@ -32,8 +32,8 @@ changes, and on Home no tab is lit.
 **Settled 2026-09-10 for Home; promoted app-wide 2026-09-11.**
 
 **The rule: wherever a figure describes something you own, it reads against what you paid.** Never
-"change over the last N days". That covers the Home headline, the per-binder rows, the winners and
-losers, the binder rail, the binder grid tiles and `HoldingsTable`'s per-row deltas.
+"change over the last N days". That covers the Home headline, the per-collection rows, the winners and
+losers, the collection rail, the collection grid tiles and `HoldingsTable`'s per-row deltas.
 
 The range pills stay, but they only pick the chart's **window**. The chart plots market value
 against the cost-basis step line, so the gap between the two lines is the gain at any window. The
@@ -56,11 +56,11 @@ not an oversight to be tidied up later.
 
 ### What app-wide costs, found 2026-09-11
 
-- **`/binders/[id]` renders two deltas stacked** — `PriceDelta caption="vs. paid"` immediately
+- **`/collections/[id]` renders two deltas stacked** — `PriceDelta caption="vs. paid"` immediately
   followed by `PriceDelta caption={RANGE_CAPTION[range]}`. The period one goes.
-- **The binder's Gain tile duplicates its own headline**, exactly as Home's did. Same fix: replace
+- **The collection's Gain tile duplicates its own headline**, exactly as Home's did. Same fix: replace
   it with **In profit — N of M**, which is a vs-paid fact the headline does not already state.
-- **The binder chart** becomes value against the cost-basis step line, matching Home.
+- **The collection chart** becomes value against the cost-basis step line, matching Home.
 - **Copy:** the code says `"vs. paid"`, the artboards say `"vs paid"`. Standardise on **vs paid**.
 
 ---
@@ -72,16 +72,16 @@ not an oversight to be tidied up later.
 **The finding that made this a decision:** the search pill every artboard draws in the top bar does
 not exist in the app. `TopNav` accepts a `search` prop and `app/(app)/layout.tsx` never passes one;
 the only place it has ever rendered is `/dev/ui`. Search lives in four local dialogs only (add to
-binder, new alert, deck builder, admin curation), all sharing `useCardSearch` and `/api/search`.
+collection, new alert, deck builder, admin curation), all sharing `useCardSearch` and `/api/search`.
 
 **Decision:** a command palette (⌘K, and the pill as its visible affordance) that **only navigates**.
-An earlier draft gave each result an action menu — add to binder, add to deck, create alert. That was
-rejected: every item needs a different form (adding to a binder needs printing, condition, quantity
+An earlier draft gave each result an action menu — add to collection, add to deck, create alert. That was
+rejected: every item needs a different form (adding to a collection needs printing, condition, quantity
 and what you paid), so a menu of forms is just a worse router.
 
 Instead the palette opens `/cards/[id]`, which is already the richest screen in the app — printings
 table with per-printing "You own", price history with range pills and a printing selector, "in your
-binders" links, an inline add form, and a set-alert shortcut.
+collections" links, an inline add form, and a set-alert shortcut.
 
 Results are grouped: **In your collection** (rows read vs paid) → **In the catalog** (market price
 only; there is nothing to compare against yet) → **Go to** (sets and decks).
@@ -98,9 +98,9 @@ only; there is nothing to compare against yet) → **Go to** (sets and decks).
 
 **Settled 2026-09-11.** Data model, not layout. Blocks the vs-paid work above.
 
-**The bug this fixes.** `collection_items` has `UNIQUE (portfolio_id, printing_id, condition)` — one
+**The bug this fixes.** `collection_items` has `UNIQUE (collection_id, printing_id, condition)` — one
 row per printing and condition, with a single scalar `acquired_price` ("dollars, per copy"). Adding
-a card you already own hits the upsert in `lib/portfolios.ts`:
+a card you already own hits the upsert in `lib/collections.ts`:
 
 ```sql
 quantity       = MIN(quantity + excluded.quantity, 9999),
@@ -127,15 +127,15 @@ something computed *from* lots, not a replacement for them.
 
 ### What this touches
 
-- **Schema:** drop `UNIQUE (portfolio_id, printing_id, condition)`. Existing rows become the first
+- **Schema:** drop `UNIQUE (collection_id, printing_id, condition)`. Existing rows become the first
   lot, so the migration is additive for data — but SQLite cannot drop a constraint in place, so it
   needs the table-rebuild dance (create new, copy, drop, rename) inside one transaction.
 - **`addItem`:** plain `INSERT`, no `ON CONFLICT`.
 - **`updateItem` / `removeItem`:** already keyed by `collection_items.id`, so they become per-lot
   operations for free — but the UI calling them must now say *which* lot.
-- **`getPortfolioHoldings`:** returns lots; the binder screen must group them per printing+condition
+- **`getCollectionHoldings`:** returns lots; the collection screen must group them per printing+condition
   for display while keeping the lots reachable. `cost` per lot is `quantity * acquired_price`, and a
-  grouped row's cost is the sum — so `getPortfolioSummary` gets *more* accurate with no change to its
+  grouped row's cost is the sum — so `getCollectionSummary` gets *more* accurate with no change to its
   own arithmetic.
 - **`getCardHolders`:** same grouping question, plus the cost sum noted in decision 2.
 - **Card page "Your copies":** becomes a list of lots rather than a single row.
@@ -143,9 +143,9 @@ something computed *from* lots, not a replacement for them.
 
 ---
 
-## 4. The binder gets grid and list, grid by default
+## 4. The collection gets grid and list, grid by default
 
-**Settled 2026-09-11.** Artboard: `docs/design/BinderGrid.dc.html`.
+**Settled 2026-09-11.** Artboard: `docs/design/CollectionGrid.dc.html`.
 
 `HoldingsTable` shipped as a vertical list of `CardRow`s with a quantity stepper and Remove inline
 on every row; `Main.dc.html` drew a four-column card-art grid with a Grid | List toggle. Neither the
@@ -164,14 +164,14 @@ purchases is a disclosure row, which a grid tile cannot carry without becoming a
 - **Percent only, no dollar delta.** At 183px a tile cannot hold both; the dollar figure is in list
   view, which is where you go to act anyway.
 - **No recorded cost** shows an accent *Add cost* rather than a misleading 0% — that holding is
-  silently distorting the binder's gain, so the prompt is the useful thing.
+  silently distorting the collection's gain, so the prompt is the useful thing.
 - **No market price** dims the art and reads *no price*, matching `HoldingsTable`.
 
 **View persists in the URL** (`?view=grid`), matching the existing `?range=` and `?p=` idiom —
 server-renderable and shareable, unlike localStorage.
 
 **Open:** whether `/s/[token]` gets the grid, and whether it gets *only* the grid, since there is
-nothing to edit on a shared binder.
+nothing to edit on a shared collection.
 
 ---
 
@@ -275,7 +275,7 @@ no screen had ever been seen above the artboards' 1280.
 
 Two tokens, because the two kinds of screen want opposite things on a wide monitor:
 `--container-read: 1200px` for screens you read left-to-right (card detail, alerts — 2000px lines
-are unreadable) and `--container-scan: 1800px` for screens you scan (binder grid, set grid — an
+are unreadable) and `--container-scan: 1800px` for screens you scan (collection grid, set grid — an
 ultrawide should buy more columns). `main` carries `max-w-scan` as the outer bound so nothing is
 ever truly unbounded, and reading screens tighten it themselves with `max-w-read`.
 

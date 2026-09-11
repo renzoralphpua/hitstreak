@@ -17,7 +17,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
         action={
           <div className="flex flex-wrap gap-2">
             <Button onClick={reset}>Try again</Button>
-            <Button href="/binders" variant="secondary">Back to your binders</Button>
+            <Button href="/collections" variant="secondary">Back to your collections</Button>
           </div>
         }
         className="max-w-md"

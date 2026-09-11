@@ -1,5 +1,5 @@
 // lib/action-utils.ts
-// Helpers shared by every server-action module (portfolios, alerts). Not a "use server" file: it
+// Helpers shared by every server-action module (collections, alerts). Not a "use server" file: it
 // exports a type and a synchronous function, which that directive forbids, so the action files
 // import from here instead.
 import { getSession } from "@/lib/session";

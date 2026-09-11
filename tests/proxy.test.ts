@@ -7,18 +7,18 @@ function req(path: string, cookie?: string) {
 }
 
 describe("proxy (optimistic auth redirect)", () => {
-  it("redirects unauthenticated /binders to /sign-in with a next param", async () => {
-    const res = await proxy(req("/binders"));
+  it("redirects unauthenticated /collections to /sign-in with a next param", async () => {
+    const res = await proxy(req("/collections"));
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe("http://localhost:3000/sign-in?next=%2Fbinders");
+    expect(res.headers.get("location")).toBe("http://localhost:3000/sign-in?next=%2Fcollections");
   });
   it("lets a request with a session cookie through", async () => {
-    const res = await proxy(req("/binders", "better-auth.session_token=abc"));
+    const res = await proxy(req("/collections", "better-auth.session_token=abc"));
     expect(res.headers.get("location")).toBeNull();
   });
   it("carries the current path on the request headers for the layout's real gate", async () => {
-    const res = await proxy(req("/binders?tab=active", "better-auth.session_token=abc"));
-    expect(res.headers.get("x-middleware-request-x-pathname")).toBe("/binders?tab=active");
+    const res = await proxy(req("/collections?tab=active", "better-auth.session_token=abc"));
+    expect(res.headers.get("x-middleware-request-x-pathname")).toBe("/collections?tab=active");
   });
   it("does not touch public routes", async () => {
     const res = await proxy(req("/sign-in"));

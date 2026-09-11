@@ -1,5 +1,5 @@
 "use server";
-// Mutations for personal decks. Same contract as the portfolio and alert actions: the session is
+// Mutations for personal decks. Same contract as the collection and alert actions: the session is
 // re-checked, ids are validated before SQL, failures come back as { ok: false, error }. The deck is
 // validated HERE, from the catalog's own attrs — the client's copy is never trusted.
 import { revalidatePath } from "next/cache";

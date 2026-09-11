@@ -1,44 +1,44 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { listPortfolios, getPortfolioSummary } from "@/lib/portfolios";
+import { listCollections, getCollectionSummary } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { SectionHeading, Panel, StatTile, PriceDelta, MoneyDisplay, EmptyState } from "@/components/ui";
-import PortfolioForm, { RenameToggle } from "./PortfolioForm";
-import DeletePortfolioButton from "./DeletePortfolioButton";
+import CollectionForm, { RenameToggle } from "./CollectionForm";
+import DeleteCollectionButton from "./DeleteCollectionButton";
 
-export const metadata = { title: "Binders — Hitstreak" };
+export const metadata = { title: "Collections — Hitstreak" };
 // Per-user data valued from latest_prices: never prerender or cache across users.
 export const dynamic = "force-dynamic";
 
-export default async function PortfoliosPage() {
+export default async function CollectionsPage() {
   const session = await getSession();
   if (!session) redirect("/sign-in"); // the layout already gates; this is for the user id
   const userId = session.user.id;
 
-  const portfolios = await listPortfolios(userId);
-  const summaries = await Promise.all(portfolios.map((p) => getPortfolioSummary(userId, p.id)));
-  const n = portfolios.length;
+  const collections = await listCollections(userId);
+  const summaries = await Promise.all(collections.map((p) => getCollectionSummary(userId, p.id)));
+  const n = collections.length;
 
   return (
     <div className="flex flex-col gap-5">
-      <SectionHeading as="h1" title="Your binders" caption={`${n} binder${n === 1 ? "" : "s"}`} />
+      <SectionHeading as="h1" title="Your collections" caption={`${n} collection${n === 1 ? "" : "s"}`} />
 
       {n === 0 ? (
         <EmptyState
-          title="No binders yet"
+          title="No collections yet"
           body="Create one to start tracking the cards you own."
-          action={<PortfolioForm mode="create" />}
+          action={<CollectionForm mode="create" />}
         />
       ) : (
         <>
           <div className="flex flex-col gap-3">
-            {portfolios.map((p, i) => {
+            {collections.map((p, i) => {
               const s = summaries[i];
               return (
                 <Panel key={p.id} className="flex flex-col gap-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-3">
-                    <Link href={`/binders/${p.id}`} className="font-semibold text-ink">
+                    <Link href={`/collections/${p.id}`} className="font-semibold text-ink">
                       {p.name}
                     </Link>
                     <div className="flex flex-col items-end gap-1">
@@ -63,7 +63,7 @@ export default async function PortfoliosPage() {
 
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     <RenameToggle id={p.id} name={p.name} />
-                    <DeletePortfolioButton id={p.id} name={p.name} count={s.cards} />
+                    <DeleteCollectionButton id={p.id} name={p.name} count={s.cards} />
                   </div>
                 </Panel>
               );
@@ -71,7 +71,7 @@ export default async function PortfoliosPage() {
           </div>
 
           <Panel>
-            <PortfolioForm mode="create" />
+            <CollectionForm mode="create" />
           </Panel>
         </>
       )}

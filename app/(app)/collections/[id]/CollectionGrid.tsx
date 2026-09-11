@@ -1,23 +1,23 @@
 import Link from "next/link";
-import type { Holding } from "@/lib/portfolios";
+import type { Holding } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { CardTile, PriceDelta } from "@/components/ui";
 
 /**
- * A binder as card art. This is the READING view — there are no controls on a tile, because the
+ * A collection as card art. This is the READING view — there are no controls on a tile, because the
  * quantity stepper, per-lot editing and removal all live in the list. A tile is a link to the card
  * page, which is where anything you might want to do about a card already is.
  *
  * The three things a tile can say under the value, in order of what matters:
  *
  * 1. **Add cost** — no lot of this holding records what it cost. Showing 0% here would claim the
- *    card is worth exactly what you paid; the truth is that it is silently distorting the binder's
+ *    card is worth exactly what you paid; the truth is that it is silently distorting the collection's
  *    gain, so the tile asks for the missing figure instead.
  * 2. **no price** — the ingest has never priced this printing, so there is no value to compare.
  * 3. the vs-paid percent, without the dollar figure: at ~183px a tile cannot hold both, and the
  *    dollar delta is one click away in the list.
  */
-export default function BinderGrid({ holdings }: { holdings: Holding[] }) {
+export default function CollectionGrid({ holdings }: { holdings: Holding[] }) {
   return (
     <ul className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {holdings.map((h) => {

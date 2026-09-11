@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the reusable UI layer (Binder tokens + `components/ui/` primitives + a dev gallery), real multi-user auth (Better Auth on Turso), and the authenticated app shell with light/dark theme — so Phase 2b can compose screens from primitives only.
+**Goal:** Build the reusable UI layer (Collection tokens + `components/ui/` primitives + a dev gallery), real multi-user auth (Better Auth on Turso), and the authenticated app shell with light/dark theme — so Phase 2b can compose screens from primitives only.
 
 **Architecture:** Tailwind v4 `@theme inline` maps utilities to CSS variables defined once in `app/globals.css` (light on `:root`, dark on `[data-theme="dark"]`), so every primitive is themed with zero per-component work. Primitives are small typed React components, one per file, tested with vitest + Testing Library in jsdom. Better Auth runs on the existing libSQL client via the Kysely `LibsqlDialect`; its tables live in `lib/schema.ts` alongside ours (still self-initializing, no migrate step). Routes under `app/(app)/` are protected by a `proxy.ts` optimistic cookie check plus a real `getSession()` check in the layout.
 
 **Tech Stack:** Next.js 16 (App Router, `proxy.ts`), React 19, Tailwind v4, `next/font/google` (DM Serif Display, DM Sans), `better-auth` + `@libsql/kysely-libsql`, vitest + `@testing-library/react` + jsdom.
 
-**Reference:** Spec `docs/superpowers/specs/2026-09-05-hitstreak-design.md` §12 (visual design + binding implementation approach). Tokens and conventions: `docs/design/README.md`. Mockups: `docs/design/*.dc.html` (Main = portfolio home, Sets, Card, Decks, Builder, Alerts, Mobile, BinderDark).
+**Reference:** Spec `docs/superpowers/specs/2026-09-05-hitstreak-design.md` §12 (visual design + binding implementation approach). Tokens and conventions: `docs/design/README.md`. Mockups: `docs/design/*.dc.html` (Main = collection home, Sets, Card, Decks, Builder, Alerts, Mobile, CollectionDark).
 
 **Conventions (carry over from Phase 1):** every verification step runs `npm test`, `npm run typecheck`, `npm run lint`; commit after each green task; DB tests use `tmpDb()` from `tests/helpers/tmpdb.ts`; never `:memory:`. New: component tests are `tests/**/*.test.tsx` with a `// @vitest-environment jsdom` docblock on line 1.
 
@@ -22,11 +22,11 @@
 app/
   globals.css                 tokens (@theme inline), light/dark vars, base styles
   layout.tsx                  fonts, <html data-theme>, no-flash theme script
-  page.tsx                    redirects to /portfolios (Phase 2b) — for now a landing with sign-in link
+  page.tsx                    redirects to /collections (Phase 2b) — for now a landing with sign-in link
   (auth)/sign-in/page.tsx     email + password sign-in
   (auth)/sign-up/page.tsx     email + password sign-up
   (app)/layout.tsx            protected shell: TopNav + BottomTabBar, getSession() gate
-  (app)/portfolios/page.tsx   placeholder "Binder" page (real screen in Phase 2b)
+  (app)/collections/page.tsx   placeholder "Collection" page (real screen in Phase 2b)
   api/auth/[...all]/route.ts  Better Auth handler
   dev/ui/page.tsx             primitives gallery (404 in production)
 components/ui/                one primitive per file (listed in Tasks 4–6) + index.ts barrel
@@ -151,7 +151,7 @@ Run: `npm test -- tests/tokens.test.ts` → FAIL.
 ```css
 @import "tailwindcss";
 
-/* Binder tokens — the single source of truth. Values from docs/design/README.md.
+/* Collection tokens — the single source of truth. Values from docs/design/README.md.
    Light is default; dark reassigns the same variables under [data-theme="dark"]. */
 :root {
   --ground: #f6f1e8;
@@ -257,7 +257,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 - [x] **Step 4: Verify** — `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Open the dev server (http://localhost:3000) — the starter page should now render in DM Sans on warm paper.
 
-- [x] **Step 5: Commit** — `feat(ui): Binder design tokens, fonts, theme-aware root layout`
+- [x] **Step 5: Commit** — `feat(ui): Collection design tokens, fonts, theme-aware root layout`
 
 ---
 
@@ -350,8 +350,8 @@ import { Button, Pill, Panel, SectionHeading, StatTile, PriceDelta, ProgressBar 
 describe("Button", () => {
   it("renders primary by default and secondary on request, forwards clicks", () => {
     const onClick = vi.fn();
-    render(<Button onClick={onClick}>Add to binder</Button>);
-    const b = screen.getByRole("button", { name: "Add to binder" });
+    render(<Button onClick={onClick}>Add to collection</Button>);
+    const b = screen.getByRole("button", { name: "Add to collection" });
     expect(b.className).toMatch(/bg-chip/);
     fireEvent.click(b);
     expect(onClick).toHaveBeenCalled();
@@ -826,7 +826,7 @@ Barrel: add the five exports.
 
 **Files:** `components/ui/{TopNav,BottomTabBar}.tsx`, `components/theme/ThemeToggle.tsx`, barrel, `tests/ui/nav.test.tsx`
 
-Nav items are fixed by the design: Binder (`/portfolios`), Sets (`/sets`), Decks (`/decks`), Alerts (`/alerts`). TopNav marks the active item from the current pathname (client component using `usePathname`).
+Nav items are fixed by the design: Collection (`/collections`), Sets (`/sets`), Decks (`/decks`), Alerts (`/alerts`). TopNav marks the active item from the current pathname (client component using `usePathname`).
 
 - [x] **Step 1: Failing tests**
 
@@ -836,7 +836,7 @@ Nav items are fixed by the design: Binder (`/portfolios`), Sets (`/sets`), Decks
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
-const pathname = { current: "/portfolios" };
+const pathname = { current: "/collections" };
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.current }));
 
 import { TopNav, BottomTabBar } from "@/components/ui";
@@ -845,8 +845,8 @@ import ThemeToggle from "@/components/theme/ThemeToggle";
 describe("TopNav", () => {
   it("renders the four sections and marks the active one", () => {
     render(<TopNav search={<input aria-label="Search" />} right={<span>avatar</span>} />);
-    for (const n of ["Binder", "Sets", "Decks", "Alerts"]) expect(screen.getByRole("link", { name: n })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Binder" })).toHaveAttribute("aria-current", "page");
+    for (const n of ["Collection", "Sets", "Decks", "Alerts"]) expect(screen.getByRole("link", { name: n })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Collection" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Sets" })).not.toHaveAttribute("aria-current");
   });
 });
@@ -880,7 +880,7 @@ describe("ThemeToggle", () => {
 ```tsx
 // components/ui/nav-items.ts
 export const NAV_ITEMS = [
-  { href: "/portfolios", label: "Binder" },
+  { href: "/collections", label: "Collection" },
   { href: "/sets", label: "Sets" },
   { href: "/decks", label: "Decks" },
   { href: "/alerts", label: "Alerts" },
@@ -906,7 +906,7 @@ export default function TopNav({ search, right }: Props) {
   const pathname = usePathname();
   return (
     <header className="flex h-16 items-center gap-9 border-b border-hairline px-6 md:px-10">
-      <Link href="/portfolios" className="font-display text-2xl text-ink">Hitstreak</Link>
+      <Link href="/collections" className="font-display text-2xl text-ink">Hitstreak</Link>
       <nav className="hidden gap-5 text-[15px] md:flex" aria-label="Primary">
         {NAV_ITEMS.map((it) => {
           const active = isActive(pathname, it.href);
@@ -940,7 +940,7 @@ import { NAV_ITEMS, isActive } from "./nav-items";
 import { cn } from "./cn";
 
 const ICONS: Record<string, React.ReactNode> = {
-  Binder: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 3 V21" /></svg>,
+  Collection: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 3 V21" /></svg>,
   Sets: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden><rect x="3" y="3" width="8" height="8" rx="1.5" /><rect x="13" y="3" width="8" height="8" rx="1.5" /><rect x="3" y="13" width="8" height="8" rx="1.5" /><rect x="13" y="13" width="8" height="8" rx="1.5" /></svg>,
   Decks: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden><rect x="6" y="2" width="13" height="18" rx="2" transform="rotate(8 12 11)" /><rect x="4" y="5" width="13" height="18" rx="2" /></svg>,
   Alerts: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 8 A6 6 0 0 0 6 8 C6 15 3 17 3 17 H21 C21 17 18 15 18 8 Z" /><path d="M10 21 A2 2 0 0 0 14 21" /></svg>,
@@ -1171,7 +1171,7 @@ Notes: `asResponse: true` returns a `Response` so status/cookies can be asserted
 ### Task 9: Sign-in / sign-up pages, route protection, app shell
 
 **Files:**
-- Create: `app/(auth)/sign-in/page.tsx`, `app/(auth)/sign-up/page.tsx`, `app/(auth)/AuthForm.tsx`, `proxy.ts`, `app/(app)/layout.tsx`, `app/(app)/portfolios/page.tsx`, `components/ui/UserMenu.tsx`
+- Create: `app/(auth)/sign-in/page.tsx`, `app/(auth)/sign-up/page.tsx`, `app/(auth)/AuthForm.tsx`, `proxy.ts`, `app/(app)/layout.tsx`, `app/(app)/collections/page.tsx`, `components/ui/UserMenu.tsx`
 - Modify: `app/page.tsx`
 - Test: `tests/ui/auth-form.test.tsx`, `tests/proxy.test.ts`
 
@@ -1192,13 +1192,13 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }
 import AuthForm from "@/app/(auth)/AuthForm";
 
 describe("AuthForm", () => {
-  it("sign-in submits email + password and navigates to /portfolios", async () => {
+  it("sign-in submits email + password and navigates to /collections", async () => {
     render(<AuthForm mode="sign-in" />);
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "r@x.com" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "pw12345678" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
     await waitFor(() => expect(signIn).toHaveBeenCalledWith(expect.objectContaining({ email: "r@x.com", password: "pw12345678" })));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/portfolios"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/collections"));
   });
   it("sign-up also sends the name and shows an API error", async () => {
     signUp.mockResolvedValueOnce({ error: { message: "User already exists" } });
@@ -1223,13 +1223,13 @@ function req(path: string, cookie?: string) {
 }
 
 describe("proxy (optimistic auth redirect)", () => {
-  it("redirects unauthenticated /portfolios to /sign-in with a next param", async () => {
-    const res = await proxy(req("/portfolios"));
+  it("redirects unauthenticated /collections to /sign-in with a next param", async () => {
+    const res = await proxy(req("/collections"));
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe("http://localhost:3000/sign-in?next=%2Fportfolios");
+    expect(res.headers.get("location")).toBe("http://localhost:3000/sign-in?next=%2Fcollections");
   });
   it("lets a request with a session cookie through", async () => {
-    const res = await proxy(req("/portfolios", "better-auth.session_token=abc"));
+    const res = await proxy(req("/collections", "better-auth.session_token=abc"));
     expect(res.headers.get("location")).toBeNull();
   });
   it("does not touch public routes", async () => {
@@ -1246,7 +1246,7 @@ describe("proxy (optimistic auth redirect)", () => {
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
-const PROTECTED = ["/portfolios", "/sets", "/cards", "/decks", "/alerts", "/dev"];
+const PROTECTED = ["/collections", "/sets", "/cards", "/decks", "/alerts", "/dev"];
 
 /** Optimistic redirect only (cookie presence, not validity). The real check is
  *  getSession() in app/(app)/layout.tsx — never rely on this alone. */
@@ -1272,7 +1272,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui";
 
-export default function AuthForm({ mode, next = "/portfolios" }: { mode: "sign-in" | "sign-up"; next?: string }) {
+export default function AuthForm({ mode, next = "/collections" }: { mode: "sign-in" | "sign-up"; next?: string }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -1308,7 +1308,7 @@ export default function AuthForm({ mode, next = "/portfolios" }: { mode: "sign-i
 }
 ```
 
-Pages: `app/(auth)/sign-in/page.tsx` and `sign-up/page.tsx` — server components rendering a centered card on `bg-ground`: the `Hitstreak` wordmark (font-display), a `SectionHeading`-style title ("Welcome back" / "Create your account"), `<AuthForm mode=… next={searchParams.next}/>` (in Next 16 `searchParams` is a Promise — `const { next } = await searchParams`), and a link to the other page. Also `app/page.tsx`: if `await getSession()` → `redirect("/portfolios")`, else a minimal landing with the wordmark, one line of copy from the spec ("Track your collection, prices, and decks — Pokémon, One Piece, Riftbound."), and Sign in / Create account buttons.
+Pages: `app/(auth)/sign-in/page.tsx` and `sign-up/page.tsx` — server components rendering a centered card on `bg-ground`: the `Hitstreak` wordmark (font-display), a `SectionHeading`-style title ("Welcome back" / "Create your account"), `<AuthForm mode=… next={searchParams.next}/>` (in Next 16 `searchParams` is a Promise — `const { next } = await searchParams`), and a link to the other page. Also `app/page.tsx`: if `await getSession()` → `redirect("/collections")`, else a minimal landing with the wordmark, one line of copy from the spec ("Track your collection, prices, and decks — Pokémon, One Piece, Riftbound."), and Sign in / Create account buttons.
 
 - [x] **Step 4: Protected shell**
 
@@ -1356,9 +1356,9 @@ export default function UserMenu({ name }: { name: string }) {
 }
 ```
 
-`app/(app)/portfolios/page.tsx` — a placeholder using primitives (`SectionHeading title="Binder"` + a `Panel` saying "Your portfolios arrive in Phase 2b") so the shell is navigable end to end. Sets/Decks/Alerts links may 404 for now.
+`app/(app)/collections/page.tsx` — a placeholder using primitives (`SectionHeading title="Collection"` + a `Panel` saying "Your collections arrive in Phase 2b") so the shell is navigable end to end. Sets/Decks/Alerts links may 404 for now.
 
-- [x] **Step 5: Verify** — `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Manual: in the dev server, hit `/portfolios` unauthenticated → redirected to `/sign-in?next=%2Fportfolios`; create an account; you land on the placeholder Binder page inside the shell; toggle theme (persists across reload); sign out returns to `/`. Set `TURSO_DATABASE_URL=file:hitstreak.local.db` in `.env.local` for this (the file DB from Phase 1 gains the auth tables on first request).
+- [x] **Step 5: Verify** — `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Manual: in the dev server, hit `/collections` unauthenticated → redirected to `/sign-in?next=%2Fcollections`; create an account; you land on the placeholder Collection page inside the shell; toggle theme (persists across reload); sign out returns to `/`. Set `TURSO_DATABASE_URL=file:hitstreak.local.db` in `.env.local` for this (the file DB from Phase 1 gains the auth tables on first request).
 
 - [x] **Step 6: Commit** — `feat(auth): sign-in/sign-up, optimistic proxy redirect, protected app shell`
 
@@ -1388,7 +1388,7 @@ export default function UserMenu({ name }: { name: string }) {
 
 ## Out of scope (Phase 2b plan, written after 2a lands)
 
-Portfolios schema + data layer (`portfolios`, `collection_items`), portfolio home screen (value, chart placeholder until Phase 3, holdings, add-item flow), catalog search API + type-ahead, set browser with completion + tap-to-own, card detail. These compose the primitives above; their plan is written once the primitive APIs have survived contact with the gallery review.
+Collections schema + data layer (`collections`, `collection_items`), collection home screen (value, chart placeholder until Phase 3, holdings, add-item flow), catalog search API + type-ahead, set browser with completion + tap-to-own, card detail. These compose the primitives above; their plan is written once the primitive APIs have survived contact with the gallery review.
 
 ## Self-review notes
 

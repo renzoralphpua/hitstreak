@@ -3,7 +3,7 @@ import { tmpDb } from "./helpers/tmpdb";
 const tmp = tmpDb("catalog-read");
 import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
-import { createPortfolio, addItem } from "@/lib/portfolios";
+import { createCollection, addItem } from "@/lib/collections";
 import { searchCards, listGames, listSetsWithCompletion, getSetDetail, getCardDetail, thirtyDayChange } from "@/lib/catalog";
 
 const U = "user_1";
@@ -11,7 +11,7 @@ const LAW_ATTRS = { CardType: "Character", Color: "Green;Purple", Number: "OP08-
 let seed: Awaited<ReturnType<typeof seedMiniCatalog>>;
 beforeAll(async () => {
   seed = await seedMiniCatalog();
-  const p = await createPortfolio(U, "Main");
+  const p = await createCollection(U, "Main");
   await addItem(U, p.id, { printingId: seed.printings.umbreonHolo, quantity: 1, condition: "NM" });
   await addItem(U, p.id, { printingId: seed.printings.pikachuNormal, quantity: 2, condition: "NM" });
   // The mini catalog's cards all carry `attrs: '{}'`; the deck builder reads a hit's attrs, so one

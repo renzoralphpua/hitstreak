@@ -1841,11 +1841,11 @@ git push
 
 ## Out of scope for this plan (later phases)
 
-- Phase 2: Better Auth, portfolios/collection CRUD, search + set browsing UI
-- Phase 3: price charts, portfolio_history materialization + `/api/internal/nightly`, share links, Resend alerts
+- Phase 2: Better Auth, collections/collection CRUD, search + set browsing UI
+- Phase 3: price charts, collection_history materialization + `/api/internal/nightly`, share links, Resend alerts
 - Phase 4: decks (meta browser, gap analysis, builder + per-game validators, admin curation)
 
-The `portfolios`/`collection_items`/`decks` tables are deliberately NOT in this phase's schema — `lib/schema.ts` grows additively in each phase (`CREATE TABLE IF NOT EXISTS` makes that safe).
+The `collections`/`collection_items`/`decks` tables are deliberately NOT in this phase's schema — `lib/schema.ts` grows additively in each phase (`CREATE TABLE IF NOT EXISTS` makes that safe).
 
 ## Risks the engineer should know
 

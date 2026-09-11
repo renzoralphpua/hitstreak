@@ -1,4 +1,4 @@
-// lib/home.ts — the portfolio-level reads behind Home. Everything here answers a question about
+// lib/home.ts — the collection-level reads behind Home. Everything here answers a question about
 // what you OWN, so every comparison is against cost basis (decision 1a): no function in this file
 // returns a "change over the last N days".
 //
@@ -8,21 +8,21 @@
 import { db } from "@/lib/db";
 import type { Point } from "@/lib/history";
 
-export interface BinderLine {
-  portfolioId: number;
+export interface CollectionLine {
+  collectionId: number;
   name: string;
   cards: number;
   value: number;
   cost: number;
   gain: number;
-  /** Null when nothing in the binder has a recorded cost — there is no ratio to show. */
+  /** Null when nothing in the collection has a recorded cost — there is no ratio to show. */
   ratio: number | null;
   uncostedQuantity: number;
   unpricedQuantity: number;
 }
 
-export interface CollectionSummary {
-  binders: number;
+export interface HomeSummary {
+  collections: number;
   cards: number;
   value: number;
   cost: number;
@@ -33,10 +33,10 @@ export interface CollectionSummary {
   comparable: number;
   uncostedQuantity: number;
   unpricedQuantity: number;
-  lines: BinderLine[];
+  lines: CollectionLine[];
 }
 
-const PER_BINDER = `
+const PER_COLLECTION = `
   SELECT po.id, po.name,
          COALESCE(SUM(ci.quantity), 0) AS cards,
          COALESCE(SUM(CASE WHEN lp.market IS NULL THEN 0 ELSE ci.quantity * lp.market END), 0) AS value,
@@ -45,24 +45,24 @@ const PER_BINDER = `
          COALESCE(SUM(CASE WHEN lp.market IS NULL THEN ci.quantity ELSE 0 END), 0) AS unpriced,
          COALESCE(SUM(CASE WHEN lp.market IS NOT NULL AND ci.acquired_price IS NOT NULL THEN ci.quantity ELSE 0 END), 0) AS comparable,
          COALESCE(SUM(CASE WHEN lp.market > ci.acquired_price THEN ci.quantity ELSE 0 END), 0) AS in_profit
-  FROM portfolios po
-  LEFT JOIN collection_items ci ON ci.portfolio_id = po.id
+  FROM collections po
+  LEFT JOIN collection_items ci ON ci.collection_id = po.id
   LEFT JOIN printings p ON p.id = ci.printing_id
   LEFT JOIN latest_prices lp ON lp.printing_id = p.id
   WHERE po.user_id = ?
   GROUP BY po.id
   ORDER BY value DESC, po.name`;
 
-/** Everything you own, and the same figures per binder. A binder with nothing in it still appears —
- *  the LEFT JOINs are there so an empty binder is a row of zeroes rather than a missing line. */
-export async function getCollectionSummary(userId: string): Promise<CollectionSummary> {
+/** Everything you own, and the same figures per collection. A collection with nothing in it still appears —
+ *  the LEFT JOINs are there so an empty collection is a row of zeroes rather than a missing line. */
+export async function getHomeSummary(userId: string): Promise<HomeSummary> {
   const c = await db();
-  const r = await c.execute({ sql: PER_BINDER, args: [userId] });
-  const lines: BinderLine[] = r.rows.map((x) => {
+  const r = await c.execute({ sql: PER_COLLECTION, args: [userId] });
+  const lines: CollectionLine[] = r.rows.map((x) => {
     const value = Number(x.value);
     const cost = Number(x.cost);
     return {
-      portfolioId: Number(x.id),
+      collectionId: Number(x.id),
       name: String(x.name),
       cards: Number(x.cards),
       value,
@@ -73,11 +73,11 @@ export async function getCollectionSummary(userId: string): Promise<CollectionSu
       unpricedQuantity: Number(x.unpriced),
     };
   });
-  const sum = (f: (l: BinderLine) => number) => lines.reduce((t, l) => t + f(l), 0);
+  const sum = (f: (l: CollectionLine) => number) => lines.reduce((t, l) => t + f(l), 0);
   const value = sum((l) => l.value);
   const cost = sum((l) => l.cost);
   return {
-    binders: lines.length,
+    collections: lines.length,
     cards: sum((l) => l.cards),
     value,
     cost,
@@ -112,7 +112,7 @@ const MOVERS = `
          SUM(ci.quantity) AS quantity,
          SUM(ci.quantity * ci.acquired_price) AS cost
   FROM collection_items ci
-  JOIN portfolios po ON po.id = ci.portfolio_id AND po.user_id = ?
+  JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
   JOIN printings p ON p.id = ci.printing_id
   JOIN cards ca ON ca.id = p.card_id
   JOIN sets se ON se.id = ca.set_id
@@ -123,7 +123,7 @@ const MOVERS = `
 /**
  * The holdings furthest from what they cost, best first and worst first.
  *
- * Grouped by printing across every binder — the same card in two binders is one position, which is
+ * Grouped by printing across every collection — the same card in two collections is one position, which is
  * what you actually hold. Lots with no recorded price are excluded rather than counted at zero: a
  * card with an unknown cost is not a winner, it is an unknown.
  */
@@ -154,20 +154,20 @@ export async function getMovers(userId: string, limit = 3): Promise<{ winners: M
 /**
  * Two series over the same window: what the collection was worth, and what it had cost by then.
  *
- * Value comes from `portfolio_history`, summed across binders for each day any of them was
+ * Value comes from `collection_history`, summed across collections for each day any of them was
  * recorded. Cost basis is derived from the lots instead — a lot counts from its `acquired_date`
  * onward, and a lot with no date counts throughout, because the alternative is pretending you
  * acquired it today and putting a cliff in the line that never happened.
  */
-export async function getCollectionHistory(
+export async function getHomeHistory(
   userId: string, from: string, to: string
 ): Promise<{ value: Point[]; cost: Point[] }> {
   const c = await db();
   const [hist, lots] = await Promise.all([
     c.execute({
       sql: `SELECT ph.date, SUM(ph.total_value) AS v
-            FROM portfolio_history ph
-            JOIN portfolios po ON po.id = ph.portfolio_id AND po.user_id = ?
+            FROM collection_history ph
+            JOIN collections po ON po.id = ph.collection_id AND po.user_id = ?
             WHERE ph.date >= ? AND ph.date <= ?
             GROUP BY ph.date ORDER BY ph.date`,
       args: [userId, from, to],
@@ -175,7 +175,7 @@ export async function getCollectionHistory(
     c.execute({
       sql: `SELECT ci.quantity, ci.acquired_price, ci.acquired_date
             FROM collection_items ci
-            JOIN portfolios po ON po.id = ci.portfolio_id AND po.user_id = ?
+            JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
             WHERE ci.acquired_price IS NOT NULL`,
       args: [userId],
     }),

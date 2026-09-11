@@ -197,7 +197,7 @@ export default function Gallery() {
         <Variants>
           <div className="flex max-w-sm flex-col gap-3">
             <Input label="Email" type="email" placeholder="you@example.com" />
-            <Input aria-label="Binder name" placeholder="New binder…" />
+            <Input aria-label="Collection name" placeholder="New collection…" />
           </div>
         </Variants>
       </Section>
@@ -324,7 +324,7 @@ export default function Gallery() {
       <Section name="LineChart">
         <Variants>
           <div className="flex flex-col gap-4">
-            <LineChart points={CHART_POINTS} from={CHART_FROM} to={CHART_TO} label="Binder value, past 30 days" />
+            <LineChart points={CHART_POINTS} from={CHART_FROM} to={CHART_TO} label="Collection value, past 30 days" />
             <LineChart points={[]} from={CHART_FROM} to={CHART_TO} height={80} label="Empty chart" />
           </div>
         </Variants>

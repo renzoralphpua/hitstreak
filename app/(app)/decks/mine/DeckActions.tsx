@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button, Input } from "@/components/ui";
 import { renameDeckAction, deleteDeckAction } from "../actions";
 
-/** Rename (inline, like PortfolioForm's RenameToggle) and delete for one deck row. */
+/** Rename (inline, like CollectionForm's RenameToggle) and delete for one deck row. */
 export default function DeckActions({ id, name }: { id: number; name: string }) {
   const router = useRouter();
   const [renaming, setRenaming] = useState(false);

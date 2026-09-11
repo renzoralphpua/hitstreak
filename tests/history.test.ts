@@ -3,8 +3,8 @@ import { tmpDb } from "./helpers/tmpdb";
 const tmp = tmpDb("history");
 import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
-import { createPortfolio, addItem, deletePortfolio, getCardHolders } from "@/lib/portfolios";
-import { RANGES, RANGE_CAPTION, parseRange, rangeStart, chartFrom, withLivePoint, getPrintingHistory, getPortfolioHistory, seriesStats, HISTORY_EPOCH } from "@/lib/history";
+import { createCollection, addItem, deleteCollection, getCardHolders } from "@/lib/collections";
+import { RANGES, RANGE_CAPTION, parseRange, rangeStart, chartFrom, withLivePoint, getPrintingHistory, getCollectionHistory, seriesStats, HISTORY_EPOCH } from "@/lib/history";
 
 let seed: Awaited<ReturnType<typeof seedMiniCatalog>>;
 beforeAll(async () => { seed = await seedMiniCatalog(); });
@@ -73,24 +73,24 @@ describe("getPrintingHistory", () => {
   });
 });
 
-describe("getPortfolioHistory", () => {
+describe("getCollectionHistory", () => {
   it("returns the owner's rows in the window and nothing for another user", async () => {
-    const p = await createPortfolio("u1", "Main");
+    const p = await createCollection("u1", "Main");
     const c = await db();
-    await c.execute({ sql: "INSERT INTO portfolio_history (portfolio_id, date, total_value) VALUES (?, '2026-09-05', 100), (?, '2026-09-06', 120), (?, '2026-09-07', 110)", args: [p.id, p.id, p.id] });
-    expect(await getPortfolioHistory("u1", p.id, "2026-09-06", "2026-09-07")).toEqual([
+    await c.execute({ sql: "INSERT INTO collection_history (collection_id, date, total_value) VALUES (?, '2026-09-05', 100), (?, '2026-09-06', 120), (?, '2026-09-07', 110)", args: [p.id, p.id, p.id] });
+    expect(await getCollectionHistory("u1", p.id, "2026-09-06", "2026-09-07")).toEqual([
       { date: "2026-09-06", value: 120 }, { date: "2026-09-07", value: 110 },
     ]);
-    expect(await getPortfolioHistory("u2", p.id, "2026-09-01", "2026-09-07")).toEqual([]);
+    expect(await getCollectionHistory("u2", p.id, "2026-09-01", "2026-09-07")).toEqual([]);
   });
-  it("deleting the binder removes its history and share link", async () => {
-    const p = await createPortfolio("u1", "Temp");
+  it("deleting the collection removes its history and share link", async () => {
+    const p = await createCollection("u1", "Temp");
     const c = await db();
-    await c.execute({ sql: "INSERT INTO portfolio_history (portfolio_id, date, total_value) VALUES (?, '2026-09-07', 5)", args: [p.id] });
-    await c.execute({ sql: "INSERT INTO share_links (portfolio_id, token) VALUES (?, 'tok')", args: [p.id] });
-    expect(await deletePortfolio("u1", p.id)).toBe(true);
-    expect((await c.execute({ sql: "SELECT COUNT(*) AS n FROM portfolio_history WHERE portfolio_id = ?", args: [p.id] })).rows[0].n).toBe(0);
-    expect((await c.execute({ sql: "SELECT COUNT(*) AS n FROM share_links WHERE portfolio_id = ?", args: [p.id] })).rows[0].n).toBe(0);
+    await c.execute({ sql: "INSERT INTO collection_history (collection_id, date, total_value) VALUES (?, '2026-09-07', 5)", args: [p.id] });
+    await c.execute({ sql: "INSERT INTO share_links (collection_id, token) VALUES (?, 'tok')", args: [p.id] });
+    expect(await deleteCollection("u1", p.id)).toBe(true);
+    expect((await c.execute({ sql: "SELECT COUNT(*) AS n FROM collection_history WHERE collection_id = ?", args: [p.id] })).rows[0].n).toBe(0);
+    expect((await c.execute({ sql: "SELECT COUNT(*) AS n FROM share_links WHERE collection_id = ?", args: [p.id] })).rows[0].n).toBe(0);
   });
 });
 
@@ -106,8 +106,8 @@ describe("seriesStats", () => {
 });
 
 describe("getCardHolders", () => {
-  it("lists the user's binders holding any printing of the card, most copies first", async () => {
-    const a = await createPortfolio("u3", "A"), b = await createPortfolio("u3", "B");
+  it("lists the user's collections holding any printing of the card, most copies first", async () => {
+    const a = await createCollection("u3", "A"), b = await createCollection("u3", "B");
     await addItem("u3", a.id, { printingId: seed.printings.pikachuNormal, quantity: 1, condition: "NM" });
     // Two lots in B at different prices, plus one copy with no price recorded: cost must be the
     // sum over lots (2 x 3 + 1 x 7 = 13), and the unpriced copy must be counted, not valued at 0.
@@ -115,8 +115,8 @@ describe("getCardHolders", () => {
     await addItem("u3", b.id, { printingId: seed.printings.pikachuNormal, quantity: 1, condition: "NM", acquiredPrice: 7 });
     await addItem("u3", b.id, { printingId: seed.printings.pikachuReverse, quantity: 1, condition: "LP" });
     expect(await getCardHolders("u3", seed.cards.pikachu)).toEqual([
-      { portfolioId: b.id, name: "B", quantity: 4, cost: 13, uncostedQuantity: 1 },
-      { portfolioId: a.id, name: "A", quantity: 1, cost: null, uncostedQuantity: 1 },
+      { collectionId: b.id, name: "B", quantity: 4, cost: 13, uncostedQuantity: 1 },
+      { collectionId: a.id, name: "A", quantity: 1, cost: null, uncostedQuantity: 1 },
     ]);
     expect(await getCardHolders("someone-else", seed.cards.pikachu)).toEqual([]);
   });

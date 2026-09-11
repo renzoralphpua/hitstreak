@@ -78,26 +78,26 @@ export const AUTH_SCHEMA_SQL = `
 `;
 
 // Phase 2b: user collections. user_id is Better Auth's text user.id; ownership is enforced in
-// lib/portfolios.ts by joining through portfolios.user_id (FKs are unenforced in SQLite).
-export const PORTFOLIO_SCHEMA_SQL = `
-  CREATE TABLE IF NOT EXISTS portfolios (
+// lib/collections.ts by joining through collections.user_id (FKs are unenforced in SQLite).
+export const COLLECTION_SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS collections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
     name TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   );
-  CREATE INDEX IF NOT EXISTS idx_portfolios_user ON portfolios(user_id);
+  CREATE INDEX IF NOT EXISTS idx_collections_user ON collections(user_id);
 
   -- ONE ROW PER ACQUISITION ("lot"), not per printing+condition. The same card bought twice at
   -- different prices is two rows, because that is what happened: cost basis is the sum over lots.
   --
-  -- There is deliberately NO UNIQUE (portfolio_id, printing_id, condition). It was here once, and it
+  -- There is deliberately NO UNIQUE (collection_id, printing_id, condition). It was here once, and it
   -- forced an upsert that COALESCEd the stored acquired_price over the incoming one — so a second
   -- purchase silently kept the first purchase's price and understated what you had paid. Do not add
-  -- it back; lib/portfolios.ts depends on a holding being many rows.
+  -- it back; lib/collections.ts depends on a holding being many rows.
   CREATE TABLE IF NOT EXISTS collection_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    portfolio_id INTEGER NOT NULL REFERENCES portfolios(id),
+    collection_id INTEGER NOT NULL REFERENCES collections(id),
     printing_id INTEGER NOT NULL REFERENCES printings(id),
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     condition TEXT NOT NULL DEFAULT 'NM',
@@ -105,25 +105,25 @@ export const PORTFOLIO_SCHEMA_SQL = `
     acquired_date TEXT,       -- YYYY-MM-DD, when THIS lot was acquired
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   );
-  CREATE INDEX IF NOT EXISTS idx_items_portfolio ON collection_items(portfolio_id);
+  CREATE INDEX IF NOT EXISTS idx_items_collection ON collection_items(collection_id);
   CREATE INDEX IF NOT EXISTS idx_items_printing ON collection_items(printing_id);
 `;
 
-// Phase 3: materialized binder value, share links, price alerts. FKs are documentation (unenforced
-// in SQLite); lib/portfolios.ts deletePortfolio clears the two portfolio-scoped tables itself.
+// Phase 3: materialized collection value, share links, price alerts. FKs are documentation (unenforced
+// in SQLite); lib/collections.ts deleteCollection clears the two collection-scoped tables itself.
 export const HISTORY_SCHEMA_SQL = `
-  -- One row per binder per day, written by ingest/nightly.ts (value as of that day's prices).
-  CREATE TABLE IF NOT EXISTS portfolio_history (
-    portfolio_id INTEGER NOT NULL REFERENCES portfolios(id),
+  -- One row per collection per day, written by ingest/nightly.ts (value as of that day's prices).
+  CREATE TABLE IF NOT EXISTS collection_history (
+    collection_id INTEGER NOT NULL REFERENCES collections(id),
     date TEXT NOT NULL,             -- YYYY-MM-DD
     total_value REAL NOT NULL,      -- dollars; unpriced copies contribute nothing
-    PRIMARY KEY (portfolio_id, date)
+    PRIMARY KEY (collection_id, date)
   );
 
-  -- One link per binder. Disabled links 404; regenerating replaces the token.
+  -- One link per collection. Disabled links 404; regenerating replaces the token.
   CREATE TABLE IF NOT EXISTS share_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    portfolio_id INTEGER NOT NULL UNIQUE REFERENCES portfolios(id),
+    collection_id INTEGER NOT NULL UNIQUE REFERENCES collections(id),
     token TEXT NOT NULL UNIQUE,     -- 16 random bytes, base64url (22 chars)
     enabled INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))

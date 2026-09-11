@@ -3,21 +3,21 @@ import { safeNext } from "@/app/(auth)/safe-next";
 
 describe("safeNext (open-redirect guard)", () => {
   const cases: Array<[unknown, string]> = [
-    ["/binders", "/binders"],
+    ["/collections", "/collections"],
     ["/cards?q=x#y", "/cards?q=x#y"],
-    ["//evil.com", "/binders"],
-    ["/\\evil.com", "/binders"],
-    ["/\t/evil.com", "/binders"],
-    ["/\r\n/evil.com", "/binders"],
-    ["/\\\\/evil.com", "/binders"],
-    ["javascript:alert(1)", "/binders"],
-    ["https://evil.com", "/binders"],
-    ["", "/binders"],
-    [undefined, "/binders"],
-    ["relative", "/binders"],
-    ["/" + "a".repeat(3000), "/binders"],
-    [123, "/binders"],
-    [{}, "/binders"],
+    ["//evil.com", "/collections"],
+    ["/\\evil.com", "/collections"],
+    ["/\t/evil.com", "/collections"],
+    ["/\r\n/evil.com", "/collections"],
+    ["/\\\\/evil.com", "/collections"],
+    ["javascript:alert(1)", "/collections"],
+    ["https://evil.com", "/collections"],
+    ["", "/collections"],
+    [undefined, "/collections"],
+    ["relative", "/collections"],
+    ["/" + "a".repeat(3000), "/collections"],
+    [123, "/collections"],
+    [{}, "/collections"],
   ];
 
   it.each(cases)("safeNext(%j) -> %j", (input, expected) => {

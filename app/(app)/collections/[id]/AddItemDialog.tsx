@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PrintingPrice } from "@/lib/catalog";
-import { CONDITIONS } from "@/lib/portfolios";
+import { CONDITIONS } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { Button, CardRow, Input, Panel, Pill, SearchField } from "@/components/ui";
 import { useCardSearch } from "@/components/ui/useCardSearch";
@@ -16,7 +16,7 @@ export interface DialogCard {
   printings: PrintingPrice[];
 }
 
-type Props = { portfolioId: number; label?: string; preselected?: DialogCard };
+type Props = { collectionId: number; label?: string; preselected?: DialogCard };
 
 // Everything the browser lets you tab to, in document order, for the focus trap.
 const FOCUSABLE =
@@ -31,7 +31,7 @@ function lowestMarket(printings: PrintingPrice[]): number | null {
 
 /** Search → printing → quantity/condition/price, then `addItemAction`. No portal, no modal
  *  library: a fixed overlay with a Panel, closed by Escape or Cancel. */
-export default function AddItemDialog({ portfolioId, label, preselected }: Props) {
+export default function AddItemDialog({ collectionId, label, preselected }: Props) {
   const router = useRouter();
   const headingId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -115,7 +115,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
     setBusy(true);
     setError(null);
     try {
-      const res = await addItemAction(portfolioId, {
+      const res = await addItemAction(collectionId, {
         printingId,
         quantity: qty,
         condition,
@@ -249,7 +249,7 @@ export default function AddItemDialog({ portfolioId, label, preselected }: Props
                   Cancel
                 </Button>
                 <Button onClick={submit} disabled={busy || selected == null}>
-                  Add to binder
+                  Add to collection
                 </Button>
               </div>
             </div>

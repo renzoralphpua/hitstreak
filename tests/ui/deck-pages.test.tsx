@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // The two deck Server Components rendered end to end against a throwaway database: seeded catalog +
-// deck fixtures, three curated Pokémon decks, and one user's binders. Only the session and Next's
+// deck fixtures, three curated Pokémon decks, and one user's collections. Only the session and Next's
 // navigation helpers are mocked (a plain vitest process has neither).
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
@@ -9,7 +9,7 @@ const tmp = tmpDb("deck-pages");
 import { db, closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "../helpers/seed";
 import { seedDeckFixtures } from "../helpers/decks";
-import { createPortfolio, addItem } from "@/lib/portfolios";
+import { createCollection, addItem } from "@/lib/collections";
 import { upsertMetaDeck, createDeck, saveDeckCards } from "@/lib/decks/data";
 
 const { getSession } = vi.hoisted(() => ({ getSession: vi.fn() }));
@@ -51,7 +51,7 @@ beforeAll(async () => {
   });
   candyId = await upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "Candy Toolbox", tier: 2, lines: [{ cardId: f.cards.rareCandySvi, zone: "main", quantity: 4 }] });
   energyId = await upsertMetaDeck(ADMIN, { gameSlug: "pokemon", name: "Energy Pile", lines: [{ cardId: f.cards.fireEnergy, zone: "main", quantity: 2 }] });
-  const a = await createPortfolio(U, "A"), b = await createPortfolio(U, "B");
+  const a = await createCollection(U, "A"), b = await createCollection(U, "B");
   await addItem(U, a.id, { printingId: f.printings.rareCandySvi, quantity: 2, condition: "NM" }); // "Rare Candy - 191/198" → Rare Candy
   await addItem(U, b.id, { printingId: f.printings.rareCandyObf, quantity: 1, condition: "LP" });
   await addItem(U, a.id, { printingId: f.printings.fireEnergy, quantity: 2, condition: "NM" });
@@ -63,7 +63,7 @@ beforeAll(async () => {
 afterAll(() => { closeDb(); tmp.clean(); });
 
 describe("/decks", () => {
-  it("groups curated decks by tier with each deck's gap against the user's binders", async () => {
+  it("groups curated decks by tier with each deck's gap against the user's collections", async () => {
     render(await browser("pokemon"));
     expect(screen.getByRole("heading", { level: 1, name: "Meta decks" })).toBeInTheDocument();
     expect(screen.getByText("3 curated for Pokémon")).toBeInTheDocument();
@@ -208,7 +208,7 @@ describe("/decks/mine/[id]", () => {
     expect(screen.getByRole("button", { name: "Save deck" })).toBeInTheDocument();
     expect(screen.getByText("Main deck")).toBeInTheDocument();
     expect(screen.getByText("Rare Candy")).toBeInTheDocument();
-    expect(screen.getByText("own 3")).toBeInTheDocument(); // 3 Rare Candy across the two binders
+    expect(screen.getByText("own 3")).toBeInTheDocument(); // 3 Rare Candy across the two collections
     expect(await builderMetadata({ params: Promise.resolve({ id: String(mineId) }), searchParams: Promise.resolve({}) }))
       .toEqual({ title: "Zard on a budget — Hitstreak" });
   });

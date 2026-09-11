@@ -12,7 +12,7 @@ type Props = {
   onClick?: () => void;
   className?: string;
   /** "multiple" hides the chip at a single copy. The set grid wants "always" — there the count is
-   *  the point — but a binder is all-owned, so ×1 on every tile says nothing. */
+   *  the point — but a collection is all-owned, so ×1 on every tile says nothing. */
   quantityDisplay?: "always" | "multiple";
 };
 

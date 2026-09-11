@@ -1,7 +1,7 @@
 import { splitMoney } from "@/lib/format";
 import { cn } from "./cn";
 
-/** The Binder money style: serif whole dollars, dim cents. */
+/** The Collection money style: serif whole dollars, dim cents. */
 export default function MoneyDisplay({ amount, size = "md", className }: { amount: number | null | undefined; size?: "md" | "lg"; className?: string }) {
   const sizeClass = size === "lg" ? "text-hero" : "text-price";
   if (amount == null || !Number.isFinite(amount)) return <span className={cn("font-display leading-none text-dim", sizeClass, className)}>—</span>;

@@ -12,7 +12,7 @@
   "artboards": [
     {
       "file": "Main.dc.html",
-      "title": "Binder · Selected binder",
+      "title": "Collection · Selected collection",
       "x": 0,
       "y": 0,
       "w": 1280,
@@ -57,7 +57,7 @@
     },
     {
       "file": "Mobile.dc.html",
-      "title": "Phone · Binder",
+      "title": "Phone · Collection",
       "x": 1400,
       "y": 1920,
       "w": 390,
@@ -74,8 +74,8 @@
       "page": "screens"
     },
     {
-      "file": "BinderDark.dc.html",
-      "title": "Binder · dark mode reference",
+      "file": "CollectionDark.dc.html",
+      "title": "Collection · dark mode reference",
       "x": 1400,
       "y": 2900,
       "w": 1280,
@@ -84,7 +84,7 @@
     },
     {
       "file": "Dashboard.dc.html",
-      "title": "Home · Portfolio dashboard",
+      "title": "Home · Collection dashboard",
       "x": 0,
       "y": 3860,
       "w": 1280,
@@ -92,8 +92,8 @@
       "page": "screens"
     },
     {
-      "file": "BinderGrid.dc.html",
-      "title": "Binder · Grid view",
+      "file": "CollectionGrid.dc.html",
+      "title": "Collection · Grid view",
       "x": 0,
       "y": 4820,
       "w": 1280,
@@ -144,7 +144,7 @@
       "y": 0,
       "w": 300,
       "page": "screens",
-      "text": "Binder system\n\nType: DM Serif Display (values, headings) + DM Sans (everything else).\nGround: warm paper #f6f1e8, surfaces #fbf8f2, hairlines #e3dccf.\nInk #1f1b16, muted #6f665a, dim #8a8072.\nAccent terracotta #b5573a (charts, links, missing). Gains #2f7a4f.\nSelected = inverted dark chip. Pills for filters, 10–12px radii, soft card shadows.\n\nLight is default; dark is a toggle (reference artboard below)."
+      "text": "Collection system\n\nType: DM Serif Display (values, headings) + DM Sans (everything else).\nGround: warm paper #f6f1e8, surfaces #fbf8f2, hairlines #e3dccf.\nInk #1f1b16, muted #6f665a, dim #8a8072.\nAccent terracotta #b5573a (charts, links, missing). Gains #2f7a4f.\nSelected = inverted dark chip. Pills for filters, 10–12px radii, soft card shadows.\n\nLight is default; dark is a toggle (reference artboard below)."
     },
     {
       "id": "missing-note",
@@ -160,7 +160,7 @@
       "y": 3860,
       "w": 300,
       "page": "screens",
-      "text": "Home vs Binder\n\nHome is what you READ: the total across binders, its chart, what moved, deck progress, alerts that fired. Nothing on it edits anything.\n\nBinder is what you CHANGE: add and remove cards, purchase price, rename, delete. Switching binders happens in a dropdown in its header, not here — the by-binder rows on Home are a breakdown, so they are plain rows, never the selected dark chip.\n\nHome has no nav item. The wordmark is the link to it, so the nav stays at four and every other artboard's top bar is unchanged; on Home no tab is lit.\n\nONE MEASURE (app-wide): wherever a figure describes something you own, it reads vs paid — the headline, the binder rows, the winners and losers. The range pills only pick the chart's window; the chart draws value against the cost-basis step line, so the gap is the gain. The headline is a level and does not move when you change range.\n\nPer-row sparklines borrowed from the Ticker direction, as the explorations note suggested.\n\nTwo exceptions: catalog figures (a card price, a set, a meta deck build cost) have no cost basis, so they keep a period change; and the public share view never shows cost at all."
+      "text": "Home vs Collection\n\nHome is what you READ: the total across collections, its chart, what moved, deck progress, alerts that fired. Nothing on it edits anything.\n\nCollection is what you CHANGE: add and remove cards, purchase price, rename, delete. Switching collections happens in a dropdown in its header, not here — the by-collection rows on Home are a breakdown, so they are plain rows, never the selected dark chip.\n\nHome has no nav item. The wordmark is the link to it, so the nav stays at four and every other artboard's top bar is unchanged; on Home no tab is lit.\n\nONE MEASURE (app-wide): wherever a figure describes something you own, it reads vs paid — the headline, the collection rows, the winners and losers. The range pills only pick the chart's window; the chart draws value against the cost-basis step line, so the gap is the gain. The headline is a level and does not move when you change range.\n\nPer-row sparklines borrowed from the Ticker direction, as the explorations note suggested.\n\nTwo exceptions: catalog figures (a card price, a set, a meta deck build cost) have no cost basis, so they keep a period change; and the public share view never shows cost at all."
     },
     {
       "id": "explore-note",
@@ -173,6 +173,6 @@
   ],
   "launch": {
     "view": "focused",
-    "file": "Type.dc.html"
+    "file": "CollectionGrid.dc.html"
   }
 }

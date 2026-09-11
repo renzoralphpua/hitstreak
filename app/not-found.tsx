@@ -10,7 +10,7 @@ export default function NotFound() {
       <EmptyState
         title="Not found"
         body="That page doesn't exist, or it isn't yours to see."
-        action={<Button href="/binders">Back to your binders</Button>}
+        action={<Button href="/collections">Back to your collections</Button>}
         className="max-w-md"
       />
     </div>

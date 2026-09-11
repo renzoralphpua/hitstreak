@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import { cn } from "./cn";
 
-// The one place the text-field skin is defined: auth, binder names, quantity and price all use it.
+// The one place the text-field skin is defined: auth, collection names, quantity and price all use it.
 // Height is not part of it — `Input` is a 44px row, `Textarea` (which imports this) is a box — so the
 // two share one skin rather than keeping two copies of it.
 export const field =

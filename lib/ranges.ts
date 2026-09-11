@@ -31,7 +31,7 @@ export function rangeStart(range: Range, to: string): string {
 export interface Point { date: string; value: number | null }
 
 /** Where the chart's x-axis starts. Fixed ranges use the range start; "All" starts at the first
- *  point — portfolio_history begins the first night the nightly runs and a printing's snapshots
+ *  point — collection_history begins the first night the nightly runs and a printing's snapshots
  *  begin at its release — so the data fills the width instead of huddling at the right edge of a
  *  2024→today axis. `today` covers an empty series. */
 export function chartFrom(range: Range, from: string, points: Point[], today: string): string {
@@ -39,7 +39,7 @@ export function chartFrom(range: Range, from: string, points: Point[], today: st
 }
 
 /** `points` plus tonight's live value as a final `today` point, unless the nightly has already
- *  written today's row (a brand-new binder has no materialized rows yet but should still chart). */
+ *  written today's row (a brand-new collection has no materialized rows yet but should still chart). */
 export function withLivePoint(points: Point[], today: string, value: number): Point[] {
   const last = points[points.length - 1];
   return last && last.date >= today ? points : [...points, { date: today, value }];

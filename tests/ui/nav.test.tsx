@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
-const pathname = { current: "/binders" };
+const pathname = { current: "/collections" };
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.current }));
 
 import { TopNav, BottomTabBar } from "@/components/ui";
@@ -11,8 +11,8 @@ import ThemeToggle from "@/components/theme/ThemeToggle";
 describe("TopNav", () => {
   it("renders the four sections and marks the active one", () => {
     render(<TopNav search={<input aria-label="Search" />} right={<span>avatar</span>} />);
-    for (const n of ["Binder", "Sets", "Decks", "Alerts"]) expect(screen.getByRole("link", { name: n })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Binder" })).toHaveAttribute("aria-current", "page");
+    for (const n of ["Collection", "Sets", "Decks", "Alerts"]) expect(screen.getByRole("link", { name: n })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Collection" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Sets" })).not.toHaveAttribute("aria-current");
   });
 });

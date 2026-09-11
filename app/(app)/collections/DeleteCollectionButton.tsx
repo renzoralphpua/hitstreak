@@ -2,10 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
-import { deletePortfolioAction } from "./actions";
+import { deleteCollectionAction } from "./actions";
 
-/** Deleting a binder takes its cards with it, so confirm with the count first. */
-export default function DeletePortfolioButton({ id, name, count }: { id: number; name: string; count: number }) {
+/** Deleting a collection takes its cards with it, so confirm with the count first. */
+export default function DeleteCollectionButton({ id, name, count }: { id: number; name: string; count: number }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -15,7 +15,7 @@ export default function DeletePortfolioButton({ id, name, count }: { id: number;
     setBusy(true);
     setError(null);
     try {
-      const res = await deletePortfolioAction(id);
+      const res = await deleteCollectionAction(id);
       if (!res.ok) {
         setError(res.error);
         return;
