@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; background: #f6f1e8; color: #1f1b16; font-family: "DM Sans", "Segoe UI", system-ui, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+    a { color: #b5573a; } a:hover { color: #8f4128; }
+    .serif { font-family: "DM Serif Display", Georgia, "Times New Roman", serif; }
+    .num { font-variant-numeric: tabular-nums; }
+    .up { color: #2f7a4f; } .down { color: #b5573a; }
+    .label { color: #6f665a; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    .tok { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: #6f665a; }
+    .row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 54px; gap: 16px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid #ece5d8; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 820px; display: flex; flex-direction: column; background: #f6f1e8; overflow: hidden;">
+
+  <div style="display: flex; align-items: baseline; gap: 14px; padding: 30px 40px 0;">
+    <span class="serif" style="font-size: 30px; line-height: 1;">Type scale</span>
+    <span style="color: #8a8072; font-size: 12px;">DM Sans for everything read as text · DM Serif Display for values and headings</span>
+    <div style="flex-grow: 1;"></div>
+    <span class="label">Decision 5 · collapse to 11 / 12 / 14 / 18</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; padding: 22px 40px 0; flex-grow: 1;">
+
+    <!-- Left: the body ramp, and where 13px goes -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+      <div style="display: flex; flex-direction: column;">
+        <span class="label" style="padding-bottom: 6px;">Body ramp · DM Sans</span>
+
+        <div class="row">
+          <span class="tok">text-micro</span>
+          <span style="font-size: 11px;">312 priced · 14 unpriced</span>
+          <span class="num" style="color: #8a8072; font-size: 12px; text-align: right;">11px</span>
+        </div>
+        <div class="row">
+          <span class="tok">text-caption</span>
+          <span style="font-size: 12px;">Prismatic Evolutions · 161/131</span>
+          <span class="num" style="color: #8a8072; font-size: 12px; text-align: right;">12px</span>
+        </div>
+        <div class="row">
+          <span class="tok">text-base</span>
+          <span style="font-size: 14px;">Search for a card to start this deck.</span>
+          <span class="num" style="color: #8a8072; font-size: 12px; text-align: right;">14px</span>
+        </div>
+        <div class="row" style="border-bottom: none;">
+          <span class="tok">text-stat</span>
+          <span style="font-size: 18px; font-weight: 600;">$3,904.15</span>
+          <span class="num" style="color: #8a8072; font-size: 12px; text-align: right;">18px</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span class="label">The 64 uses of 13px split by role</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px; background: #fbf8f2; border: 1px solid #e3dccf;">
+            <span class="tok" style="color: #1f1b16;">→ text-caption</span>
+            <span style="color: #8a8072; font-size: 12px;">Supporting another element</span>
+            <div style="display: flex; flex-direction: column; gap: 5px; padding-top: 6px; border-top: 1px solid #ece5d8;">
+              <span style="font-size: 12px; color: #6f665a;">← Obsidian Flames</span>
+              <span style="font-size: 12px; color: #8a8072;">Charizard ex / Pidgeot</span>
+              <span style="font-size: 12px; color: #6f665a;">Tier</span>
+              <span style="font-size: 12px; color: #8a8072;">sorted by value</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px; background: #fbf8f2; border: 1px solid #e3dccf;">
+            <span class="tok" style="color: #1f1b16;">→ text-base</span>
+            <span style="color: #8a8072; font-size: 12px;">Read as content</span>
+            <div style="display: flex; flex-direction: column; gap: 5px; padding-top: 6px; border-top: 1px solid #ece5d8;">
+              <span style="font-size: 14px; color: #b5573a;">Could not reach the server. Try again.</span>
+              <span style="font-size: 14px; color: #8a8072;">No cards match “charizard”.</span>
+              <span style="font-size: 14px;">Nothing to resolve — that list has no card lines.</span>
+            </div>
+          </div>
+        </div>
+        <span style="color: #8a8072; font-size: 12px;">Errors and empty states are the ones you must act on, so they go up, not down.</span>
+      </div>
+    </div>
+
+    <!-- Right: display ramp and what retires -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+      <div style="display: flex; flex-direction: column;">
+        <span class="label" style="padding-bottom: 6px;">Display ramp · DM Serif Display</span>
+
+        <div class="row">
+          <span class="tok">text-dialog</span>
+          <span class="serif" style="font-size: 22px;">Add a card</span>
+          <span class="num" style="color: #8a8072; font-size: 12px; text-align: right;">22px</span>
+        </div>
+        <div class="row">
+          <span class="tok">text-section</span>
+          <span class="serif" style="font-size: 26px;">Winners and losers</span>
+          <span class="num" style="color: #8a8072; font-size: 12px; text-align: right;">26px</span>
+        </div>
+        <div class="row">
+          <span class="tok">text-price</span>
+          <span class="serif num" style="font-size: 32px;">$1,465.00</span>
+          <span class="num" style="color: #8a8072; font-size: 12px; text-align: right;">32px</span>
+        </div>
+        <div class="row" style="border-bottom: none;">
+          <span class="tok">text-hero</span>
+          <span class="serif num" style="font-size: 56px; line-height: 1; letter-spacing: -0.02em;">$7,321.15</span>
+          <span class="num" style="color: #8a8072; font-size: 12px; text-align: right;">56px</span>
+        </div>
+        <span style="color: #8a8072; font-size: 12px; padding-top: 10px;">The phone hero keeps 44px; the wordmark is a brand mark at 24px and sits outside the ramp.</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span class="label">Retired · every size folds somewhere</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <span class="num" style="padding: 7px 12px; border-radius: 999px; background: #ece5d8; color: #6f665a; font-size: 12px;">10 → 11</span>
+          <span class="num" style="padding: 7px 12px; border-radius: 999px; background: #1f1b16; color: #f6f1e8; font-size: 12px; font-weight: 600;">13 → 12 or 14</span>
+          <span class="num" style="padding: 7px 12px; border-radius: 999px; background: #ece5d8; color: #6f665a; font-size: 12px;">15 → 14</span>
+          <span class="num" style="padding: 7px 12px; border-radius: 999px; background: #ece5d8; color: #6f665a; font-size: 12px;">16 → 14</span>
+          <span class="num" style="padding: 7px 12px; border-radius: 999px; background: #ece5d8; color: #6f665a; font-size: 12px;">17 → 18</span>
+          <span class="num" style="padding: 7px 12px; border-radius: 999px; background: #ece5d8; color: #6f665a; font-size: 12px;">20 → 22</span>
+          <span class="num" style="padding: 7px 12px; border-radius: 999px; background: #ece5d8; color: #6f665a; font-size: 12px;">30 → 32</span>
+          <span class="num" style="padding: 7px 12px; border-radius: 999px; background: #ece5d8; color: #6f665a; font-size: 12px;">36 → 32</span>
+          <span class="num" style="padding: 7px 12px; border-radius: 999px; background: #ece5d8; color: #6f665a; font-size: 12px;">40 → 44</span>
+          <span class="num" style="padding: 7px 12px; border-radius: 999px; background: #ece5d8; color: #6f665a; font-size: 12px;">52 → 56</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 7px; padding: 14px 16px; border-radius: 12px; background: #fbf8f2; border: 1px solid #e3dccf;">
+          <span style="font-size: 14px;">Fourteen sizes become nine.</span>
+          <span style="color: #6f665a; font-size: 12px;">Nothing in the body range may be written as an arbitrary value again: <span class="tok" style="color: #b5573a;">text-[13px]</span> and <span class="tok" style="color: #b5573a;">text-xs</span> both become errors, guarded the way the re-export trap is guarded in tests.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

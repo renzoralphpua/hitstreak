@@ -126,6 +126,15 @@
       "w": 1280,
       "h": 820,
       "page": "explorations"
+    },
+    {
+      "file": "Type.dc.html",
+      "title": "System · Type scale",
+      "x": 1400,
+      "y": 4820,
+      "w": 1280,
+      "h": 820,
+      "page": "screens"
     }
   ],
   "annotations": [
@@ -164,6 +173,6 @@
   ],
   "launch": {
     "view": "focused",
-    "file": "BinderGrid.dc.html"
+    "file": "Type.dc.html"
   }
 }

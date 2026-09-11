@@ -143,11 +143,79 @@ something computed *from* lots, not a replacement for them.
 
 ---
 
+## 4. The binder gets grid and list, grid by default
+
+**Settled 2026-09-11.** Artboard: `docs/design/BinderGrid.dc.html`.
+
+`HoldingsTable` shipped as a vertical list of `CardRow`s with a quantity stepper and Remove inline
+on every row; `Main.dc.html` drew a four-column card-art grid with a Grid | List toggle. Neither the
+grid nor the toggle exists. `SetGrid.tsx` already renders card art at `grid-cols-3 sm:4 md:6 lg:8`,
+so the grid is mostly that component with different tile contents.
+
+**Grid is for recognising cards, list is where you work.** The quantity stepper and Remove stay in
+list view only. That also settles where lots (decision 3) live: expanding a holding into its
+purchases is a disclosure row, which a grid tile cannot carry without becoming a popover.
+
+**The tile:** art, name, set and number, then value with the vs-paid percent.
+
+- **Quantity is a dark pill on the art**, not text appended to the name — the ×N convention
+  `SetGrid` already uses, and the only version that scans across a wall of cards.
+- **Value is the line total**, not the unit price: Shanks ×3 reads $204.30.
+- **Percent only, no dollar delta.** At 183px a tile cannot hold both; the dollar figure is in list
+  view, which is where you go to act anyway.
+- **No recorded cost** shows an accent *Add cost* rather than a misleading 0% — that holding is
+  silently distorting the binder's gain, so the prompt is the useful thing.
+- **No market price** dims the art and reads *no price*, matching `HoldingsTable`.
+
+**View persists in the URL** (`?view=grid`), matching the existing `?range=` and `?p=` idiom —
+server-renderable and shareable, unlike localStorage.
+
+**Open:** whether `/s/[token]` gets the grid, and whether it gets *only* the grid, since there is
+nothing to edit on a shared binder.
+
+---
+
+## 5. Type scale: fourteen sizes become nine
+
+**Settled 2026-09-11.** Specimen: `docs/design/Type.dc.html`.
+
+The app ran two parallel type systems — 81 arbitrary `text-[Npx]` against 66 Tailwind named sizes,
+14 distinct sizes in all. The core drift: **12px and 13px were both doing "secondary text"**, 107
+uses split with no rule, while the design distinguishes dim from muted by *colour*
+(`#8a8072` / `#6f665a`), not size. The three tokens added in `d89f5e9` (`--text-caption`,
+`--text-micro`, `--tracking-label`) had **zero uses** — defined, never adopted.
+
+The artboards settle which size wins: **218 uses of 12px against 90 of 13px.** The design already
+prefers 12; the code drifted to 13.
+
+**Body ramp (DM Sans):** `text-micro` 11 · `text-caption` 12 · `text-base` 14 · `text-stat` 18.
+**Display ramp (DM Serif):** `text-dialog` 22 · `text-section` 26 · `text-price` 32 · `text-hero` 56,
+plus 44 for the phone hero. The wordmark stays at 24, outside the ramp — it is a brand mark.
+
+**Splitting the 64 thirteens:** *supporting another element* → 12 (back links, archetype and game
+labels, field labels, "sorted by value"); *read as content* → 14 (error messages, empty states, "No
+cards match"). Errors and empty states therefore get **bigger**, not smaller — they are the ones you
+must act on, and 12px for "Could not reach the server" would be a regression.
+
+**Retired:** 10→11, 13→12 or 14, 15→14, 16→14, 17→18, 20→22, 30→32, 36→32, 40→44, 52→56.
+
+### Consequences
+
+- **`--text-caption` is redefined from 13px to 12px.** It has no uses, so nothing breaks — but
+  `tests/ui/foundations.test.tsx` asserts `13px` and that assertion inverts, which is the signal the
+  change landed.
+- `text-[13px]` and `text-xs` both become forbidden in the body range, guarded by a source-level
+  test in the manner of the re-export trap in `tests/ranges.test.ts`.
+- **The artboards use 13px 90 times.** They must get the same caption-or-content pass, or the design
+  spec stops matching the app — the exact drift this decision exists to kill. Do it *with* the code
+  migration so the two land together and can be checked against each other.
+
+---
+
 ## Still open
 
 - Whether alerts belong on Home at all (drawn as "triggered since you were last here", capped, with
   a link out — but there is a whole Alerts tab).
 - Palette as an overlay vs a dropdown under the pill. With actions removed the two are nearly
   equivalent; the overlay keeps ⌘K and can list sets and decks alongside cards.
-- Decisions 3–8 of the original eight: holdings grid vs list, type scale, icons, builder Save
-  placement, max content width, zero-delta glyph.
+- Remaining: icons, builder Save placement, max content width, zero-delta glyph.
