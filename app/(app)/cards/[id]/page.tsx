@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
 import { getCardDetail } from "@/lib/catalog";
-import { getCardHolders, listCollections } from "@/lib/collections";
+import { getCardHolders, getCardLots, listCollections } from "@/lib/collections";
 import {
   parseRange,
   rangeStart,
@@ -28,6 +28,7 @@ import {
   Button,
 } from "@/components/ui";
 import AddToCollection from "./AddToCollection";
+import YourCopies from "./YourCopies";
 
 // "You own" counts are per-user: never prerender or cache across users.
 export const dynamic = "force-dynamic";
@@ -76,10 +77,11 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
   const requested = typeof rawP === "string" ? parseRouteId(rawP) : null;
   // PrintingPrice | null: `?p=` when it names one of this card's printings, else the headline one.
   const chartPrinting = printings.find((x) => x.printingId === requested) ?? primary;
-  const [collections, history, holders] = await Promise.all([
+  const [collections, history, holders, lots] = await Promise.all([
     listCollections(userId),
     chartPrinting ? getPrintingHistory(chartPrinting.printingId, from, today) : Promise.resolve<Point[]>([]),
     getCardHolders(userId, card.id),
+    getCardLots(userId, card.id),
   ]);
   const stats = seriesStats(history);
   const hrefFor = (r: Range, printingId: number) =>
@@ -188,6 +190,11 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
             </Button>
           )}
         </div>
+
+        {/* One row per acquisition. Everywhere else folds lots into a holding and shows the total;
+            this is the only place the folding comes apart, and the only place a single purchase can
+            be corrected without touching the others. */}
+        {lots.length > 0 && <YourCopies lots={lots} />}
 
         <Panel className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">

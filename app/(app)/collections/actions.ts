@@ -50,7 +50,7 @@ export async function addItemAction(collectionId: number, input: P.AddItemInput)
 export async function updateItemAction(
   collectionId: number,
   itemId: number,
-  patch: { quantity?: number; acquiredPrice?: number | null }
+  patch: { quantity?: number; acquiredPrice?: number | null; acquiredDate?: string | null }
 ) {
   const r = await withUser(async (u) => {
     assertId(collectionId);
@@ -59,6 +59,7 @@ export async function updateItemAction(
   if (r.ok) {
     revalidatePath(`/collections/${collectionId}`);
     revalidatePath("/collections");
+    revalidatePath("/home");
   }
   return r;
 }

@@ -294,6 +294,64 @@ export interface CardHolder {
   uncostedQuantity: number;
 }
 /** The signed-in user's collections that hold any printing of `cardId`, with copies and what they cost. */
+export interface CardLot {
+  itemId: number;
+  collectionId: number;
+  collectionName: string;
+  printingId: number;
+  subtype: string;
+  condition: Condition;
+  quantity: number;
+  acquiredPrice: number | null;
+  acquiredDate: string | null;
+  /** This printing's current price, so a lot can be read against what it cost. */
+  market: number | null;
+  cost: number | null;    // quantity × acquiredPrice
+  value: number | null;   // quantity × market
+}
+
+/**
+ * Every acquisition of this card the caller owns, newest first — one row per purchase, not one per
+ * card. Two copies bought a year apart at different prices are two rows here, which is the whole
+ * point of lots: the card page is where you see what you actually paid and when.
+ *
+ * Spans collections and printings, because "how did I do on this card" is not a per-collection
+ * question. `getCardHolders` answers the per-collection one and stays for the summary line.
+ */
+export async function getCardLots(userId: string, cardId: number): Promise<CardLot[]> {
+  const c = await db();
+  const r = await c.execute({
+    sql: `SELECT ci.id, ci.collection_id, co.name AS collection_name, ci.printing_id, p.subtype,
+                 ci.condition, ci.quantity, ci.acquired_price, ci.acquired_date, lp.market
+          FROM collection_items ci
+          JOIN collections co ON co.id = ci.collection_id AND co.user_id = ?
+          JOIN printings p ON p.id = ci.printing_id
+          LEFT JOIN latest_prices lp ON lp.printing_id = p.id
+          WHERE p.card_id = ?
+          ORDER BY ci.acquired_date IS NULL, ci.acquired_date DESC, ci.id DESC`,
+    args: [userId, cardId],
+  });
+  return r.rows.map((x) => {
+    const quantity = Number(x.quantity);
+    const acquiredPrice = x.acquired_price == null ? null : Number(x.acquired_price);
+    const market = x.market == null ? null : Number(x.market);
+    return {
+      itemId: Number(x.id),
+      collectionId: Number(x.collection_id),
+      collectionName: String(x.collection_name),
+      printingId: Number(x.printing_id),
+      subtype: String(x.subtype),
+      condition: String(x.condition) as Condition,
+      quantity,
+      acquiredPrice,
+      acquiredDate: x.acquired_date == null ? null : String(x.acquired_date),
+      market,
+      cost: acquiredPrice == null ? null : quantity * acquiredPrice,
+      value: market == null ? null : quantity * market,
+    };
+  });
+}
+
 export async function getCardHolders(userId: string, cardId: number): Promise<CardHolder[]> {
   const c = await db();
   const r = await c.execute({
