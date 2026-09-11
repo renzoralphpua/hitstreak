@@ -90,10 +90,11 @@ export const PORTFOLIO_SCHEMA_SQL = `
 
   -- ONE ROW PER ACQUISITION ("lot"), not per printing+condition. The same card bought twice at
   -- different prices is two rows, because that is what happened: cost basis is the sum over lots.
-  -- There is deliberately NO UNIQUE (portfolio_id, printing_id, condition) — it used to be here,
-  -- and the upsert it forced COALESCEd the existing acquired_price over the incoming one, so a
-  -- second purchase silently kept the first purchase's price and understated what you paid.
-  -- LOTS_MIGRATION_SQL below rebuilds any database still carrying that constraint.
+  --
+  -- There is deliberately NO UNIQUE (portfolio_id, printing_id, condition). It was here once, and it
+  -- forced an upsert that COALESCEd the stored acquired_price over the incoming one — so a second
+  -- purchase silently kept the first purchase's price and understated what you had paid. Do not add
+  -- it back; lib/portfolios.ts depends on a holding being many rows.
   CREATE TABLE IF NOT EXISTS collection_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     portfolio_id INTEGER NOT NULL REFERENCES portfolios(id),
@@ -107,41 +108,6 @@ export const PORTFOLIO_SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_items_portfolio ON collection_items(portfolio_id);
   CREATE INDEX IF NOT EXISTS idx_items_printing ON collection_items(printing_id);
 `;
-
-/**
- * Rebuilds `collection_items` without its old `UNIQUE (portfolio_id, printing_id, condition)`.
- *
- * SQLite cannot drop a constraint in place, so this is the table-rebuild dance. It is safe to skip
- * when the constraint is already gone — `needsLotsMigration` decides — and every existing row
- * becomes that holding's first lot, so no data moves and nothing is lost.
- *
- * Ordered so a crash at any point leaves a working database: the copy exists before the original is
- * dropped, and the rename is last. Run inside one transaction (see `lib/db.ts`).
- */
-export const LOTS_MIGRATION_SQL: readonly string[] = [
-  `CREATE TABLE collection_items_lots (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    portfolio_id INTEGER NOT NULL REFERENCES portfolios(id),
-    printing_id INTEGER NOT NULL REFERENCES printings(id),
-    quantity INTEGER NOT NULL CHECK (quantity > 0),
-    condition TEXT NOT NULL DEFAULT 'NM',
-    acquired_price REAL,
-    acquired_date TEXT,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-  )`,
-  `INSERT INTO collection_items_lots (id, portfolio_id, printing_id, quantity, condition, acquired_price, acquired_date, created_at)
-     SELECT id, portfolio_id, printing_id, quantity, condition, acquired_price, acquired_date, created_at FROM collection_items`,
-  `DROP TABLE collection_items`,
-  `ALTER TABLE collection_items_lots RENAME TO collection_items`,
-  // DROP TABLE took the indexes with it.
-  `CREATE INDEX IF NOT EXISTS idx_items_portfolio ON collection_items(portfolio_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_items_printing ON collection_items(printing_id)`,
-];
-
-/** True when this database still carries the pre-lots unique constraint. */
-export function needsLotsMigration(createTableSql: string | null | undefined): boolean {
-  return /UNIQUE\s*\(\s*portfolio_id/i.test(createTableSql ?? "");
-}
 
 // Phase 3: materialized binder value, share links, price alerts. FKs are documentation (unenforced
 // in SQLite); lib/portfolios.ts deletePortfolio clears the two portfolio-scoped tables itself.
