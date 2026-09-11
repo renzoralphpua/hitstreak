@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
+import { parseView } from "@/lib/view-mode";
 import { getPortfolio, getPortfolioHoldings, getPortfolioSummary } from "@/lib/portfolios";
 import { getShareLink } from "@/lib/share";
 import {
@@ -23,8 +24,10 @@ import {
   EmptyState,
   LineChart,
   RangePills,
+  Pill,
 } from "@/components/ui";
 import HoldingsTable from "./HoldingsTable";
+import BinderGrid from "./BinderGrid";
 import AddItemDialog from "./AddItemDialog";
 import SharePanel from "./SharePanel";
 
@@ -54,8 +57,9 @@ export async function generateMetadata({ params }: Params) {
 export default async function PortfolioDetailPage({ params, searchParams }: PageProps<"/portfolios/[id]">) {
   const { id } = await params;
   const { userId, portfolioId, portfolio } = await load(id);
-  const { range: rawRange } = await searchParams;
+  const { range: rawRange, view: rawView } = await searchParams;
   const range = parseRange(rawRange);
+  const view = parseView(rawView);
   const today = new Date().toISOString().slice(0, 10);
   const from = rangeStart(range, today);
   const [holdings, summary, shareLink] = await Promise.all([
@@ -98,7 +102,7 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
             height={120}
             label={`${portfolio.name} value, ${RANGE_CAPTION[range]}`}
           />
-          <RangePills current={range} hrefFor={(r) => `/portfolios/${portfolioId}?range=${r}`} />
+          <RangePills current={range} hrefFor={(r) => `/portfolios/${portfolioId}?range=${r}&view=${view}`} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -125,13 +129,33 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
       </div>
 
       <div className="flex flex-col gap-4">
-        <SectionHeading title="Cards" caption="sorted by value" />
+        <SectionHeading
+          title="Cards"
+          caption="sorted by value"
+          trailing={
+            holdings.length > 0 ? (
+              <div className="flex gap-1.5">
+                {/* Grid is for recognising a card, the list is for changing it — which is why the
+                    stepper and Remove exist only in the list. `scroll={false}` keeps your place
+                    when you flip between them. */}
+                <Pill href={`/portfolios/${portfolioId}?range=${range}&view=grid`} selected={view === "grid"} scroll={false}>
+                  Grid
+                </Pill>
+                <Pill href={`/portfolios/${portfolioId}?range=${range}&view=list`} selected={view === "list"} scroll={false}>
+                  List
+                </Pill>
+              </div>
+            ) : undefined
+          }
+        />
         {holdings.length === 0 ? (
           <EmptyState
             title="Nothing here yet"
             body="Add a card to start tracking this binder's value."
             action={<AddItemDialog portfolioId={portfolioId} label="Add your first card" />}
           />
+        ) : view === "grid" ? (
+          <BinderGrid holdings={holdings} />
         ) : (
           <HoldingsTable portfolioId={portfolioId} holdings={holdings} />
         )}

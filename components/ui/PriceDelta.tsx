@@ -1,7 +1,16 @@
 import { formatDelta, formatPercent } from "@/lib/format";
 import { cn } from "./cn";
 
-type Props = { amount: number | null | undefined; ratio?: number | null; caption?: string; className?: string };
+type Props = {
+  amount: number | null | undefined;
+  ratio?: number | null;
+  caption?: string;
+  className?: string;
+  /** "percent" drops the arrow and the dollar figure and shows the ratio alone — for a grid tile,
+   *  which has no room for both. The sign and the colour already say the direction, so the arrow
+   *  would be the third copy of the same fact. Needs `ratio`; without one there is nothing to show. */
+  format?: "full" | "percent";
+};
 
 /**
  * Signed money change: ▲ gain green, ▼ loss terracotta, and **no glyph at all** when the value has
@@ -12,7 +21,7 @@ type Props = { amount: number | null | undefined; ratio?: number | null; caption
  * two facts that are never interchangeable, and the second of which is common once every figure
  * reads against cost basis (a quiet week, or anything bought at today’s price).
  */
-export default function PriceDelta({ amount, ratio, caption, className }: Props) {
+export default function PriceDelta({ amount, ratio, caption, className, format = "full" }: Props) {
   if (amount == null || !Number.isFinite(amount)) return <span className={cn("text-dim", className)}>—</span>;
   if (amount === 0) {
     return (
@@ -24,6 +33,13 @@ export default function PriceDelta({ amount, ratio, caption, className }: Props)
     );
   }
   const up = amount >= 0;
+  if (format === "percent") {
+    return ratio == null ? null : (
+      <span className={cn("num text-caption font-medium", up ? "text-gain" : "text-accent", className)}>
+        {formatPercent(ratio)}
+      </span>
+    );
+  }
   return (
     <span className={cn("num text-base font-medium", up ? "text-gain" : "text-accent", className)}>
       {up ? "▲" : "▼"} {formatDelta(amount)}

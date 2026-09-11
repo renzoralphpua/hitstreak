@@ -11,11 +11,15 @@ type Props = {
   delta?: ReactNode; // e.g. <PriceDelta … />
   onClick?: () => void;
   className?: string;
+  /** "multiple" hides the chip at a single copy. The set grid wants "always" — there the count is
+   *  the point — but a binder is all-owned, so ×1 on every tile says nothing. */
+  quantityDisplay?: "always" | "multiple";
 };
 
 /** Owned vs missing convention (docs/design/README.md): owned = solid tile + ×N chip; missing = dashed, dimmed. */
-export default function CardTile({ name, subtitle, price, quantity, imageUrl, delta, onClick, className }: Props) {
+export default function CardTile({ name, subtitle, price, quantity, imageUrl, delta, onClick, className, quantityDisplay = "always" }: Props) {
   const owned = quantity > 0;
+  const showQuantity = owned && (quantityDisplay === "always" || quantity > 1);
   const Wrapper: ElementType = onClick ? "button" : "div";
   return (
     <Wrapper type={onClick ? "button" : undefined} onClick={onClick} className={cn("flex flex-col gap-2.5 text-left", className)}>
@@ -27,7 +31,7 @@ export default function CardTile({ name, subtitle, price, quantity, imageUrl, de
         )}
         style={imageUrl ? { backgroundImage: `url(${imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
       >
-        {owned && (
+        {showQuantity && (
           <span className="num absolute right-1.5 top-1.5 rounded-full bg-chip px-1.5 py-0.5 text-micro font-semibold text-chip-ink">
             ×{quantity}
           </span>
