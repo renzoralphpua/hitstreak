@@ -8,12 +8,12 @@ const { add, decrement, removeHolding, refresh } = vi.hoisted(() => ({
 }));
 // A row is a holding now, so its controls are holding-level. `+` goes through addItemAction
 // because adding a copy is an acquisition, not an edit to an existing lot.
-vi.mock("@/app/(app)/portfolios/actions", () => ({
+vi.mock("@/app/(app)/binders/actions", () => ({
   addItemAction: add, decrementHoldingAction: decrement, removeHoldingAction: removeHolding,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import HoldingsTable from "@/app/(app)/portfolios/[id]/HoldingsTable";
+import HoldingsTable from "@/app/(app)/binders/[id]/HoldingsTable";
 
 const holding = (over: Partial<Holding>): Holding => ({
   printingId: 1, cardId: 1, cardName: "Umbreon ex", setName: "Prismatic Evolutions",

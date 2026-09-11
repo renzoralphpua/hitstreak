@@ -5,7 +5,7 @@ import type { SetCard } from "@/lib/catalog";
 import type { Portfolio } from "@/lib/portfolios";
 
 const { addItem, refresh } = vi.hoisted(() => ({ addItem: vi.fn(), refresh: vi.fn() }));
-vi.mock("@/app/(app)/portfolios/actions", () => ({ addItemAction: addItem }));
+vi.mock("@/app/(app)/binders/actions", () => ({ addItemAction: addItem }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
 import SetGrid from "@/app/(app)/sets/[id]/SetGrid";
@@ -84,10 +84,10 @@ describe("SetGrid", () => {
     );
   });
 
-  it("without a binder the tiles are not tappable and it points at /portfolios", () => {
+  it("without a binder the tiles are not tappable and it points at /binders", () => {
     render(<SetGrid cards={cards} portfolios={[]} />);
     const hint = screen.getByRole("link", { name: "Create a binder to start marking cards owned" });
-    expect(hint).toHaveAttribute("href", "/portfolios");
+    expect(hint).toHaveAttribute("href", "/binders");
     expect(screen.queryByText("Add to:")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Charmander/ })).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Charmander" })).toBeInTheDocument();

@@ -38,7 +38,7 @@ export default async function PortfoliosPage() {
               return (
                 <Panel key={p.id} className="flex flex-col gap-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-3">
-                    <Link href={`/portfolios/${p.id}`} className="font-semibold text-ink">
+                    <Link href={`/binders/${p.id}`} className="font-semibold text-ink">
                       {p.name}
                     </Link>
                     <div className="flex flex-col items-end gap-1">

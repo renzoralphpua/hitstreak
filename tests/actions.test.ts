@@ -16,7 +16,7 @@ import {
   renamePortfolioAction,
   deletePortfolioAction,
   addItemAction,
-} from "@/app/(app)/portfolios/actions";
+} from "@/app/(app)/binders/actions";
 
 const U1 = "user_1", U2 = "user_2";
 const signedIn = (id: string) => getSession.mockResolvedValue({ user: { id } });
@@ -50,12 +50,12 @@ describe("portfolio server actions", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("creates a binder for the signed-in user and revalidates /portfolios", async () => {
+  it("creates a binder for the signed-in user and revalidates /binders", async () => {
     signedIn(U1);
     const r = await createPortfolioAction("Main");
     expect(r.ok).toBe(true);
     expect((await listPortfolios(U1)).map((p) => p.name)).toContain("Main");
-    expect(revalidatePath).toHaveBeenCalledWith("/portfolios");
+    expect(revalidatePath).toHaveBeenCalledWith("/binders");
   });
 
   it("returns the validation error for a blank name instead of throwing", async () => {
@@ -79,7 +79,7 @@ describe("portfolio server actions", () => {
     const r = await addItemAction(p.id, { printingId: seed.printings.umbreonHolo, quantity: 2, condition: "NM", acquiredPrice: 1100 });
     expect(r.ok).toBe(true);
     expect((await getPortfolioHoldings(U1, p.id)).map((h) => [h.cardName, h.quantity])).toEqual([["Umbreon ex", 2]]);
-    expect(revalidatePath).toHaveBeenCalledWith(`/portfolios/${p.id}`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/binders/${p.id}`);
   });
 
   it("renames and deletes your own binder, and refuses another user's", async () => {
@@ -90,7 +90,7 @@ describe("portfolio server actions", () => {
 
     expect(await renamePortfolioAction(id, "Renamed")).toEqual({ ok: true, data: undefined });
     expect((await getPortfolio(U1, id))?.name).toBe("Renamed");
-    expect(revalidatePath).toHaveBeenCalledWith(`/portfolios/${id}`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/binders/${id}`);
 
     const hijack = await renamePortfolioAction(otherPortfolioId, "hijack");
     expect(hijack.ok).toBe(false);

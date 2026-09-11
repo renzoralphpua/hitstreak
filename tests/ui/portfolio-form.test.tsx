@@ -8,15 +8,15 @@ const { create, rename, remove, refresh } = vi.hoisted(() => ({
   remove: vi.fn(),
   refresh: vi.fn(),
 }));
-vi.mock("@/app/(app)/portfolios/actions", () => ({
+vi.mock("@/app/(app)/binders/actions", () => ({
   createPortfolioAction: create,
   renamePortfolioAction: rename,
   deletePortfolioAction: remove,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import PortfolioForm, { RenameToggle } from "@/app/(app)/portfolios/PortfolioForm";
-import DeletePortfolioButton from "@/app/(app)/portfolios/DeletePortfolioButton";
+import PortfolioForm, { RenameToggle } from "@/app/(app)/binders/PortfolioForm";
+import DeletePortfolioButton from "@/app/(app)/binders/DeletePortfolioButton";
 
 beforeEach(() => {
   create.mockReset().mockResolvedValue({ ok: true, data: { id: 1, name: "Main", createdAt: "x" } });

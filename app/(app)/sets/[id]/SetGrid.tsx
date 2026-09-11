@@ -6,7 +6,7 @@ import type { SetCard } from "@/lib/catalog";
 import type { Portfolio } from "@/lib/portfolios";
 import { formatMoney } from "@/lib/format";
 import { CardTile, EmptyState, Pill } from "@/components/ui";
-import { addItemAction } from "../../portfolios/actions";
+import { addItemAction } from "../../binders/actions";
 
 type Filter = "all" | "owned" | "missing";
 
@@ -85,7 +85,7 @@ export default function SetGrid({ cards, portfolios }: { cards: SetCard[]; portf
 
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {portfolios.length === 0 ? (
-            <Link href="/portfolios" className="text-caption text-accent">
+            <Link href="/binders" className="text-caption text-accent">
               Create a binder to start marking cards owned
             </Link>
           ) : (

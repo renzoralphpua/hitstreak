@@ -6,12 +6,12 @@ import type { ShareLink } from "@/lib/share";
 const { enable, regenerate, disable, refresh } = vi.hoisted(() => ({
   enable: vi.fn(), regenerate: vi.fn(), disable: vi.fn(), refresh: vi.fn(),
 }));
-vi.mock("@/app/(app)/portfolios/actions", () => ({
+vi.mock("@/app/(app)/binders/actions", () => ({
   enableShareAction: enable, regenerateShareAction: regenerate, disableShareAction: disable,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import SharePanel from "@/app/(app)/portfolios/[id]/SharePanel";
+import SharePanel from "@/app/(app)/binders/[id]/SharePanel";
 
 const TOKEN = "abcdefghijklmnopqrstuv";
 const NEW_TOKEN = "ZYXWVUTSRQPONMLKJIHGFE";

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import type { Portfolio } from "@/lib/portfolios";
 import { Button, Pill } from "@/components/ui";
-import AddItemDialog, { type DialogCard } from "../../portfolios/[id]/AddItemDialog";
+import AddItemDialog, { type DialogCard } from "../../binders/[id]/AddItemDialog";
 
 /** Picks which binder the card detail page adds to, then hands the card to `AddItemDialog`
  *  preselected (so the dialog opens straight on the printing/quantity step). */
@@ -11,7 +11,7 @@ export default function AddToBinder({ portfolios, card }: { portfolios: Portfoli
 
   if (portfolios.length === 0) {
     return (
-      <Button href="/portfolios" variant="secondary">
+      <Button href="/binders" variant="secondary">
         Create a binder first
       </Button>
     );

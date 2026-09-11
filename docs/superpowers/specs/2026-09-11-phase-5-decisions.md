@@ -11,14 +11,14 @@ scrollback. Artboards live in `docs/design/`; the canvas is linked from `docs/de
 **Settled 2026-09-10.** Artboard: `docs/design/Dashboard.dc.html`.
 
 The approved `Main.dc.html` drew a single screen that merged a binder's value, chart and a binder
-switcher with that binder's cards. We shipped it as two (`/portfolios`, `/portfolios/[id]`). Rather
+switcher with that binder's cards. We shipped it as two (`/binders`, `/binders/[id]`). Rather
 than collapse them back, Home becomes a genuine portfolio-level screen — the one that answers "what
 is my whole collection worth", which nothing answered before.
 
 - **Home is what you read.** Total across binders, its chart, winners and losers, deck progress,
   alerts that fired. Nothing on it edits anything.
 - **Binder is what you change.** Add and remove cards, purchase price, rename, delete.
-- **Binder switching** moves into a dropdown in the Binder header. `/portfolios` keeps its role as
+- **Binder switching** moves into a dropdown in the Binder header. `/binders` keeps its role as
   the management surface (create, rename, delete) and does not auto-jump to the last binder used.
 - The by-binder rows on Home are therefore a *breakdown*, not a switcher, and are drawn as plain
   rows — never the selected dark chip, which means "selected" everywhere else in the system.
@@ -56,7 +56,7 @@ not an oversight to be tidied up later.
 
 ### What app-wide costs, found 2026-09-11
 
-- **`/portfolios/[id]` renders two deltas stacked** — `PriceDelta caption="vs. paid"` immediately
+- **`/binders/[id]` renders two deltas stacked** — `PriceDelta caption="vs. paid"` immediately
   followed by `PriceDelta caption={RANGE_CAPTION[range]}`. The period one goes.
 - **The binder's Gain tile duplicates its own headline**, exactly as Home's did. Same fix: replace
   it with **In profit — N of M**, which is a vs-paid fact the headline does not already state.

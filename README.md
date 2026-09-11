@@ -35,10 +35,10 @@ steps to phases; plans live in `docs/superpowers/plans/`).
 
 ### Screens
 
-- `/` — landing (anonymous); signed-in visitors are redirected to `/portfolios`
+- `/` — landing (anonymous); signed-in visitors are redirected to `/binders`
 - `/sign-in`, `/sign-up` — email + password
-- `/portfolios` — binder list with value, gain, and create/rename/delete
-- `/portfolios/[id]` — holdings valued from latest prices, value-history chart (`?range=`), add-card dialog, quantity edits, share-link panel
+- `/binders` — binder list with value, gain, and create/rename/delete
+- `/binders/[id]` — grid (default) or list of holdings (`?view=`), valued from latest prices, value-history chart (`?range=`), add-card dialog, quantity edits, share-link panel
 - `/sets` — game pills and each set's completion bar
 - `/sets/[id]` — the set's cards as owned/missing tiles; tap a tile to add one copy
 - `/cards/[id]` — art, market price, 30-day change, price-history chart (`?range=` + `?p=` printing pills), printings table, "in your binders", add to a binder, set-alert shortcut

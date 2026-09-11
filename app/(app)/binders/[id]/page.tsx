@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: Params) {
   return { title: `${portfolio.name} — Hitstreak` };
 }
 
-export default async function PortfolioDetailPage({ params, searchParams }: PageProps<"/portfolios/[id]">) {
+export default async function PortfolioDetailPage({ params, searchParams }: PageProps<"/binders/[id]">) {
   const { id } = await params;
   const { userId, portfolioId, portfolio } = await load(id);
   const { range: rawRange, view: rawView } = await searchParams;
@@ -75,7 +75,7 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
   return (
     <div className="grid gap-10 md:grid-cols-[380px_1fr]">
       <div className="flex flex-col gap-4">
-        <Link href="/portfolios" className="text-caption text-muted hover:text-ink">
+        <Link href="/binders" className="text-caption text-muted hover:text-ink">
           ← Binders
         </Link>
 
@@ -102,7 +102,7 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
             height={120}
             label={`${portfolio.name} value, ${RANGE_CAPTION[range]}`}
           />
-          <RangePills current={range} hrefFor={(r) => `/portfolios/${portfolioId}?range=${r}&view=${view}`} />
+          <RangePills current={range} hrefFor={(r) => `/binders/${portfolioId}?range=${r}&view=${view}`} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -138,10 +138,10 @@ export default async function PortfolioDetailPage({ params, searchParams }: Page
                 {/* Grid is for recognising a card, the list is for changing it — which is why the
                     stepper and Remove exist only in the list. `scroll={false}` keeps your place
                     when you flip between them. */}
-                <Pill href={`/portfolios/${portfolioId}?range=${range}&view=grid`} selected={view === "grid"} scroll={false}>
+                <Pill href={`/binders/${portfolioId}?range=${range}&view=grid`} selected={view === "grid"} scroll={false}>
                   Grid
                 </Pill>
-                <Pill href={`/portfolios/${portfolioId}?range=${range}&view=list`} selected={view === "list"} scroll={false}>
+                <Pill href={`/binders/${portfolioId}?range=${range}&view=list`} selected={view === "list"} scroll={false}>
                   List
                 </Pill>
               </div>

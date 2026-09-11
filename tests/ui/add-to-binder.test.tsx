@@ -2,11 +2,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { Portfolio } from "@/lib/portfolios";
-import type { DialogCard } from "@/app/(app)/portfolios/[id]/AddItemDialog";
+import type { DialogCard } from "@/app/(app)/binders/[id]/AddItemDialog";
 
 // The dialog itself is covered by tests/ui/add-item-dialog.test.tsx; here we only care which
 // portfolio the wrapper hands it.
-vi.mock("@/app/(app)/portfolios/[id]/AddItemDialog", () => ({
+vi.mock("@/app/(app)/binders/[id]/AddItemDialog", () => ({
   default: ({ portfolioId }: { portfolioId: number }) => <div>Dialog:{portfolioId}</div>,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
@@ -41,9 +41,9 @@ describe("AddToBinder", () => {
     expect(screen.queryByText(/Dialog:2/)).not.toBeInTheDocument();
   });
 
-  it("without a binder it links to /portfolios and renders no dialog", () => {
+  it("without a binder it links to /binders and renders no dialog", () => {
     render(<AddToBinder portfolios={[]} card={card} />);
-    expect(screen.getByRole("link", { name: "Create a binder first" })).toHaveAttribute("href", "/portfolios");
+    expect(screen.getByRole("link", { name: "Create a binder first" })).toHaveAttribute("href", "/binders");
     expect(screen.queryByText(/^Dialog:/)).not.toBeInTheDocument();
   });
 });

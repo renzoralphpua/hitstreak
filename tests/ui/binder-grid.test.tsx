@@ -4,7 +4,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import type { Holding } from "@/lib/portfolios";
-import BinderGrid from "@/app/(app)/portfolios/[id]/BinderGrid";
+import BinderGrid from "@/app/(app)/binders/[id]/BinderGrid";
 import { parseView } from "@/lib/view-mode";
 
 const holding = (over: Partial<Holding>): Holding => ({

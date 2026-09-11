@@ -13,7 +13,7 @@ import PriceDelta from "@/components/ui/PriceDelta";
 import Input from "@/components/ui/Input";
 import { vi } from "vitest";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/portfolios" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/binders" }));
 
 const css = readFileSync(path.resolve(import.meta.dirname, "../../app/globals.css"), "utf8");
 /** The `{ … }` body of the first rule whose selector line starts with `selector`. */

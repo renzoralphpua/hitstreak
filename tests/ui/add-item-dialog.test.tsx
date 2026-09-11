@@ -3,10 +3,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 const { addItem, refresh } = vi.hoisted(() => ({ addItem: vi.fn(), refresh: vi.fn() }));
-vi.mock("@/app/(app)/portfolios/actions", () => ({ addItemAction: addItem }));
+vi.mock("@/app/(app)/binders/actions", () => ({ addItemAction: addItem }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import AddItemDialog from "@/app/(app)/portfolios/[id]/AddItemDialog";
+import AddItemDialog from "@/app/(app)/binders/[id]/AddItemDialog";
 
 const printings = [
   { printingId: 2, subtype: "Normal", market: 0.25, priceDate: "2026-09-07" },

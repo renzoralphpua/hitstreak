@@ -174,7 +174,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
               {holders.map((h, i) => (
                 <span key={h.portfolioId}>
                   {i > 0 && ", "}
-                  <Link href={`/portfolios/${h.portfolioId}`} className="text-ink">
+                  <Link href={`/binders/${h.portfolioId}`} className="text-ink">
                     {h.name}
                   </Link>
                   <span className="num text-dim"> ×{h.quantity}</span>

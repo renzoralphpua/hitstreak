@@ -9,7 +9,7 @@ import ThemeToggle from "@/components/theme/ThemeToggle";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) {
-    const path = (await headers()).get("x-pathname") ?? "/portfolios";
+    const path = (await headers()).get("x-pathname") ?? "/binders";
     redirect(`/sign-in?next=${encodeURIComponent(path)}`);
   }
   return (

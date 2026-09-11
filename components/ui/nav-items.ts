@@ -1,5 +1,5 @@
 export const NAV_ITEMS = [
-  { href: "/portfolios", label: "Binder" },
+  { href: "/binders", label: "Binder" },
   { href: "/sets", label: "Sets" },
   { href: "/decks", label: "Decks" },
   { href: "/alerts", label: "Alerts" },

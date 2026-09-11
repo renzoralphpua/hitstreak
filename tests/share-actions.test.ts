@@ -11,7 +11,7 @@ const { getSession, revalidatePath } = vi.hoisted(() => ({ getSession: vi.fn(), 
 vi.mock("@/lib/session", () => ({ getSession }));
 vi.mock("next/cache", () => ({ revalidatePath }));
 
-import { enableShareAction, regenerateShareAction, disableShareAction } from "@/app/(app)/portfolios/actions";
+import { enableShareAction, regenerateShareAction, disableShareAction } from "@/app/(app)/binders/actions";
 
 const U1 = "user_1", U2 = "user_2";
 const signedIn = (id: string) => getSession.mockResolvedValue({ user: { id } });
@@ -56,7 +56,7 @@ describe("share server actions", () => {
       expect(isShareToken(r.data!.token)).toBe(true);
       expect((await getSharedPortfolio(r.data!.token))?.portfolioId).toBe(mine);
     }
-    expect(revalidatePath).toHaveBeenCalledWith(`/portfolios/${mine}`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/binders/${mine}`);
   });
 
   it("regenerate hands back a fresh, enabled token and revalidates", async () => {
@@ -69,14 +69,14 @@ describe("share server actions", () => {
       expect(r.data!.token).not.toBe(before.token);
     }
     expect(await getSharedPortfolio(before.token)).toBeNull();
-    expect(revalidatePath).toHaveBeenCalledWith(`/portfolios/${mine}`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/binders/${mine}`);
   });
 
   it("disable turns the link off and revalidates", async () => {
     signedIn(U1);
     expect(await disableShareAction(mine)).toEqual({ ok: true, data: undefined });
     expect((await getShareLink(U1, mine))?.enabled).toBe(false);
-    expect(revalidatePath).toHaveBeenCalledWith(`/portfolios/${mine}`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/binders/${mine}`);
   });
 
   it("another user gets 'Portfolio not found' for every action and nothing changes", async () => {

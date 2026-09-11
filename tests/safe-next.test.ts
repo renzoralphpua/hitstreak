@@ -3,21 +3,21 @@ import { safeNext } from "@/app/(auth)/safe-next";
 
 describe("safeNext (open-redirect guard)", () => {
   const cases: Array<[unknown, string]> = [
-    ["/portfolios", "/portfolios"],
+    ["/binders", "/binders"],
     ["/cards?q=x#y", "/cards?q=x#y"],
-    ["//evil.com", "/portfolios"],
-    ["/\\evil.com", "/portfolios"],
-    ["/\t/evil.com", "/portfolios"],
-    ["/\r\n/evil.com", "/portfolios"],
-    ["/\\\\/evil.com", "/portfolios"],
-    ["javascript:alert(1)", "/portfolios"],
-    ["https://evil.com", "/portfolios"],
-    ["", "/portfolios"],
-    [undefined, "/portfolios"],
-    ["relative", "/portfolios"],
-    ["/" + "a".repeat(3000), "/portfolios"],
-    [123, "/portfolios"],
-    [{}, "/portfolios"],
+    ["//evil.com", "/binders"],
+    ["/\\evil.com", "/binders"],
+    ["/\t/evil.com", "/binders"],
+    ["/\r\n/evil.com", "/binders"],
+    ["/\\\\/evil.com", "/binders"],
+    ["javascript:alert(1)", "/binders"],
+    ["https://evil.com", "/binders"],
+    ["", "/binders"],
+    [undefined, "/binders"],
+    ["relative", "/binders"],
+    ["/" + "a".repeat(3000), "/binders"],
+    [123, "/binders"],
+    [{}, "/binders"],
   ];
 
   it.each(cases)("safeNext(%j) -> %j", (input, expected) => {
