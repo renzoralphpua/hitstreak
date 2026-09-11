@@ -6,7 +6,7 @@ import type { SetCard } from "@/lib/catalog";
 import type { Collection } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { CardTile, EmptyState, Pill } from "@/components/ui";
-import { addItemAction } from "../../collections/actions";
+import { addItemAction } from "../../../collections/actions";
 
 type Filter = "all" | "owned" | "missing";
 

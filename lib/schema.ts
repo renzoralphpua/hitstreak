@@ -24,6 +24,10 @@ export const SCHEMA_SQL = `
     -- carry the ingest date instead of a real one (POP Series, trainer kits, promos), which would
     -- otherwise sort Base Set and XY above Mega Evolution.
     series_rank INTEGER,
+    -- Readable URL, unique WITHIN A GAME because the route is /sets/<game>/<slug>. The set CODE
+    -- cannot serve: 320 sets share 281 codes and "PR" alone covers 22 of them. Assigned once by
+    -- scripts/backfill-set-slugs.mts and never regenerated, because a slug is a URL.
+    slug TEXT,
     -- Absolute URLs. They point at R2 once a bucket is configured and at the upstream source until
     -- then, so the column means the same thing either way: where to render this set's art from.
     logo_url TEXT,
@@ -31,6 +35,7 @@ export const SCHEMA_SQL = `
   );
   CREATE INDEX IF NOT EXISTS idx_sets_series ON sets(series);
   CREATE INDEX IF NOT EXISTS idx_sets_game ON sets(game_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_sets_game_slug ON sets(game_id, slug);
 
   CREATE TABLE IF NOT EXISTS cards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

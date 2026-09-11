@@ -85,7 +85,7 @@ export async function searchCards(q: string, opts: { gameSlug?: string; limit?: 
   });
 }
 
-export interface JumpTarget { kind: "set" | "deck"; id: number; name: string; caption: string }
+export interface JumpTarget { kind: "set" | "deck"; id: number; name: string; caption: string; href: string }
 
 /**
  * Sets and decks matching a query, for the palette's "Go to" group.
@@ -101,7 +101,7 @@ export async function searchJumpTargets(userId: string, q: string, limit = 4): P
   const c = await db();
   const [sets, decks] = await Promise.all([
     c.execute({
-      sql: `SELECT se.id, se.name, g.name AS game, se.code
+      sql: `SELECT se.id, se.slug, se.name, g.name AS game, se.code
             FROM sets se JOIN games g ON g.id = se.game_id
             WHERE se.name LIKE ? ESCAPE '\' OR se.code LIKE ? ESCAPE '\'
             ORDER BY se.series_rank IS NULL, se.series_rank DESC, se.release_date DESC LIMIT ?`,
@@ -118,13 +118,25 @@ export async function searchJumpTargets(userId: string, q: string, limit = 4): P
   return [
     ...sets.rows.map((r) => ({
       kind: "set" as const, id: Number(r.id), name: String(r.name),
+      href: `/sets/${r.slug == null ? Number(r.id) : String(r.slug)}`,
       caption: [String(r.game), r.code == null ? null : String(r.code)].filter(Boolean).join(" · "),
     })),
     ...decks.rows.map((r) => ({
-      kind: "deck" as const, id: Number(r.id), name: String(r.name),
+      kind: "deck" as const, id: Number(r.id), name: String(r.name), href: `/decks/${Number(r.id)}`,
       caption: `${r.game} · ${Number(r.is_meta) === 1 ? "meta deck" : "your deck"}`,
     })),
   ];
+}
+
+/** The numeric id behind a game+slug pair, or null. Slugs are unique per game, which is exactly
+ *  what /sets/<game>/<slug> encodes. */
+export async function resolveSetSlug(gameSlug: string, slug: string): Promise<number | null> {
+  const c = await db();
+  const r = await c.execute({
+    sql: `SELECT se.id FROM sets se JOIN games g ON g.id = se.game_id WHERE g.slug = ? AND se.slug = ?`,
+    args: [gameSlug, slug],
+  });
+  return r.rows.length === 1 ? Number(r.rows[0].id) : null;
 }
 
 export interface Game { id: number; slug: string; name: string }
@@ -134,7 +146,7 @@ export async function listGames(): Promise<Game[]> {
 }
 
 export interface SetCompletion {
-  id: number; name: string; code: string | null; releaseDate: string | null;
+  id: number; slug: string | null; name: string; code: string | null; releaseDate: string | null;
   totalCards: number; ownedCards: number;
   /** The era, in the game's own vocabulary. Null for TCGplayer product groups that are not sets —
    *  /sets gathers those under "Promos & products". Filled by scripts/backfill-set-meta.mts. */
@@ -149,7 +161,7 @@ export interface SetCompletion {
 export async function listSetsWithCompletion(userId: string, gameSlug: string): Promise<SetCompletion[]> {
   const c = await db();
   const rows = (await c.execute({
-    sql: `SELECT se.id, se.name, se.code, se.release_date, se.series, se.series_rank, se.logo_url, se.symbol_url,
+    sql: `SELECT se.id, se.slug, se.name, se.code, se.release_date, se.series, se.series_rank, se.logo_url, se.symbol_url,
                  (SELECT COUNT(*) FROM cards ca WHERE ca.set_id = se.id AND ca.number IS NOT NULL) AS total_cards,
                  (SELECT COUNT(DISTINCT ca.id) FROM cards ca
                     JOIN printings p ON p.card_id = ca.id
@@ -162,7 +174,7 @@ export async function listSetsWithCompletion(userId: string, gameSlug: string): 
     args: [userId, gameSlug],
   })).rows;
   return rows.map((r) => ({
-    id: Number(r.id), name: String(r.name), code: r.code == null ? null : String(r.code),
+    id: Number(r.id), slug: r.slug == null ? null : String(r.slug), name: String(r.name), code: r.code == null ? null : String(r.code),
     releaseDate: r.release_date == null ? null : String(r.release_date),
     totalCards: Number(r.total_cards), ownedCards: Number(r.owned_cards),
     series: r.series == null ? null : String(r.series),
@@ -173,7 +185,7 @@ export async function listSetsWithCompletion(userId: string, gameSlug: string): 
 }
 
 export interface SetCard { cardId: number; name: string; number: string; rarity: string | null; imageUrl: string | null; lowestMarket: number | null; ownedQuantity: number; printings: PrintingPrice[] }
-export interface SetDetail { set: { id: number; name: string; code: string | null; releaseDate: string | null; gameSlug: string; gameName: string }; cards: SetCard[]; stats: { totalCards: number; ownedCards: number; setValue: number; ownedValue: number; missingCost: number } }
+export interface SetDetail { set: { id: number; slug: string | null; name: string; code: string | null; releaseDate: string | null; gameSlug: string; gameName: string }; cards: SetCard[]; stats: { totalCards: number; ownedCards: number; setValue: number; ownedValue: number; missingCost: number } }
 
 export async function getSetDetail(userId: string, setId: number): Promise<SetDetail | null> {
   const c = await db();
@@ -206,7 +218,7 @@ export async function getSetDetail(userId: string, setId: number): Promise<SetDe
     else if (card.lowestMarket != null) missingCost += card.lowestMarket;
   }
   return {
-    set: { id: Number(s.id), name: String(s.name), code: s.code == null ? null : String(s.code), releaseDate: s.release_date == null ? null : String(s.release_date), gameSlug: String(s.slug), gameName: String(s.game_name) },
+    set: { id: Number(s.id), slug: s.set_slug == null ? null : String(s.set_slug), name: String(s.name), code: s.code == null ? null : String(s.code), releaseDate: s.release_date == null ? null : String(s.release_date), gameSlug: String(s.slug), gameName: String(s.game_name) },
     cards: list,
     stats: { totalCards: list.length, ownedCards, setValue, ownedValue, missingCost },
   };

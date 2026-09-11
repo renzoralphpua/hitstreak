@@ -5,7 +5,7 @@ import { Panel, ProgressBar } from "@/components/ui";
 
 /** One set: art where we have it, name, completion counts and the bar. Sealed-only sets (no
  *  numbered cards) say so instead of showing a 0 / 0 bar. */
-export default function SetPanel({ set, view }: { set: SetCompletion; view: ViewMode }) {
+export default function SetPanel({ set, view, gameSlug }: { set: SetCompletion; view: ViewMode; gameSlug: string }) {
   const sealedOnly = set.totalCards === 0;
   // Ingested release dates are full ISO timestamps; the day is all this caption wants.
   const caption = [set.code, set.releaseDate?.slice(0, 10)].filter(Boolean).join(" · ");
@@ -33,7 +33,7 @@ export default function SetPanel({ set, view }: { set: SetCompletion; view: View
 
   if (view === "list") {
     return (
-      <Link href={`/sets/${set.id}`} className="block">
+      <Link href={`/sets/${gameSlug}/${set.slug ?? set.id}`} className="block">
         <Panel className="flex items-center gap-4 transition-colors hover:border-ink">
           {logo("h-9 w-24 shrink-0 object-contain") ?? <span className="h-9 w-24 shrink-0" />}
           <span className="flex min-w-0 flex-col gap-0.5">
@@ -53,7 +53,7 @@ export default function SetPanel({ set, view }: { set: SetCompletion; view: View
   // gets the whole upper half and the name sits under it — the reverse of the list, where a dense
   // scan of names is the point.
   return (
-    <Link href={`/sets/${set.id}`} className="block h-full">
+    <Link href={`/sets/${gameSlug}/${set.slug ?? set.id}`} className="block h-full">
       <Panel className="flex aspect-square h-full flex-col gap-2 transition-colors hover:border-ink">
         <div className="flex min-h-0 flex-1 items-center justify-center">
           {logo("max-h-full w-full object-contain") ?? (

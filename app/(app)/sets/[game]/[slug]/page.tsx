@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
-import { getSetDetail } from "@/lib/catalog";
+import { isNumericId } from "@/lib/slug";
+import { getSetDetail, resolveSetSlug } from "@/lib/catalog";
 import { listCollections } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { SectionHeading, ProgressBar } from "@/components/ui";
@@ -12,29 +13,40 @@ import SetGrid from "./SetGrid";
 // Owned counts and values are per-user: never prerender or cache across users.
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ game: string; slug: string }> };
 
-/** The set with the signed-in user's ownership folded in, or `notFound()`. `cache` makes this one
- *  query per request even though both `generateMetadata` and the page ask for it. */
-const load = cache(async (id: string) => {
-  const setId = parseRouteId(id);
-  if (setId == null) notFound();
+/**
+ * The set with the signed-in user's ownership folded in, or `notFound()`.
+ *
+ * A NUMERIC segment is still accepted and redirected to the canonical slug URL — every link in the
+ * app used /sets/<id> until now, and old bookmarks should land rather than 404. `cache` makes this
+ * one query per request even though both `generateMetadata` and the page ask for it.
+ */
+const load = cache(async (game: string, slug: string) => {
   const session = await getSession();
   if (!session) redirect("/sign-in"); // the layout already gates; this is for the user id
+
+  const bySlug = isNumericId(slug) ? null : await resolveSetSlug(game, slug);
+  const setId = bySlug ?? (isNumericId(slug) ? parseRouteId(slug) : null);
+  if (setId == null) notFound();
+
   const detail = await getSetDetail(session.user.id, setId);
   if (!detail) notFound();
+  // Reached by id, or under the wrong game: send the reader to the one true URL for this set.
+  if (bySlug == null && detail.set.slug) redirect(`/sets/${detail.set.gameSlug}/${detail.set.slug}`);
+  if (detail.set.gameSlug !== game) notFound();
   return { userId: session.user.id, detail };
 });
 
 export async function generateMetadata({ params }: Params) {
-  const { id } = await params;
-  const { detail } = await load(id);
+  const { game, slug } = await params;
+  const { detail } = await load(game, slug);
   return { title: `${detail.set.name} — Hitstreak` };
 }
 
 export default async function SetDetailPage({ params }: Params) {
-  const { id } = await params;
-  const { userId, detail } = await load(id);
+  const { game, slug } = await params;
+  const { userId, detail } = await load(game, slug);
   const { set, stats } = detail;
   const collections = await listCollections(userId);
   const ratio = stats.totalCards > 0 ? stats.ownedCards / stats.totalCards : 0;
@@ -42,7 +54,7 @@ export default async function SetDetailPage({ params }: Params) {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href={`/sets?game=${set.gameSlug}`} className="text-caption text-muted hover:text-ink">
+      <Link href={`/sets/${set.gameSlug}`} className="text-caption text-muted hover:text-ink">
         ← Sets
       </Link>
 

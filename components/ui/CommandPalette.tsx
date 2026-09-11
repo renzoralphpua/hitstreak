@@ -11,7 +11,7 @@ interface Hit {
   cardId: number; name: string; number: string | null; rarity: string | null;
   setName: string; imageUrl: string | null; owned: number; printings: PrintingPrice[];
 }
-interface Jump { kind: "set" | "deck"; id: number; name: string; caption: string }
+interface Jump { kind: "set" | "deck"; id: number; name: string; caption: string; href: string }
 
 /** A row is whatever the keyboard can land on; `href` is where Enter goes. */
 interface Row {
@@ -135,7 +135,7 @@ export default function CommandPalette() {
         label: "Go to",
         rows: jump.map<Row>((j) => ({
           key: `${j.kind}-${j.id}`,
-          href: j.kind === "set" ? `/sets/${j.id}` : `/decks/${j.id}`,
+          href: j.href,
           name: j.name,
           caption: j.caption,
           icon: j.kind === "set" ? "grid" : "decks",

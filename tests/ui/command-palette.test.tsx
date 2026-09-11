@@ -22,7 +22,7 @@ const card = (over: Record<string, unknown> = {}) => ({
 
 const body = {
   hits: [card({ cardId: 1, owned: 2 }), card({ cardId: 2, name: "Umbreon", owned: 0, rarity: "Common" })],
-  jump: [{ kind: "set", id: 9, name: "Prismatic Evolutions", caption: "Pokémon · PRE" }],
+  jump: [{ kind: "set", id: 9, name: "Prismatic Evolutions", caption: "Pokémon · PRE", href: "/sets/pokemon/prismatic-evolutions" }],
 };
 
 beforeEach(() => {
@@ -100,7 +100,7 @@ describe("CommandPalette", () => {
     const dialog = screen.getByRole("dialog");
     fireEvent.keyDown(dialog, { key: "ArrowUp" }); // from the first row, back to the last
     fireEvent.keyDown(dialog, { key: "Enter" });
-    expect(push).toHaveBeenCalledWith("/sets/9");
+    expect(push).toHaveBeenCalledWith("/sets/pokemon/prismatic-evolutions");
   });
 
   it("carries no action buttons — every row is a way to somewhere", async () => {

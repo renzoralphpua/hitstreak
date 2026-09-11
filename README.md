@@ -40,8 +40,9 @@ steps to phases; plans live in `docs/superpowers/plans/`).
 - `/sign-in`, `/sign-up` — email + password
 - `/collections` — collection list with value, gain, and create/rename/delete
 - `/collections/[id]` — grid (default) or list of holdings with an in-page filter, valued from latest prices, value-history chart (`?range=`), add-card dialog, quantity edits, share-link panel
-- `/sets` — sets grouped by era, newest first, each era foldable; square logo-forward grid or a dense list, a filter row, and an in-page search over name and code. View, filter, folds and search are local preferences in localStorage, not query parameters — only `?game=` is in the URL, because the server fetches by it
-- `/sets/[id]` — the set's cards as owned/missing tiles; tap a tile to add one copy
+- `/sets` — redirects to the default game
+- `/sets/[game]` — sets grouped by era, newest first, each era foldable; square logo-forward grid or a dense list, a filter row, and an in-page search over name and code. View, filter, folds and search are local preferences in localStorage, not query parameters — only `?game=` is in the URL, because the server fetches by it
+- `/sets/[game]/[slug]` — the set's cards as owned/missing tiles; tap a tile to add one copy. A numeric segment still resolves and redirects to the canonical slug, so old `/sets/117` links land
 - `/cards/[id]` — art, market price, 30-day change, price-history chart (`?range=` + `?p=` printing pills), printings table, "in your collections", add to a collection, set-alert shortcut
 - `/alerts` — Triggered / Watching lists, new-alert form (search → printing → direction → price; `?printing=` preselects one), delete
 - `/s/[token]` — public read-only collection view (no sign-in, market value only, `noindex`); unknown or disabled tokens 404

@@ -7,7 +7,7 @@ import {
 } from "@/lib/set-filters";
 
 const set = (over: Partial<SetCompletion>): SetCompletion => ({
-  id: 1, name: "Prismatic Evolutions", code: "PRE", releaseDate: "2025-01-17",
+  id: 1, slug: "prismatic-evolutions", name: "Prismatic Evolutions", code: "PRE", releaseDate: "2025-01-17",
   totalCards: 100, ownedCards: 40, series: "Scarlet & Violet", seriesRank: 15,
   logoUrl: null, symbolUrl: null, ...over,
 });

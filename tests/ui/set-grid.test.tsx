@@ -8,7 +8,7 @@ const { addItem, refresh } = vi.hoisted(() => ({ addItem: vi.fn(), refresh: vi.f
 vi.mock("@/app/(app)/collections/actions", () => ({ addItemAction: addItem }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import SetGrid from "@/app/(app)/sets/[id]/SetGrid";
+import SetGrid from "@/app/(app)/sets/[game]/[slug]/SetGrid";
 
 const card = (over: Partial<SetCard> & { cardId: number }): SetCard => ({
   name: `Card ${over.cardId}`,

@@ -85,7 +85,7 @@ export default function SetBrowser({
       <div className="flex flex-wrap gap-1.5">
         {games.map((g) => (
           // Game IS a navigation — the server fetches by it — so it stays a link.
-          <Pill key={g.slug} href={`/sets?game=${g.slug}`} selected={g.slug === gameSlug}>
+          <Pill key={g.slug} href={`/sets/${g.slug}`} selected={g.slug === gameSlug}>
             {g.name}
           </Pill>
         ))}
@@ -131,11 +131,11 @@ export default function SetBrowser({
               {!isClosed &&
                 (view === "grid" ? (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                    {g.sets.map((s) => <SetPanel key={s.id} set={s} view={view} />)}
+                    {g.sets.map((s) => <SetPanel key={s.id} set={s} view={view} gameSlug={gameSlug} />)}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {g.sets.map((s) => <SetPanel key={s.id} set={s} view={view} />)}
+                    {g.sets.map((s) => <SetPanel key={s.id} set={s} view={view} gameSlug={gameSlug} />)}
                   </div>
                 ))}
             </div>
