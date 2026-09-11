@@ -92,6 +92,15 @@
       "page": "screens"
     },
     {
+      "file": "BinderGrid.dc.html",
+      "title": "Binder · Grid view",
+      "x": 0,
+      "y": 4820,
+      "w": 1280,
+      "h": 820,
+      "page": "screens"
+    },
+    {
       "file": "Palette.dc.html",
       "title": "Search · Command palette (navigates only)",
       "x": 1400,
@@ -142,7 +151,7 @@
       "y": 3860,
       "w": 300,
       "page": "screens",
-      "text": "Home vs Binder\n\nHome is what you READ: the total across binders, its chart, what moved, deck progress, alerts that fired. Nothing on it edits anything.\n\nBinder is what you CHANGE: add and remove cards, purchase price, rename, delete. Switching binders happens in a dropdown in its header, not here — the by-binder rows on Home are a breakdown, so they are plain rows, never the selected dark chip.\n\nHome has no nav item. The wordmark is the link to it, so the nav stays at four and every other artboard's top bar is unchanged; on Home no tab is lit.\n\nONE MEASURE: everything on Home is vs paid — the headline, the binder rows, the winners and losers. The range pills only pick the chart's window; the chart draws value against the cost-basis step line, so the gap is the gain. The headline is a level and does not move when you change range.\n\nPer-row sparklines borrowed from the Ticker direction, as the explorations note suggested."
+      "text": "Home vs Binder\n\nHome is what you READ: the total across binders, its chart, what moved, deck progress, alerts that fired. Nothing on it edits anything.\n\nBinder is what you CHANGE: add and remove cards, purchase price, rename, delete. Switching binders happens in a dropdown in its header, not here — the by-binder rows on Home are a breakdown, so they are plain rows, never the selected dark chip.\n\nHome has no nav item. The wordmark is the link to it, so the nav stays at four and every other artboard's top bar is unchanged; on Home no tab is lit.\n\nONE MEASURE (app-wide): wherever a figure describes something you own, it reads vs paid — the headline, the binder rows, the winners and losers. The range pills only pick the chart's window; the chart draws value against the cost-basis step line, so the gap is the gain. The headline is a level and does not move when you change range.\n\nPer-row sparklines borrowed from the Ticker direction, as the explorations note suggested.\n\nTwo exceptions: catalog figures (a card price, a set, a meta deck build cost) have no cost basis, so they keep a period change; and the public share view never shows cost at all."
     },
     {
       "id": "explore-note",
@@ -155,6 +164,6 @@
   ],
   "launch": {
     "view": "focused",
-    "file": "Card.dc.html"
+    "file": "BinderGrid.dc.html"
   }
 }

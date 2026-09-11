@@ -27,10 +27,13 @@ is my whole collection worth", which nothing answered before.
 primary nav stays at four (Binder · Sets · Decks · Alerts), so no existing artboard's top bar
 changes, and on Home no tab is lit.
 
-### 1a. One measure on Home: vs paid
+### 1a. One measure, app-wide: vs paid
 
-**Settled 2026-09-10.** Every comparison on Home reads against cost basis — the headline delta, the
-per-binder rows, the winners and losers. Never "change over the last N days".
+**Settled 2026-09-10 for Home; promoted app-wide 2026-09-11.**
+
+**The rule: wherever a figure describes something you own, it reads against what you paid.** Never
+"change over the last N days". That covers the Home headline, the per-binder rows, the winners and
+losers, the binder rail, the binder grid tiles and `HoldingsTable`'s per-row deltas.
 
 The range pills stay, but they only pick the chart's **window**. The chart plots market value
 against the cost-basis step line, so the gap between the two lines is the gain at any window. The
@@ -40,9 +43,25 @@ Anything that cannot be expressed against cost basis stays off Home: the tier-1 
 build cost with no trend, and alert thresholds (absolute prices by definition) stay in the Alerts
 panel.
 
-**Scope:** this is a *Home* rule, not an app-wide one. On `/cards/[id]` the market price and its
-history are facts about a card you may not own, so a period change is correct there; only the "Your
-copies" block reads vs paid.
+**Two exceptions, both principled rather than convenient.**
+
+*Catalog figures have no cost basis.* A card's market price and its history on `/cards/[id]`, a
+set's completion, a meta deck's build cost — these describe things you may not own, so there is
+nothing to compare against and a period change is the correct measure. On the card page only the
+"Your copies" block reads vs paid.
+
+*The public share view must never show cost.* `/s/[token]` shows market value and a period change
+and no cost basis at all — what you paid is nobody else's business. This is a deliberate omission,
+not an oversight to be tidied up later.
+
+### What app-wide costs, found 2026-09-11
+
+- **`/portfolios/[id]` renders two deltas stacked** — `PriceDelta caption="vs. paid"` immediately
+  followed by `PriceDelta caption={RANGE_CAPTION[range]}`. The period one goes.
+- **The binder's Gain tile duplicates its own headline**, exactly as Home's did. Same fix: replace
+  it with **In profit — N of M**, which is a vs-paid fact the headline does not already state.
+- **The binder chart** becomes value against the cost-basis step line, matching Home.
+- **Copy:** the code says `"vs. paid"`, the artboards say `"vs paid"`. Standardise on **vs paid**.
 
 ---
 
