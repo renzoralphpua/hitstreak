@@ -23,7 +23,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/alerts">)
   const watching = alerts.filter((a) => a.armed).length;
 
   return (
-    <div className="grid gap-10 md:grid-cols-[1fr_360px]">
+    <div className="mx-auto grid w-full max-w-read gap-10 md:grid-cols-[1fr_360px]">
       <div className="flex flex-col gap-4">
         <SectionHeading
           as="h1"

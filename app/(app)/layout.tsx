@@ -22,7 +22,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </>
         }
       />
-      <main className="grow px-6 py-6 md:px-10">{children}</main>
+      {/* Width is a per-screen call, so `main` only pads. A screen you READ (card detail,
+          alerts) wraps its content in `max-w-read`; a screen you SCAN (binder grid, sets)
+          uses `max-w-scan`, which earns the extra columns an ultrawide gives it. */}
+      <main className="mx-auto w-full max-w-scan grow px-6 py-6 md:px-10">{children}</main>
       <BottomTabBar />
     </div>
   );

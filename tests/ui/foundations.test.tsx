@@ -8,6 +8,8 @@ import path from "node:path";
 import ProgressBar from "@/components/ui/ProgressBar";
 import SearchField from "@/components/ui/SearchField";
 import BottomTabBar from "@/components/ui/BottomTabBar";
+import TopNav from "@/components/ui/TopNav";
+import PriceDelta from "@/components/ui/PriceDelta";
 import Input from "@/components/ui/Input";
 import { vi } from "vitest";
 
@@ -82,6 +84,35 @@ describe("Phase 5 bug fixes", () => {
     expect(label.className).toMatch(/min-h-11/);
     expect(label.className).toMatch(/md:min-h-10/);
     expect(label.className).toMatch(/focus-within:outline-focus/);
+  });
+
+  it("the desktop header is pinned, so Save and draft status never scroll away in the builder", () => {
+    render(<TopNav />);
+    const header = screen.getByRole("banner");
+    expect(header.className).toMatch(/sticky/);
+    expect(header.className).toMatch(/top-0/);
+    // A transparent sticky header lets content slide visibly underneath it.
+    expect(header.className).toMatch(/bg-ground/);
+  });
+
+  it("a zero delta is dim text, and the em dash is left to mean unknown", () => {
+    const { rerender, container } = render(<PriceDelta amount={0} ratio={0} />);
+    expect(container.textContent).toContain("$0.00");
+    // The zero case used to render "— $0.00", so one mark meant both "no data" and "no movement".
+    expect(container.textContent).not.toContain("—");
+    expect(container.textContent).not.toMatch(/[▲▼]/);
+
+    rerender(<PriceDelta amount={null} />);
+    expect(container.textContent).toBe("—");
+  });
+
+  it("keeps a gain green and a loss terracotta, each with its own arrow", () => {
+    const { rerender, container } = render(<PriceDelta amount={12.5} />);
+    expect(container.firstElementChild).toHaveClass("text-gain");
+    expect(container.textContent).toContain("▲");
+    rerender(<PriceDelta amount={-12.5} />);
+    expect(container.firstElementChild).toHaveClass("text-accent");
+    expect(container.textContent).toContain("▼");
   });
 
   it("Input no longer strips the browser's focus ring", () => {

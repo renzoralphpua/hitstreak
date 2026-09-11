@@ -96,7 +96,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
     .slice(0, MAX_ATTRS);
 
   return (
-    <div className="grid gap-11 md:grid-cols-[340px_1fr]">
+    <div className="mx-auto grid w-full max-w-read gap-11 md:grid-cols-[340px_1fr]">
       <div className="flex flex-col gap-3.5">
         <Link href={`/sets/${card.setId}`} className="text-[13px] text-muted hover:text-ink">
           ← {card.setName}

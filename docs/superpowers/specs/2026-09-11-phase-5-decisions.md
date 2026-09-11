@@ -212,10 +212,83 @@ must act on, and 12px for "Could not reach the server" would be a regression.
 
 ---
 
+## 6. One icon standard, documented in `Icon.tsx`
+
+**Settled and implemented 2026-09-11** (`cfe428f`).
+
+Nine icons shipped, hand-written inline across five files, and nine was already enough to drift:
+six used a 24 viewBox at stroke 1.8, three used a 16 viewBox, two of those at stroke 2. Phase 5
+roughly triples the count, so hand-drawing stops scaling here.
+
+Paths are traced from **Lucide (ISC)** into a local map rather than depending on `lucide-react` —
+the runtime dependency list is ten packages and an icon is fifty bytes of path data.
+
+The rules live in a JSDoc block at the top of `components/ui/Icon.tsx` so a grep lands on them: one
+viewBox (24), one stroke (1.8), no fill, `currentColor` always, sizes closed to **16 inline / 20
+controls / 24 nav** (folding the artboards' seven). `aria-hidden` unless given a `title`.
+
+**Game marks are not icons.** Recorded in the same block at Renzo's request, ahead of per-game marks
+being introduced: they are filled, often multi-colour, carry their own aspect ratios, name the row
+rather than decorate it, and are third-party trademarks. Every rule above is wrong for them. They
+get their own `GameMark` component.
+
+`tests/ui/icon-standard.test.ts` fails on any inline `<svg>` outside `Icon.tsx` and `LineChart.tsx`,
+pins the geometry, keeps the size set closed, and fails if the game-marks note is deleted.
+
+---
+
+## 7. The header is sticky
+
+**Settled and implemented 2026-09-11.** Save in the deck builder sits in `SectionHeading`'s
+`trailing` slot beside the draft status — and scrolled away, on the one screen whose whole job is
+repeated edits down a long card list.
+
+**Sticky on desktop, docked on mobile**, and the header is sticky on *every* screen rather than just
+the builder: `TopNav` is now `sticky top-0 z-40 bg-ground`. The background matters — a transparent
+sticky header lets content slide visibly underneath it.
+
+The mobile docked bar works without fighting `BottomTabBar`: the tab bar is a sibling *after*
+`main` in a `min-h-dvh flex-col` layout, so a `sticky bottom-0` element inside `main` settles
+directly above it rather than under it.
+
+**Logged, not decided:** there is no unsaved-changes guard. `saved === "dirty"` is tracked and
+nothing warns on navigate-away.
+
+---
+
+## 8. Two content ceilings
+
+**Settled and implemented 2026-09-11.** There was no `max-w` anywhere; `main` filled the window, and
+no screen had ever been seen above the artboards' 1280.
+
+Two tokens, because the two kinds of screen want opposite things on a wide monitor:
+`--container-read: 1200px` for screens you read left-to-right (card detail, alerts — 2000px lines
+are unreadable) and `--container-scan: 1800px` for screens you scan (binder grid, set grid — an
+ultrawide should buy more columns). `main` carries `max-w-scan` as the outer bound so nothing is
+ever truly unbounded, and reading screens tighten it themselves with `max-w-read`.
+
+---
+
+## 9. Zero is not unknown
+
+**Settled and implemented 2026-09-11.** `PriceDelta` already had a zero branch — and it rendered
+`— $0.00`, so the em dash meant both *"we have no price for this"* and *"this has not moved"*. Those
+are never interchangeable, and the second became common the moment every figure started reading
+against cost basis: a quiet week, or anything bought at today's price.
+
+Zero now renders **dim text with no glyph at all** — `$0.00` — and the em dash is reserved for
+unknown. Gains keep ▲ in `text-gain`, losses keep ▼ in `text-accent` (terracotta is this system's
+loss colour; see `docs/design/README.md`). No word is added; the colour carries it.
+
+Pinned in `tests/ui/foundations.test.tsx`.
+
+---
+
 ## Still open
+
+The original eight are closed. What remains:
 
 - Whether alerts belong on Home at all (drawn as "triggered since you were last here", capped, with
   a link out — but there is a whole Alerts tab).
 - Palette as an overlay vs a dropdown under the pill. With actions removed the two are nearly
   equivalent; the overlay keeps ⌘K and can list sets and decks alongside cards.
-- Remaining: icons, builder Save placement, max content width, zero-delta glyph.

@@ -65,6 +65,12 @@
   --radius-art: 16px;
   --shadow-tile: var(--tile-shadow);
   --shadow-art: var(--art-shadow);
+  /* Two content ceilings, because the two kinds of screen want opposite things on a wide monitor.
+     A screen you READ (card detail, alerts) has to keep its line length sane; a screen you SCAN
+     (binder grid, set grid) should cash an ultrawide in for more columns. `max-w-scan` is also the
+     outer bound on `main`, so nothing is ever truly unbounded. */
+  --container-read: 1200px;
+  --container-scan: 1800px;
   /* The small type ramp. 13px carried ~64 hand-written `text-[13px]` uses before this existed. */
   --text-caption: 13px;
   --text-micro: 11px;
