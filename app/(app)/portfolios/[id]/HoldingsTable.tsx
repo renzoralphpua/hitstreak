@@ -4,52 +4,68 @@ import { useRouter } from "next/navigation";
 import type { Holding } from "@/lib/portfolios";
 import { formatMoney } from "@/lib/format";
 import { Button, CardRow, PriceDelta } from "@/components/ui";
-import { updateItemAction, removeItemAction } from "../actions";
+import { addItemAction, decrementHoldingAction, removeHoldingAction } from "../actions";
 
-/** One binder's cards, value first (the data layer already sorts by value). Quantity edits and
- *  removals go through the server actions, then `router.refresh()` re-reads the valuation. */
+/** A holding is one printing+condition; its lots share a row, so the row keys on both. */
+const keyOf = (h: Holding) => `${h.printingId}|${h.condition}`;
+
+/**
+ * One binder's cards, value first. A row is a HOLDING — every lot of that printing and condition
+ * folded together — so its controls are holding-level.
+ *
+ * `+` records a NEW LOT with no purchase price rather than bumping an existing one. Bumping would
+ * silently value the new copy at an older copy's price, which is precisely the bug that made
+ * acquisitions lots in the first place; an uncosted lot is honest and the UI can prompt for the
+ * price later. `−` takes a copy off the newest lot. Per-lot editing lives on the card page.
+ */
 export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: number; holdings: Holding[] }) {
   const router = useRouter();
-  const [errors, setErrors] = useState<Record<number, string>>({});
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [busyKey, setBusyKey] = useState<string | null>(null);
 
-  async function run(itemId: number, call: () => Promise<{ ok: true; data?: unknown } | { ok: false; error: string }>) {
-    setBusyId(itemId);
+  async function run(key: string, call: () => Promise<{ ok: true; data?: unknown } | { ok: false; error: string }>) {
+    setBusyKey(key);
     setErrors((e) => {
-      if (!(itemId in e)) return e;
+      if (!(key in e)) return e;
       const rest = { ...e };
-      delete rest[itemId];
+      delete rest[key];
       return rest;
     });
     try {
       const res = await call();
       if (!res.ok) {
-        setErrors((e) => ({ ...e, [itemId]: res.error }));
+        setErrors((e) => ({ ...e, [key]: res.error }));
         return;
       }
       router.refresh();
     } catch {
-      setErrors((e) => ({ ...e, [itemId]: "Could not reach the server. Try again." }));
+      setErrors((e) => ({ ...e, [key]: "Could not reach the server. Try again." }));
     } finally {
-      setBusyId(null);
+      setBusyKey(null);
     }
   }
 
-  const setQuantity = (h: Holding, quantity: number) =>
-    run(h.itemId, () => updateItemAction(portfolioId, h.itemId, { quantity }));
+  const addCopy = (h: Holding) =>
+    run(keyOf(h), () =>
+      addItemAction(portfolioId, { printingId: h.printingId, quantity: 1, condition: h.condition })
+    );
+  const removeCopy = (h: Holding) =>
+    run(keyOf(h), () => decrementHoldingAction(portfolioId, h.printingId, h.condition));
 
   function remove(h: Holding) {
-    if (!window.confirm(`Remove ${h.quantity} × ${h.cardName} from this binder?`)) return;
-    return run(h.itemId, () => removeItemAction(portfolioId, h.itemId));
+    const lots = h.lots.length > 1 ? ` (${h.lots.length} purchases)` : "";
+    if (!window.confirm(`Remove ${h.quantity} × ${h.cardName}${lots} from this binder?`)) return;
+    return run(keyOf(h), () => removeHoldingAction(portfolioId, h.printingId, h.condition));
   }
 
   return (
     <ul className="flex flex-col gap-2">
       {holdings.map((h) => {
-        const busy = busyId === h.itemId;
-        const error = errors[h.itemId];
+        const key = keyOf(h);
+        const busy = busyKey === key;
+        const error = errors[key];
         return (
-          <li key={h.itemId} className="flex flex-col gap-1">
+          <li key={key} className="flex flex-col gap-1">
             <CardRow
               name={h.cardName}
               subtitle={[h.setName, h.number, h.subtype, h.condition].filter(Boolean).join(" · ")}
@@ -65,6 +81,15 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                     <span className="text-lg font-semibold text-ink">{formatMoney(h.value)}</span>
                   )}
                   <PriceDelta amount={h.value != null && h.cost != null ? h.value - h.cost : null} />
+                  {/* Cost covers only the priced lots, so a partly-uncosted holding's gain is
+                      overstated. Say so rather than letting the number quietly mislead. */}
+                  {h.uncostedQuantity > 0 && (
+                    <span className="text-[11px] text-dim">
+                      {h.uncostedQuantity === h.quantity
+                        ? "no cost recorded"
+                        : `${h.uncostedQuantity} of ${h.quantity} without a cost`}
+                    </span>
+                  )}
                   <div className="mt-1.5 flex items-center gap-1.5">
                     <Button
                       variant="secondary"
@@ -72,7 +97,7 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                       size="sm"
                       className="min-w-11 px-2.5 md:min-w-0"
                       disabled={busy || h.quantity <= 1}
-                      onClick={() => setQuantity(h, h.quantity - 1)}
+                      onClick={() => removeCopy(h)}
                     >
                       −
                     </Button>
@@ -83,7 +108,7 @@ export default function HoldingsTable({ portfolioId, holdings }: { portfolioId: 
                       size="sm"
                       className="min-w-11 px-2.5 md:min-w-0"
                       disabled={busy}
-                      onClick={() => setQuantity(h, h.quantity + 1)}
+                      onClick={() => addCopy(h)}
                     >
                       +
                     </Button>

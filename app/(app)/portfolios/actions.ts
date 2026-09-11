@@ -76,6 +76,39 @@ export async function removeItemAction(portfolioId: number, itemId: number) {
   return r;
 }
 
+// Holding-level operations. `updateItemAction` and `removeItemAction` above address ONE lot by id
+// (per-lot editing); these two address the whole holding, which is what the binder's row controls
+// mean. There is deliberately no "add a copy" here — an addition is an acquisition with a price and
+// a date, so it goes through `addItemAction`, which records it as its own lot.
+
+export async function decrementHoldingAction(portfolioId: number, printingId: number, condition: string) {
+  const r = await withUser(async (u) => {
+    if (!(await P.decrementHolding(u, assertId(portfolioId), assertId(printingId), condition))) {
+      throw new Error("Holding not found");
+    }
+  });
+  if (r.ok) {
+    revalidatePath(`/portfolios/${portfolioId}`);
+    revalidatePath("/portfolios");
+    revalidatePath("/sets");
+  }
+  return r;
+}
+
+export async function removeHoldingAction(portfolioId: number, printingId: number, condition: string) {
+  const r = await withUser(async (u) => {
+    if (!(await P.removeHolding(u, assertId(portfolioId), assertId(printingId), condition))) {
+      throw new Error("Holding not found");
+    }
+  });
+  if (r.ok) {
+    revalidatePath(`/portfolios/${portfolioId}`);
+    revalidatePath("/portfolios");
+    revalidatePath("/sets");
+  }
+  return r;
+}
+
 // Share links (lib/share.ts). Only the binder page shows the link, so that is all that revalidates.
 export async function enableShareAction(portfolioId: number) {
   const r = await withUser((u) => S.enableShare(u, assertId(portfolioId)));

@@ -64,11 +64,13 @@ export async function disableShare(userId: string, portfolioId: number): Promise
 }
 
 /** What a visitor may see. Everything the owner paid is deliberately absent. */
-export type PublicHolding = Omit<Holding, "acquiredPrice" | "acquiredDate" | "cost">;
+export type PublicHolding = Omit<Holding, "cost" | "uncostedQuantity" | "lots">;
 export interface SharedPortfolio { ownerId: string; portfolioId: number; name: string; holdings: PublicHolding[]; value: number; cards: number; unpriced: number }
 
+// Lots carry acquisition prices and dates, so they are dropped wholesale rather than filtered —
+// what the owner paid must never reach a public link, and neither must when they bought it.
 const toPublic = (h: Holding): PublicHolding => ({
-  itemId: h.itemId, printingId: h.printingId, cardId: h.cardId, cardName: h.cardName, setName: h.setName, number: h.number,
+  printingId: h.printingId, cardId: h.cardId, cardName: h.cardName, setName: h.setName, number: h.number,
   subtype: h.subtype, imageUrl: h.imageUrl, quantity: h.quantity, condition: h.condition, market: h.market, priceDate: h.priceDate, value: h.value,
 });
 

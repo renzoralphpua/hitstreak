@@ -109,10 +109,14 @@ describe("getCardHolders", () => {
   it("lists the user's binders holding any printing of the card, most copies first", async () => {
     const a = await createPortfolio("u3", "A"), b = await createPortfolio("u3", "B");
     await addItem("u3", a.id, { printingId: seed.printings.pikachuNormal, quantity: 1, condition: "NM" });
-    await addItem("u3", b.id, { printingId: seed.printings.pikachuNormal, quantity: 2, condition: "NM" });
+    // Two lots in B at different prices, plus one copy with no price recorded: cost must be the
+    // sum over lots (2 x 3 + 1 x 7 = 13), and the unpriced copy must be counted, not valued at 0.
+    await addItem("u3", b.id, { printingId: seed.printings.pikachuNormal, quantity: 2, condition: "NM", acquiredPrice: 3 });
+    await addItem("u3", b.id, { printingId: seed.printings.pikachuNormal, quantity: 1, condition: "NM", acquiredPrice: 7 });
     await addItem("u3", b.id, { printingId: seed.printings.pikachuReverse, quantity: 1, condition: "LP" });
     expect(await getCardHolders("u3", seed.cards.pikachu)).toEqual([
-      { portfolioId: b.id, name: "B", quantity: 3 }, { portfolioId: a.id, name: "A", quantity: 1 },
+      { portfolioId: b.id, name: "B", quantity: 4, cost: 13, uncostedQuantity: 1 },
+      { portfolioId: a.id, name: "A", quantity: 1, cost: null, uncostedQuantity: 1 },
     ]);
     expect(await getCardHolders("someone-else", seed.cards.pikachu)).toEqual([]);
   });

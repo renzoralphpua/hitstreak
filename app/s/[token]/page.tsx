@@ -60,7 +60,7 @@ export default async function SharedPortfolioPage({ params, searchParams }: Page
           ) : (
             <ul className="flex flex-col gap-2">
               {shared.holdings.map((h) => (
-                <li key={h.itemId}>
+                <li key={`${h.printingId}|${h.condition}`}>
                   <CardRow
                     name={h.cardName}
                     subtitle={[h.setName, h.number, h.subtype, h.condition].filter(Boolean).join(" · ")}
