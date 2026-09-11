@@ -17,14 +17,14 @@ import { CardTile, PriceDelta } from "@/components/ui";
  * 3. the vs-paid percent, without the dollar figure: at ~183px a tile cannot hold both, and the
  *    dollar delta is one click away in the list.
  */
-export default function CollectionGrid({ holdings }: { holdings: Holding[] }) {
+export default function CollectionGrid({ holdings, from }: { holdings: Holding[]; from: string }) {
   return (
     <ul className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {holdings.map((h) => {
         const costed = h.cost != null && h.uncostedQuantity === 0;
         return (
           <li key={`${h.printingId}|${h.condition}`}>
-            <Link href={`/cards/${h.cardId}`} className="block rounded-tile hover:opacity-95">
+            <Link href={`/cards/${h.cardId}?from=${encodeURIComponent(from)}`} className="block rounded-tile hover:opacity-95">
               <CardTile
                 name={h.cardName}
                 subtitle={[h.setName, h.number, h.subtype].filter(Boolean).join(" · ")}

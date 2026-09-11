@@ -190,7 +190,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
               <ul className="flex flex-col gap-2">
                 {triggered.map((a) => (
                   <li key={a.id}>
-                    <Link href={`/cards/${a.cardId}`} className="block">
+                    <Link href={`/cards/${a.cardId}?from=/home`} className="block">
                       <CardRow
                         name={a.cardName}
                         subtitle={`${a.direction === "above" ? "Rises above" : "Drops below"} ${formatMoney(a.threshold)}`}
@@ -220,7 +220,7 @@ function MoverColumn({ title, movers }: { title: string; movers: Awaited<ReturnT
         <ul className="flex flex-col gap-2">
           {movers.map((m) => (
             <li key={m.printingId}>
-              <Link href={`/cards/${m.cardId}`} className="block">
+              <Link href={`/cards/${m.cardId}?from=/home`} className="block">
                 <CardRow
                   name={m.quantity > 1 ? `${m.cardName} ×${m.quantity}` : m.cardName}
                   subtitle={[m.setName, m.number, m.subtype].filter(Boolean).join(" · ")}

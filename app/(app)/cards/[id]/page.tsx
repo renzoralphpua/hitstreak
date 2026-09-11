@@ -4,7 +4,9 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
 import { getCardDetail } from "@/lib/catalog";
-import { getCardHolders, getCardLots, listCollections } from "@/lib/collections";
+import { getCardHolders, getCardLots, getCollection, listCollections } from "@/lib/collections";
+import { collectionIdFromPath, resolveBack } from "@/lib/back-link";
+import { toPlainText, hasText } from "@/lib/card-text";
 import {
   parseRange,
   rangeStart,
@@ -70,7 +72,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
       null
     ) ?? printings[0] ?? null;
 
-  const { range: rawRange, p: rawP } = await searchParams;
+  const { range: rawRange, p: rawP, from: rawFrom } = await searchParams;
   const range = parseRange(rawRange);
   const today = new Date().toISOString().slice(0, 10);
   const from = rangeStart(range, today);
@@ -84,6 +86,17 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
     getCardLots(userId, card.id),
   ]);
   const stats = seriesStats(history);
+
+  // Where "back" goes. The set is the fallback because a card does belong to one, but arriving from
+  // a collection, from Home or from an alert and being offered the set is a dead end.
+  const fromPath = typeof rawFrom === "string" ? rawFrom : "";
+  const fromCollectionId = collectionIdFromPath(fromPath);
+  const fromCollection = fromCollectionId == null ? null : await getCollection(userId, fromCollectionId);
+  const back = resolveBack(
+    rawFrom,
+    { href: `/sets/${card.setId}`, label: card.setName },
+    { collectionName: fromCollection?.name }
+  );
   const hrefFor = (r: Range, printingId: number) =>
     `/cards/${card.id}?range=${r}${printingId === primary?.printingId ? "" : `&p=${printingId}`}`;
 
@@ -93,15 +106,19 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
   const change = stats?.change ?? primary?.change30d ?? null;
   const changeCaption = stats?.change ? RANGE_CAPTION[range] : "past 30 days";
 
+  // TCGplayer ships these as HTML fragments — ~29,000 cards carry <br>, <strong> or <em> in
+  // CardText and the attack lines — so they are stripped to text here rather than rendered. Never
+  // dangerouslySetInnerHTML: this is third-party content the ingest does not control.
   const attrs = Object.entries(card.attrs)
-    .filter(([k, v]) => !SKIP_ATTRS.has(k.toLowerCase()) && String(v).trim() !== "")
+    .filter(([k, v]) => !SKIP_ATTRS.has(k.toLowerCase()) && hasText(v))
+    .map(([k, v]) => [k, toPlainText(v)] as const)
     .slice(0, MAX_ATTRS);
 
   return (
     <div className="mx-auto grid w-full max-w-read gap-11 md:grid-cols-[340px_1fr]">
       <div className="flex flex-col gap-3.5">
-        <Link href={`/sets/${card.setId}`} className="text-caption text-muted hover:text-ink">
-          ← {card.setName}
+        <Link href={back.href} className="text-caption text-muted hover:text-ink">
+          ← {back.label}
         </Link>
         <div
           role="img"
@@ -240,8 +257,9 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
             <dl className="flex flex-col gap-1 text-caption">
               {attrs.map(([k, v]) => (
                 <div key={k} className="flex gap-2">
-                  <dt className="text-dim">{k}:</dt>
-                  <dd className="text-ink">{String(v)}</dd>
+                  <dt className="shrink-0 text-dim">{k}:</dt>
+                  {/* whitespace-pre-line keeps the line breaks that were <br> before stripping. */}
+                  <dd className="whitespace-pre-line text-ink">{v}</dd>
                 </div>
               ))}
             </dl>

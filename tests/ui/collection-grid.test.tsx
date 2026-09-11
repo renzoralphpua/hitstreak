@@ -29,7 +29,7 @@ describe("parseView", () => {
 
 describe("CollectionGrid", () => {
   it("shows the vs-paid percent without the dollar figure, which will not fit a tile", () => {
-    render(<CollectionGrid holdings={[holding({})]} />);
+    render(<CollectionGrid holdings={[holding({})]} from="/collections/7?view=grid" />);
     const tile = tileFor("Umbreon ex");
     expect(within(tile).getByText("$1,465.00")).toBeInTheDocument();
     expect(within(tile).getByText("+33.0%")).toBeInTheDocument();
@@ -38,7 +38,7 @@ describe("CollectionGrid", () => {
   });
 
   it("asks for the missing cost instead of claiming a holding has not moved", () => {
-    render(<CollectionGrid holdings={[holding({ cost: null, uncostedQuantity: 1 })]} />);
+    render(<CollectionGrid holdings={[holding({ cost: null, uncostedQuantity: 1 })]} from="/collections/7?view=grid" />);
     const tile = tileFor("Umbreon ex");
     expect(within(tile).getByText("Add cost")).toBeInTheDocument();
     // 0% would read as "worth exactly what you paid" — the opposite of "we do not know".
@@ -46,27 +46,31 @@ describe("CollectionGrid", () => {
   });
 
   it("asks for the cost when only SOME copies have one, since the gain is overstated either way", () => {
-    render(<CollectionGrid holdings={[holding({ quantity: 3, value: 4395, cost: 1101.5, uncostedQuantity: 2 })]} />);
+    render(<CollectionGrid holdings={[holding({ quantity: 3, value: 4395, cost: 1101.5, uncostedQuantity: 2 })]} from="/collections/7?view=grid" />);
     expect(within(tileFor("Umbreon ex")).getByText("Add cost")).toBeInTheDocument();
   });
 
   it("says 'no price' when the ingest has never priced the printing", () => {
-    render(<CollectionGrid holdings={[holding({ market: null, value: null, priceDate: null })]} />);
+    render(<CollectionGrid holdings={[holding({ market: null, value: null, priceDate: null })]} from="/collections/7?view=grid" />);
     const tile = tileFor("Umbreon ex");
     expect(within(tile).getByText("no price")).toBeInTheDocument();
     expect(within(tile).getByText("—")).toBeInTheDocument();
   });
 
   it("shows the ×N chip only above a single copy — a collection is all-owned, so ×1 says nothing", () => {
-    render(<CollectionGrid holdings={[holding({}), holding({ printingId: 2, cardId: 2, cardName: "Shanks", quantity: 3 })]} />);
+    render(<CollectionGrid holdings={[holding({}), holding({ printingId: 2, cardId: 2, cardName: "Shanks", quantity: 3 })]} from="/collections/7?view=grid" />);
     expect(tileFor("Umbreon ex").textContent).not.toContain("×");
     expect(within(tileFor("Shanks")).getByText("×3")).toBeInTheDocument();
   });
 
   it("carries no controls at all — a tile is a link to the card page", () => {
-    render(<CollectionGrid holdings={[holding({})]} />);
+    render(<CollectionGrid holdings={[holding({})]} from="/collections/7?view=grid" />);
     const tile = tileFor("Umbreon ex");
     expect(within(tile).queryAllByRole("button")).toEqual([]);
-    expect(within(tile).getByRole("link")).toHaveAttribute("href", "/cards/1");
+    // The link says where it came from, so the card page's back arrow returns to this collection
+    // rather than to the card's set.
+    expect(within(tile).getByRole("link")).toHaveAttribute(
+      "href", "/cards/1?from=" + encodeURIComponent("/collections/7?view=grid")
+    );
   });
 });

@@ -81,7 +81,7 @@ export default async function SetDetailPage({ params }: Params) {
         </div>
       </div>
 
-      <SetGrid cards={detail.cards} collections={collections} />
+      <SetGrid cards={detail.cards} collections={collections} setId={detail.set.id} />
     </div>
   );
 }

@@ -41,7 +41,7 @@ beforeEach(() => {
 
 describe("SetGrid", () => {
   it("counts owned and missing cards on the filter pills and filters the grid", () => {
-    render(<SetGrid cards={cards} collections={collections} />);
+    render(<SetGrid cards={cards} collections={collections} setId={5} />);
     expect(screen.getByRole("button", { name: "All 3" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Owned 1" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Missing 2" })).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("SetGrid", () => {
   });
 
   it("tapping a missing tile adds the first printing to the target collection and shows ×1 at once", async () => {
-    render(<SetGrid cards={cards} collections={collections} />);
+    render(<SetGrid cards={cards} collections={collections} setId={5} />);
     expect(screen.getByText("×2")).toBeInTheDocument(); // the already-owned card
 
     fireEvent.click(screen.getByRole("button", { name: /Charmander/ }));
@@ -72,7 +72,7 @@ describe("SetGrid", () => {
   });
 
   it("switching the target collection pill changes the collection the action is called with", async () => {
-    render(<SetGrid cards={cards} collections={collections} />);
+    render(<SetGrid cards={cards} collections={collections} setId={5} />);
     expect(screen.getByRole("button", { name: "Main Collection" })).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(screen.getByRole("button", { name: "Trades" }));
@@ -85,7 +85,7 @@ describe("SetGrid", () => {
   });
 
   it("without a collection the tiles are not tappable and it points at /collections", () => {
-    render(<SetGrid cards={cards} collections={[]} />);
+    render(<SetGrid cards={cards} collections={[]} setId={5} />);
     const hint = screen.getByRole("link", { name: "Create a collection to start marking cards owned" });
     expect(hint).toHaveAttribute("href", "/collections");
     expect(screen.queryByText("Add to:")).not.toBeInTheDocument();
@@ -95,7 +95,7 @@ describe("SetGrid", () => {
 
   it("surfaces an action error as an alert and reverts the optimistic copy", async () => {
     addItem.mockResolvedValueOnce({ ok: false, error: "Collection not found" });
-    render(<SetGrid cards={cards} collections={collections} />);
+    render(<SetGrid cards={cards} collections={collections} setId={5} />);
 
     fireEvent.click(screen.getByRole("button", { name: /Charmander/ }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Collection not found"));

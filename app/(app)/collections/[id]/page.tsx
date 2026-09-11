@@ -155,7 +155,7 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
             action={<AddItemDialog collectionId={collectionId} label="Add your first card" />}
           />
         ) : view === "grid" ? (
-          <CollectionGrid holdings={holdings} />
+          <CollectionGrid holdings={holdings} from={`/collections/${collectionId}?view=grid`} />
         ) : (
           <HoldingsTable collectionId={collectionId} holdings={holdings} />
         )}

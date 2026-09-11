@@ -20,7 +20,7 @@ const FILTERS: Array<{ key: Filter; label: string }> = [
  *  to the target collection: the count bumps immediately, then `router.refresh()` re-reads the truth
  *  (the optimistic bumps are dropped as soon as new server data arrives). A failed add is reverted
  *  and reported above the grid. */
-export default function SetGrid({ cards, collections }: { cards: SetCard[]; collections: Collection[] }) {
+export default function SetGrid({ cards, collections, setId }: { cards: SetCard[]; collections: Collection[]; setId: number }) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
   const [targetCollectionId, setTargetCollectionId] = useState<number | null>(collections[0]?.id ?? null);
@@ -133,7 +133,7 @@ export default function SetGrid({ cards, collections }: { cards: SetCard[]; coll
               imageUrl={c.imageUrl}
               onClick={canAdd ? () => add(c) : undefined}
             />
-            <Link href={`/cards/${c.cardId}`} className="text-caption text-accent">
+            <Link href={`/cards/${c.cardId}?from=${encodeURIComponent(`/sets/${setId}`)}`} className="text-caption text-accent">
               Details
             </Link>
           </div>
