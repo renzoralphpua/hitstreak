@@ -35,7 +35,8 @@ steps to phases; plans live in `docs/superpowers/plans/`).
 
 ### Screens
 
-- `/` — landing (anonymous); signed-in visitors are redirected to `/binders`
+- `/` — landing (anonymous); signed-in visitors are redirected to `/home`
+- `/home` — everything you own: total vs paid, value against cost basis (`?range=`), per-binder breakdown, winners and losers, decks, triggered alerts. Reached from the wordmark; deliberately not a nav item
 - `/sign-in`, `/sign-up` — email + password
 - `/binders` — binder list with value, gain, and create/rename/delete
 - `/binders/[id]` — grid (default) or list of holdings (`?view=`), valued from latest prices, value-history chart (`?range=`), add-card dialog, quantity edits, share-link panel

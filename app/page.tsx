@@ -3,7 +3,7 @@ import { getSession } from "@/lib/session";
 import { Button } from "@/components/ui";
 
 export default async function Home() {
-  if (await getSession()) redirect("/binders");
+  if (await getSession()) redirect("/home");
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-ground px-6 py-12 text-center">
       <span className="font-display text-section text-ink">Hitstreak</span>
