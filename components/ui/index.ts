@@ -19,3 +19,5 @@ export { default as EmptyState } from "./EmptyState";
 export { default as MoneyDisplay } from "./MoneyDisplay";
 export { default as LineChart } from "./LineChart";
 export { default as RangePills } from "./RangePills";
+export { default as Icon, SIZES as ICON_SIZES } from "./Icon";
+export type { IconName, IconSize } from "./Icon";

@@ -1,23 +1,10 @@
+import Icon from "./Icon";
 import { cn } from "./cn";
 
 export type ValidationItem = { ok: boolean; text: string };
 
-function Check() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M3 8.5 L6.5 12 L13 4.5" />
-    </svg>
-  );
-}
-function Warn() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M8 1.5 L14.5 13.5 H1.5 Z" />
-      <path d="M8 6 V9.5" />
-      <circle cx="8" cy="11.8" r="0.5" fill="currentColor" />
-    </svg>
-  );
-}
+const Check = () => <Icon name="check" />;
+const Warn = () => <Icon name="warning" />;
 
 export default function ValidationList({ items, className }: { items: ValidationItem[]; className?: string }) {
   return (
