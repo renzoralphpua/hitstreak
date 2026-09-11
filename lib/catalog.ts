@@ -55,13 +55,23 @@ export async function listGames(): Promise<Game[]> {
   return (await c.execute("SELECT id, slug, name FROM games ORDER BY id")).rows.map((r) => ({ id: Number(r.id), slug: String(r.slug), name: String(r.name) }));
 }
 
-export interface SetCompletion { id: number; name: string; code: string | null; releaseDate: string | null; totalCards: number; ownedCards: number }
+export interface SetCompletion {
+  id: number; name: string; code: string | null; releaseDate: string | null;
+  totalCards: number; ownedCards: number;
+  /** The era, in the game's own vocabulary. Null for TCGplayer product groups that are not sets —
+   *  /sets gathers those under "Promos & products". Filled by scripts/backfill-set-meta.mts. */
+  series: string | null;
+  /** Higher is newer. From the SOURCE's dates, because ours carry the ingest date for 19 sets. */
+  seriesRank: number | null;
+  logoUrl: string | null;
+  symbolUrl: string | null;
+}
 
 /** Completion counts CARDS (rows with a number — sealed products are excluded), owned = at least one copy in any of the user's collections. */
 export async function listSetsWithCompletion(userId: string, gameSlug: string): Promise<SetCompletion[]> {
   const c = await db();
   const rows = (await c.execute({
-    sql: `SELECT se.id, se.name, se.code, se.release_date,
+    sql: `SELECT se.id, se.name, se.code, se.release_date, se.series, se.series_rank, se.logo_url, se.symbol_url,
                  (SELECT COUNT(*) FROM cards ca WHERE ca.set_id = se.id AND ca.number IS NOT NULL) AS total_cards,
                  (SELECT COUNT(DISTINCT ca.id) FROM cards ca
                     JOIN printings p ON p.card_id = ca.id
@@ -70,10 +80,18 @@ export async function listSetsWithCompletion(userId: string, gameSlug: string): 
                   WHERE ca.set_id = se.id AND ca.number IS NOT NULL) AS owned_cards
           FROM sets se JOIN games g ON g.id = se.game_id
           WHERE g.slug = ?
-          ORDER BY se.release_date DESC, se.name`,
+          ORDER BY se.series_rank IS NULL, se.series_rank DESC, se.release_date DESC, se.name`,
     args: [userId, gameSlug],
   })).rows;
-  return rows.map((r) => ({ id: Number(r.id), name: String(r.name), code: r.code == null ? null : String(r.code), releaseDate: r.release_date == null ? null : String(r.release_date), totalCards: Number(r.total_cards), ownedCards: Number(r.owned_cards) }));
+  return rows.map((r) => ({
+    id: Number(r.id), name: String(r.name), code: r.code == null ? null : String(r.code),
+    releaseDate: r.release_date == null ? null : String(r.release_date),
+    totalCards: Number(r.total_cards), ownedCards: Number(r.owned_cards),
+    series: r.series == null ? null : String(r.series),
+    seriesRank: r.series_rank == null ? null : Number(r.series_rank),
+    logoUrl: r.logo_url == null ? null : String(r.logo_url),
+    symbolUrl: r.symbol_url == null ? null : String(r.symbol_url),
+  }));
 }
 
 export interface SetCard { cardId: number; name: string; number: string; rarity: string | null; imageUrl: string | null; lowestMarket: number | null; ownedQuantity: number; printings: PrintingPrice[] }

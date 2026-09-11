@@ -40,7 +40,7 @@ steps to phases; plans live in `docs/superpowers/plans/`).
 - `/sign-in`, `/sign-up` — email + password
 - `/collections` — collection list with value, gain, and create/rename/delete
 - `/collections/[id]` — grid (default) or list of holdings (`?view=`), valued from latest prices, value-history chart (`?range=`), add-card dialog, quantity edits, share-link panel
-- `/sets` — game pills and each set's completion bar
+- `/sets` — sets grouped by era, newest first, each era foldable (`?closed=`); grid or list (`?view=`), filters (`?filter=all|started|incomplete|complete|sealed`), set logos where the enrichment found them
 - `/sets/[id]` — the set's cards as owned/missing tiles; tap a tile to add one copy
 - `/cards/[id]` — art, market price, 30-day change, price-history chart (`?range=` + `?p=` printing pills), printings table, "in your collections", add to a collection, set-alert shortcut
 - `/alerts` — Triggered / Watching lists, new-alert form (search → printing → direction → price; `?printing=` preselects one), delete

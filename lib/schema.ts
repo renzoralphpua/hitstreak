@@ -14,8 +14,22 @@ export const SCHEMA_SQL = `
     tcgplayer_group_id INTEGER NOT NULL UNIQUE,
     name TEXT NOT NULL,
     code TEXT,
-    release_date TEXT
+    release_date TEXT,
+    -- Enrichment, filled by scripts/backfill-set-meta.mts rather than the price ingest: TCGCSV
+    -- carries neither an era nor set art. series is the era a set belongs to ("Scarlet & Violet",
+    -- "Mega Evolution"); it is what /sets groups by, and NULL means "Promos & products" -- the
+    -- TCGplayer product groups that are not sets in the game's own sense.
+    series TEXT,
+    -- Higher is newer. Derived from the SOURCE's release dates, not ours: 19 of our Pokemon sets
+    -- carry the ingest date instead of a real one (POP Series, trainer kits, promos), which would
+    -- otherwise sort Base Set and XY above Mega Evolution.
+    series_rank INTEGER,
+    -- Absolute URLs. They point at R2 once a bucket is configured and at the upstream source until
+    -- then, so the column means the same thing either way: where to render this set's art from.
+    logo_url TEXT,
+    symbol_url TEXT
   );
+  CREATE INDEX IF NOT EXISTS idx_sets_series ON sets(series);
   CREATE INDEX IF NOT EXISTS idx_sets_game ON sets(game_id);
 
   CREATE TABLE IF NOT EXISTS cards (

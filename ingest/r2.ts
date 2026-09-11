@@ -25,6 +25,27 @@ export function createRawArchiver(opts: RawArchiverOptions) {
         })
       );
     },
+
+    /**
+     * Mirrors an image into the bucket and returns its public URL, or null when mirroring is not
+     * possible — no bucket, or no `R2_PUBLIC_BASE_URL` to serve it from. Null is not a failure: the
+     * caller falls back to the upstream URL, which is how card art already works.
+     *
+     * Unlike `putRaw`, a failure here does NOT propagate. Set art is decoration; losing it must
+     * never fail an enrichment run that also carries the era each set belongs to.
+     */
+    async putImage(key: string, body: Uint8Array, contentType: string): Promise<string | null> {
+      const base = process.env.R2_PUBLIC_BASE_URL;
+      if (!opts.s3 || !opts.bucket || !base) return null;
+      try {
+        await opts.s3.send(
+          new PutObjectCommand({ Bucket: opts.bucket, Key: key, Body: body, ContentType: contentType })
+        );
+        return `${base.replace(/\/$/, "")}/${key}`;
+      } catch {
+        return null;
+      }
+    },
   };
 }
 
