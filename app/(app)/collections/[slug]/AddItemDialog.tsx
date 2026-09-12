@@ -141,7 +141,7 @@ export default function AddItemDialog({ collectionId, label, preselected }: Prop
   return (
     <>
       <Button ref={triggerRef} onClick={() => setOpen(true)}>
-        {label ?? "Add a card"}
+        {label ?? "Add an item"}
       </Button>
 
       {open && (
@@ -155,12 +155,12 @@ export default function AddItemDialog({ collectionId, label, preselected }: Prop
           >
             <div className="flex flex-col gap-4">
               <h2 id={headingId} className="font-display text-title leading-none text-ink">
-                Add a card
+                Add an item
               </h2>
 
               {selected == null ? (
                 <>
-                  <SearchField value={q} onChange={setQ} placeholder="Search cards…" autoFocus />
+                  <SearchField value={q} onChange={setQ} placeholder="Search cards and sealed products…" autoFocus />
                   {hits.length > 0 && (
                     <ul className="flex max-h-80 flex-col gap-2 overflow-y-auto overflow-x-clip">
                       {hits.map((h) => (

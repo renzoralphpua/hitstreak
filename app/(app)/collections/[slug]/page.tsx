@@ -148,11 +148,11 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
       <div className="flex flex-col gap-4">
         {holdings.length === 0 ? (
           <div className="flex flex-col gap-4">
-            <SectionHeading title="Cards" caption="sorted by value" />
+            <SectionHeading title="Items" caption="sorted by value" />
             <EmptyState
               title="Nothing here yet"
-              body="Add a card to start tracking this collection's value."
-              action={<AddItemDialog collectionId={collectionId} label="Add your first card" />}
+              body="Add a card or a sealed product to start tracking this collection's value."
+              action={<AddItemDialog collectionId={collectionId} label="Add your first item" />}
             />
           </div>
         ) : (

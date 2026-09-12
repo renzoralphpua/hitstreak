@@ -28,7 +28,7 @@ beforeEach(() => {
 
 async function openAndPick() {
   render(<AddItemDialog collectionId={7} />);
-  fireEvent.click(screen.getByRole("button", { name: "Add a card" }));
+  fireEvent.click(screen.getByRole("button", { name: "Add an item" }));
   fireEvent.change(screen.getByRole("searchbox"), { target: { value: "pika" } });
   const row = await screen.findByRole("button", { name: /Pikachu/ });
   fireEvent.click(row);
@@ -75,12 +75,12 @@ describe("AddItemDialog", () => {
 
   it("Escape closes the dialog, and so does Cancel", async () => {
     render(<AddItemDialog collectionId={7} />);
-    fireEvent.click(screen.getByRole("button", { name: "Add a card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add an item" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole("button", { name: "Add a card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add an item" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(addItem).not.toHaveBeenCalled();
@@ -88,7 +88,7 @@ describe("AddItemDialog", () => {
 
   it("returns focus to the trigger when it closes", async () => {
     render(<AddItemDialog collectionId={7} />);
-    const trigger = screen.getByRole("button", { name: "Add a card" });
+    const trigger = screen.getByRole("button", { name: "Add an item" });
     fireEvent.click(trigger);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
@@ -103,7 +103,7 @@ describe("AddItemDialog", () => {
         preselected={{ name: "Pikachu", subtitle: "Prismatic Evolutions · 025/131", imageUrl: null, printings }}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add a card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add an item" }));
     const panel = screen.getByRole("dialog");
     expect(panel.contains(document.activeElement)).toBe(true);
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Normal · $0.25" }));
@@ -118,15 +118,15 @@ describe("AddItemDialog", () => {
 
   it("does not search for a one-character query", async () => {
     render(<AddItemDialog collectionId={7} />);
-    fireEvent.click(screen.getByRole("button", { name: "Add a card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add an item" }));
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "p" } });
     await new Promise((r) => setTimeout(r, 320));
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("uses a custom trigger label", () => {
-    render(<AddItemDialog collectionId={7} label="Add your first card" />);
-    expect(screen.getByRole("button", { name: "Add your first card" })).toBeInTheDocument();
+    render(<AddItemDialog collectionId={7} label="Add your first item" />);
+    expect(screen.getByRole("button", { name: "Add your first item" })).toBeInTheDocument();
   });
 
   it("skips the search step when a card is preselected", async () => {
@@ -136,7 +136,7 @@ describe("AddItemDialog", () => {
         preselected={{ name: "Pikachu", subtitle: "Prismatic Evolutions · 025/131", imageUrl: null, printings }}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add a card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add an item" }));
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Normal · $0.25" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pick a different card" })).not.toBeInTheDocument();
