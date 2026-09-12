@@ -41,7 +41,10 @@ export default function CardTile({ name, subtitle, price, quantity, imageUrl, de
         <span className="font-semibold text-ink">{name}</span>
         <span className="text-caption text-dim">{subtitle}</span>
         <div className="flex items-baseline justify-between">
-          <span className={cn("num font-semibold", !owned && "font-normal text-dim")}>{price}</span>
+          {/* text-ink explicitly, never inherited: this tile is usually wrapped in a Link, and the
+              base rule `a { color: var(--accent) }` would otherwise paint the price in the ACCENT —
+              which is this system's loss colour. Every price in a collection read as a loss. */}
+          <span className={cn("num font-semibold text-ink", !owned && "font-normal text-dim")}>{price}</span>
           {delta}
         </div>
       </div>

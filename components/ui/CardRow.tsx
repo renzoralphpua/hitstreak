@@ -38,7 +38,9 @@ export default function CardRow({ name, subtitle, imageUrl, right, onClick, clas
         <span className={cn("truncate font-semibold", inverted ? "text-chip-ink" : "text-ink")}>{name}</span>
         <span className={cn("truncate text-caption", inverted ? "text-chip-ink/70" : "text-dim")}>{subtitle}</span>
       </div>
-      {right && <div className="num flex shrink-0 flex-col items-end">{right}</div>}
+      {/* Same reason as CardTile's price: a row inside a Link would inherit the accent colour for
+          anything the caller did not colour itself. Callers that DO set one still win. */}
+      {right && <div className={cn("num flex shrink-0 flex-col items-end", inverted ? "text-chip-ink" : "text-ink")}>{right}</div>}
     </Wrapper>
   );
 }

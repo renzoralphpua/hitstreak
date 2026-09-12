@@ -10,6 +10,8 @@ import SearchField from "@/components/ui/SearchField";
 import BottomTabBar from "@/components/ui/BottomTabBar";
 import TopNav from "@/components/ui/TopNav";
 import PriceDelta from "@/components/ui/PriceDelta";
+import CardTile from "@/components/ui/CardTile";
+import CardRow from "@/components/ui/CardRow";
 import Input from "@/components/ui/Input";
 import Pill from "@/components/ui/Pill";
 import { vi } from "vitest";
@@ -138,5 +140,20 @@ describe("Phase 5 bug fixes", () => {
   it("Input no longer strips the browser's focus ring", () => {
     render(<Input aria-label="Name" />);
     expect(screen.getByLabelText("Name").className).not.toMatch(/outline-none/);
+  });
+});
+
+describe("colour inheritance inside links", () => {
+  // A tile or row is almost always wrapped in a Link, and globals.css sets `a { color: accent }`.
+  // Accent is this system's LOSS colour, so anything without an explicit colour inherited it —
+  // which painted every price in a collection as though it were down.
+  it("CardTile prices its own text rather than inheriting the link colour", () => {
+    render(<CardTile name="Umbreon ex" subtitle="161/131" price="$1,465.00" quantity={2} imageUrl={null} />);
+    expect(screen.getByText("$1,465.00").className).toMatch(/text-ink/);
+  });
+
+  it("CardRow colours its trailing slot too", () => {
+    render(<CardRow name="Umbreon ex" subtitle="PRE" imageUrl={null} right={<span>$1,465.00</span>} />);
+    expect(screen.getByText("$1,465.00").parentElement!.className).toMatch(/text-ink/);
   });
 });

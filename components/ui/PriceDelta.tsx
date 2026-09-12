@@ -1,5 +1,5 @@
 "use client";
-import { formatDelta, formatPercent } from "@/lib/format";
+import { formatDelta, formatMoney, formatPercent } from "@/lib/format";
 import { useDisplay } from "@/components/currency/CurrencyProvider";
 import { cn } from "./cn";
 
@@ -29,7 +29,9 @@ export default function PriceDelta({ amount, ratio, caption, className, format =
   if (amount === 0) {
     return (
       <span className={cn("num text-base text-dim", className)}>
-        $0.00
+        {/* formatDelta, not a literal "$0.00": the zero branch was the one place that ignored the
+            display currency and printed dollars at a reader looking at pesos. */}
+        {formatMoney(0, { display })}
         {ratio != null && <> ({formatPercent(ratio)})</>}
         {caption && <span className="ml-1 font-normal text-dim">{caption}</span>}
       </span>
