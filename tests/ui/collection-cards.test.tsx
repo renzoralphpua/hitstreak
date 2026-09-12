@@ -14,7 +14,7 @@ import type { Holding } from "@/lib/collections";
 
 const holding = (over: Partial<Holding> & { printingId: number }): Holding => ({
   cardId: over.printingId, cardName: `Card ${over.printingId}`, setName: "Prismatic Evolutions",
-  number: "001/131", subtype: "Holofoil", imageUrl: null, condition: "NM",
+  number: "001/131", rarity: "Common", subtype: "Holofoil", imageUrl: null, condition: "NM",
   quantity: 1, market: 10, priceDate: "2026-09-07", value: 10, cost: 8, uncostedQuantity: 0, lots: [],
   ...over,
 });

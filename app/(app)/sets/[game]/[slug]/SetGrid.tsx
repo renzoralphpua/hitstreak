@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import type { SetCard } from "@/lib/catalog";
 import type { Collection } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
-import { CardTile, EmptyState, Pill, SectionHeading, StickyBar } from "@/components/ui";
+import { CardTile, EmptyState, Pill, SectionHeading, SortControl, StickyBar } from "@/components/ui";
+import { isSortDir, isSortKey, SET_SORT_KEYS, sortCards, SORT_OPTIONS, type SortDir, type SortKey } from "@/lib/sort";
+import { usePersisted } from "@/components/ui/usePersisted";
 import { addItemAction } from "../../../collections/actions";
 import { useDisplay } from "@/components/currency/CurrencyProvider";
 
@@ -35,6 +37,10 @@ export default function SetGrid({
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
+  const [sortKey, setSortKey] = usePersisted<SortKey>("set.sort", "number",
+    (r) => (isSortKey(r, SET_SORT_KEYS) ? r : null));
+  const [sortDir, setSortDir] = usePersisted<SortDir>("set.sortDir",
+    SORT_OPTIONS.number.defaultDir, (r) => (isSortDir(r) ? r : null));
   const [targetCollectionId, setTargetCollectionId] = useState<number | null>(collections[0]?.id ?? null);
   // Local "+1"s are tagged with the `cards` array they were counted on top of, so the first render
   // after `router.refresh()` (a new array, already including those copies) simply ignores them —
@@ -60,8 +66,16 @@ export default function SetGrid({
     owned: ownedCount,
     missing: everything.length - ownedCount,
   };
-  const visible = cards.filter(keep);
-  const visibleSealed = sealed.filter(keep);
+  // Sorted after filtering, and the same way for both sections — a set grid has no cost basis, so
+  // `paid` and `gain` are absent by construction rather than left blank.
+  const order = (list: SetCard[]) =>
+    sortCards(
+      list.map((c) => ({ ...c, price: c.lowestMarket, owned: quantityOf(c) })),
+      sortKey,
+      sortDir
+    );
+  const visible = order(cards.filter(keep));
+  const visibleSealed = order(sealed.filter(keep));
 
   const canAdd = targetCollectionId != null;
 
@@ -101,6 +115,13 @@ export default function SetGrid({
             {f.label} {counts[f.key]}
           </Pill>
         ))}
+
+        <SortControl
+          keys={SET_SORT_KEYS}
+          sortKey={sortKey}
+          dir={sortDir}
+          onChange={(k, d) => { setSortKey(k); setSortDir(d); }}
+        />
 
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {collections.length === 0 ? (

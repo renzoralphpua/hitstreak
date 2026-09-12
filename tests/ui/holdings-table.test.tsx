@@ -17,7 +17,7 @@ import HoldingsTable from "@/app/(app)/collections/[slug]/HoldingsTable";
 
 const holding = (over: Partial<Holding>): Holding => ({
   printingId: 1, cardId: 1, cardName: "Umbreon ex", setName: "Prismatic Evolutions",
-  number: "161/131", subtype: "Holofoil", imageUrl: null, quantity: 1, condition: "NM",
+  number: "161/131", rarity: "Common", subtype: "Holofoil", imageUrl: null, quantity: 1, condition: "NM",
   market: 1465, priceDate: "2026-09-07", value: 1465, cost: 1100, uncostedQuantity: 0,
   lots: [{ itemId: 1, quantity: 1, acquiredPrice: 1100, acquiredDate: null, cost: 1100 }],
   ...over,

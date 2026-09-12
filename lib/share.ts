@@ -70,7 +70,7 @@ export interface SharedCollection { ownerId: string; collectionId: number; name:
 // Lots carry acquisition prices and dates, so they are dropped wholesale rather than filtered —
 // what the owner paid must never reach a public link, and neither must when they bought it.
 const toPublic = (h: Holding): PublicHolding => ({
-  printingId: h.printingId, cardId: h.cardId, cardName: h.cardName, setName: h.setName, number: h.number,
+  printingId: h.printingId, cardId: h.cardId, cardName: h.cardName, setName: h.setName, number: h.number, rarity: h.rarity,
   subtype: h.subtype, imageUrl: h.imageUrl, quantity: h.quantity, condition: h.condition, market: h.market, priceDate: h.priceDate, value: h.value,
 });
 

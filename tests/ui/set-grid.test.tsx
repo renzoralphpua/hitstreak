@@ -44,11 +44,14 @@ describe("SetGrid", () => {
     // /sets/5 matches the GAME route (/sets/[game]) and renders a game that does not exist, so the
     // back arrow from a card landed nowhere. The set's canonical href is passed in for this.
     render(<SetGrid cards={cards} sealed={[]} setHref="/sets/pokemon/prismatic-evolutions" collections={collections} />);
-    const details = screen.getAllByRole("link", { name: "Details" })[0];
-    expect(details).toHaveAttribute(
-      "href",
-      `/cards/1?from=${encodeURIComponent("/sets/pokemon/prismatic-evolutions")}`
-    );
+    // Order-independent: the grid is sorted, so which card comes first is not this test's business.
+    const from = encodeURIComponent("/sets/pokemon/prismatic-evolutions");
+    const hrefs = screen.getAllByRole("link", { name: "Details" }).map((l) => l.getAttribute("href")!);
+    expect(hrefs).toHaveLength(3);
+    for (const href of hrefs) {
+      expect(href.startsWith("/cards/"), href).toBe(true);
+      expect(href.endsWith(`?from=${from}`), href).toBe(true);
+    }
   });
 
   it("counts owned and missing cards on the filter pills and filters the grid", () => {

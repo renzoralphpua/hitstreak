@@ -25,6 +25,8 @@ export interface Lot {
 /** One printing+condition you own, with the lots it is made of. */
 export interface Holding {
   printingId: number; cardId: number; cardName: string; setName: string; number: string | null;
+  /** Carried so a collection grid can sort by it; the tile itself does not show it. */
+  rarity: string | null;
   subtype: string; imageUrl: string | null; condition: Condition;
   quantity: number;       // summed across lots
   market: number | null; priceDate: string | null;
@@ -285,7 +287,7 @@ export async function getCollectionHoldings(userId: string, collectionId: number
   const c = await db();
   const r = await c.execute({
     sql: `SELECT ci.id AS item_id, ci.printing_id, ci.quantity, ci.condition, ci.acquired_price, ci.acquired_date,
-                 ca.id AS card_id, ca.name AS card_name, ca.number, ca.image_url, se.name AS set_name, p.subtype,
+                 ca.id AS card_id, ca.name AS card_name, ca.number, ca.rarity, ca.image_url, se.name AS set_name, p.subtype,
                  lp.market, lp.date AS price_date
           FROM collection_items ci
           JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
@@ -323,7 +325,8 @@ export async function getCollectionHoldings(userId: string, collectionId: number
     } else {
       byHolding.set(key, {
         printingId, cardId: Number(x.card_id), cardName: String(x.card_name), setName: String(x.set_name),
-        number: x.number == null ? null : String(x.number), subtype: String(x.subtype),
+        number: x.number == null ? null : String(x.number), rarity: x.rarity == null ? null : String(x.rarity),
+        subtype: String(x.subtype),
         imageUrl: x.image_url == null ? null : String(x.image_url), condition,
         quantity, market, priceDate: x.price_date == null ? null : String(x.price_date),
         value: null, cost: null, uncostedQuantity: 0, lots: [lot],

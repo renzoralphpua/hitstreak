@@ -2,7 +2,11 @@
 import { useMemo } from "react";
 import type { Holding } from "@/lib/collections";
 import { VIEW_MODES, type ViewMode } from "@/lib/view-mode";
-import { FoldSection, Pill, SearchField, SectionHeading, StickyBar } from "@/components/ui";
+import { FoldSection, Pill, SearchField, SectionHeading, SortControl, StickyBar } from "@/components/ui";
+import {
+  COLLECTION_SORT_KEYS, isSortDir, isSortKey, sortCards, SORT_OPTIONS,
+  type SortDir, type SortKey,
+} from "@/lib/sort";
 import { usePersisted } from "@/components/ui/usePersisted";
 import CollectionGrid from "./CollectionGrid";
 import HoldingsTable from "./HoldingsTable";
@@ -39,6 +43,10 @@ export default function CollectionCards({
   const [query, setQuery] = usePersisted<string>("collection.query", "", (r) => (typeof r === "string" ? r : null));
   const [grouped, setGrouped] = usePersisted<boolean>("collection.group", false, asBool);
   const [closed, setClosed] = usePersisted<string[]>("collection.closed", [], asClosed);
+  const [sortKey, setSortKey] = usePersisted<SortKey>("collection.sort", "price",
+    (r) => (isSortKey(r, COLLECTION_SORT_KEYS) ? r : null));
+  const [sortDir, setSortDir] = usePersisted<SortDir>("collection.sortDir",
+    SORT_OPTIONS.price.defaultDir, (r) => (isSortDir(r) ? r : null));
 
   const toggle = (name: string) =>
     setClosed(closed.includes(name) ? closed.filter((x) => x !== name) : [...closed, name]);
@@ -55,15 +63,27 @@ export default function CollectionCards({
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (q === "") return holdings;
-    return holdings.filter(
+    const matched = q === "" ? holdings : holdings.filter(
       (h) =>
         h.cardName.toLowerCase().includes(q) ||
         h.setName.toLowerCase().includes(q) ||
         (h.number ?? "").toLowerCase().includes(q) ||
         h.subtype.toLowerCase().includes(q)
     );
-  }, [holdings, query]);
+    // A holding sorts on what it IS worth and what it COST — both of which a set grid lacks.
+    return sortCards(
+      matched.map((h) => ({
+        ...h,
+        name: h.cardName,
+        price: h.value,
+        paid: h.cost,
+        gain: h.value != null && h.cost != null ? h.value - h.cost : null,
+        owned: h.quantity,
+      })),
+      sortKey,
+      sortDir
+    );
+  }, [holdings, query, sortKey, sortDir]);
 
   // Singles first: they are what most collections are mostly made of, and sealed reads as the
   // addendum rather than the other way round.
@@ -95,6 +115,12 @@ export default function CollectionCards({
             styling already says which. Named "type" rather than "Singles / sealed" so the control
             does not collide with the headings it produces. */}
         <div className="flex flex-wrap items-center gap-1.5">
+          <SortControl
+            keys={COLLECTION_SORT_KEYS}
+            sortKey={sortKey}
+            dir={sortDir}
+            onChange={(k, d) => { setSortKey(k); setSortDir(d); }}
+          />
           <Pill selected={grouped} onClick={() => setGrouped(!grouped)}>Group by type</Pill>
         </div>
       </StickyBar>

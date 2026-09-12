@@ -84,6 +84,8 @@ const ICONS = {
   close: { d: "M6 6 L18 18 M18 6 L6 18" },
   /** Chevron down: a dropdown that opens downward — the collection switcher. */
   "chevron-down": { d: "M6 9 L12 15 L18 9" },
+  /** Ascending order, and anything else that points back the way it came. */
+  "chevron-up": { d: "M6 15 L12 9 L18 15" },
   /** Chevron right: a disclosure that expands in place — a holding into its lots. */
   "chevron-right": { d: "M9 6 L15 12 L9 18" },
   /** Back: the return link at the top of a detail screen. */

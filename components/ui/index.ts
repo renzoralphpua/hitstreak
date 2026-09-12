@@ -5,6 +5,7 @@ export { default as Dialog } from "./Dialog";
 export { default as MenuButton, MenuItem } from "./MenuButton";
 export { default as SectionHeading } from "./SectionHeading";
 export { default as FoldSection } from "./FoldSection";
+export { default as SortControl } from "./SortControl";
 export { default as BackLink } from "./BackLink";
 export type { Back } from "./BackLink";
 export { default as StatTile } from "./StatTile";
