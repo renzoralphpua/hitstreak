@@ -510,6 +510,62 @@ Two traps, both pinned in `tests/currency.test.ts`:
 
 ---
 
+## 16. Selling draws a lot down; it never deletes one
+
+**Settled and implemented 2026-09-12.** Before this, selling a card meant deleting the row — which
+destroyed the cost basis, made every gain figure unrealised-only, and would have shown up in
+`collection_history` as a price crash on the day you sold.
+
+`collection_items` stays a record of ACQUISITIONS. `sales` records DISPOSALS. What you still hold is
+the difference, exposed by the `lot_holdings` view — so a sold copy stops counting as owned in **one**
+place rather than in the nineteen queries that read ownership. All nineteen moved onto the view.
+
+Note the trap the view creates and which the code has to respect: `quantity` in the VIEW means HELD,
+while in the TABLE it means acquired. Same name, different meaning. A fully-sold lot is a row with
+`quantity` 0 — `SUM` handles that, `COUNT(*)` does not, so queries that decide *"do you own this"*
+carry `quantity > 0` and queries that total copies do not.
+
+Four decisions inside it:
+
+- **Specific-lot, not FIFO.** Acquisitions are already one row each, so *"I sold that copy, the one I
+  paid $1,100 for"* is both truer and simpler than maintaining a queue.
+- **`unit_cost` is snapshotted at the moment of sale** and never recomputed. Realised profit is a fact
+  about a day that has passed; editing what you paid afterwards must not rewrite what you made.
+- **No cost basis means NULL profit, not zero.** "I made $20" and "I made $20 on something that cost
+  an unknown amount" are different claims and only one is safe to add up, so `realisedFor` counts
+  those copies separately in `uncostedQuantity`.
+- **Fees default to 0 and venue is free text.** Selling is in person at events, so there is no
+  marketplace to pick and usually no cut — but a table fee exists and "Manila Card Con" is worth
+  recording.
+
+`realisedAsOf(date)` is what keeps the history line continuous: proceeds appear on the same day the
+held value drops, so a chart plotting held + realised does not see a cliff.
+
+---
+
+## 17. Japanese is a separate game; Chinese has no price source
+
+**Settled 2026-09-12.** Pokémon Japan is TCGplayer category 85 — 459 groups against English's 220 —
+and it is modelled as a separate game because it IS one upstream: separate sets, separate products,
+separate prices. A Japanese print and its English counterpart trade at different prices, so collapsing
+them would be wrong even if the data allowed it.
+
+It arrives with no era and no set art, pokemontcg.io being English-only. Neither is a special case:
+`/sets` already renders an era-less game as a flat list (decision 15's `isUngroupedOnly`) and a set
+with no logo already falls back to its code.
+
+**Chinese is different, and the blocker is prices.** TCGplayer publishes 94 categories and Pokémon is
+in exactly two of them, so tcgcsv cannot supply it at all. TCGdex can — free, no key, 98 Traditional
+and 57 Simplified sets with images — but its Chinese cards carry only *Cardmarket EUR* pricing, and
+the `idProduct` mapping points at the equivalent card in another language rather than the Chinese
+print's own market. Adding it would put two different marketplaces, two currencies and one proxied
+price into a single collection total.
+
+So Chinese is deferred, not refused. If it goes in, it should go in knowing the prices are borrowed —
+or as a catalog with no prices at all, which is at least honest.
+
+---
+
 ## Still open
 
 The original eight are closed. What remains:
