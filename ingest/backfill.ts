@@ -136,6 +136,42 @@ function* dateRange(from: string, to: string): Generator<string> {
   }
 }
 
+/**
+ * The 7-Zip binary. The archives are PPMd-compressed .7z, which no Node or Python decoder on a
+ * default install can read, so this is a real dependency.
+ *
+ * PATH first, then the standard Windows install locations: the official installer does NOT add
+ * itself to PATH, so `winget install 7zip.7zip` leaves a perfectly good 7z.exe that a bare `7z`
+ * cannot find. Cached, because this runs once per replayed day.
+ */
+let sevenZipPath: string | null = null;
+export function sevenZip(): string {
+  if (sevenZipPath) return sevenZipPath;
+  const candidates = [
+    "7z",
+    // Forward slashes on purpose: Windows accepts them, and they survive every layer of
+    // escaping between here and the shell.
+    "C:/Program Files/7-Zip/7z.exe",
+    "C:/Program Files (x86)/7-Zip/7z.exe",
+    "/usr/bin/7z",
+    "/usr/local/bin/7z",
+    "/opt/homebrew/bin/7z",
+  ];
+  for (const c of candidates) {
+    try {
+      execFileSync(c, ["i"], { stdio: "ignore" });
+      sevenZipPath = c;
+      return c;
+    } catch {
+      /* not here; try the next */
+    }
+  }
+  throw new Error(
+    "7-Zip not found. The price archives are PPMd .7z and need it: `winget install 7zip.7zip`, " +
+      "or put 7z on PATH."
+  );
+}
+
 export async function downloadAndExtract(date: string, fetchImpl: typeof fetch = fetch): Promise<string | null> {
   const url = `https://tcgcsv.com/archive/tcgplayer/prices-${date}.ppmd.7z`;
   const res = await fetchImpl(url, {
@@ -152,7 +188,7 @@ export async function downloadAndExtract(date: string, fetchImpl: typeof fetch =
   const archivePath = join(dir, "prices.7z");
   writeFileSync(archivePath, buf);
   try {
-    execFileSync("7z", ["x", archivePath, `-o${dir}/x`, "-y"], { stdio: "ignore" });
+    execFileSync(sevenZip(), ["x", archivePath, `-o${dir}/x`, "-y"], { stdio: "ignore" });
   } catch (e) {
     rmSync(dir, { recursive: true, force: true });
     throw new Error(`archive ${date}: 7z extraction failed: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
