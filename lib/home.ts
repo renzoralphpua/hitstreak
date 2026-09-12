@@ -10,6 +10,7 @@ import type { Point } from "@/lib/history";
 
 export interface CollectionLine {
   collectionId: number;
+  slug: string | null;
   name: string;
   cards: number;
   value: number;
@@ -37,7 +38,7 @@ export interface HomeSummary {
 }
 
 const PER_COLLECTION = `
-  SELECT po.id, po.name,
+  SELECT po.id, po.name, po.slug,
          COALESCE(SUM(ci.quantity), 0) AS cards,
          COALESCE(SUM(CASE WHEN lp.market IS NULL THEN 0 ELSE ci.quantity * lp.market END), 0) AS value,
          COALESCE(SUM(CASE WHEN ci.acquired_price IS NULL THEN 0 ELSE ci.quantity * ci.acquired_price END), 0) AS cost,
@@ -63,6 +64,7 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
     const cost = Number(x.cost);
     return {
       collectionId: Number(x.id),
+      slug: x.slug == null ? null : String(x.slug),
       name: String(x.name),
       cards: Number(x.cards),
       value,

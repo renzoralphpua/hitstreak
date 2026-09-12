@@ -3,7 +3,7 @@ import { useMemo, useCallback } from "react";
 import type { SetCompletion } from "@/lib/catalog";
 import { VIEW_MODES, type ViewMode } from "@/lib/view-mode";
 import { groupByEra, matchesFilter, SET_FILTERS, UNGROUPED, type SetFilter } from "@/lib/set-filters";
-import { EmptyState, Icon, Pill, SearchField, SectionHeading } from "@/components/ui";
+import { EmptyState, Icon, Pill, SearchField, SectionHeading, StickyBar } from "@/components/ui";
 import { usePersisted } from "@/components/ui/usePersisted";
 import SetPanel from "./SetPanel";
 
@@ -68,36 +68,39 @@ export default function SetBrowser({
 
   return (
     <div className="flex flex-col gap-5">
-      <SectionHeading
-        as="h1"
-        title="Sets"
-        caption={shown === sets.length ? `${sets.length} in ${gameName}` : `${shown} of ${sets.length} in ${gameName}`}
-        trailing={
-          <div className="flex gap-1.5">
-            <Pill selected={view === "grid"} onClick={() => setView("grid")}>Grid</Pill>
-            <Pill selected={view === "list"} onClick={() => setView("list")}>List</Pill>
-          </div>
-        }
-      />
+      {/* Everything you steer the list WITH stays put; only the list itself scrolls. */}
+      <StickyBar>
+        <SectionHeading
+          as="h1"
+          title="Sets"
+          caption={shown === sets.length ? `${sets.length} in ${gameName}` : `${shown} of ${sets.length} in ${gameName}`}
+          trailing={
+            <div className="flex gap-1.5">
+              <Pill selected={view === "grid"} onClick={() => setView("grid")}>Grid</Pill>
+              <Pill selected={view === "list"} onClick={() => setView("list")}>List</Pill>
+            </div>
+          }
+        />
 
-      <SearchField value={query} onChange={setQuery} placeholder="Filter sets by name or code…" />
+        <SearchField value={query} onChange={setQuery} placeholder="Filter sets by name or code…" />
 
-      <div className="flex flex-wrap gap-1.5">
-        {games.map((g) => (
-          // Game IS a navigation — the server fetches by it — so it stays a link.
-          <Pill key={g.slug} href={`/sets/${g.slug}`} selected={g.slug === gameSlug}>
-            {g.name}
-          </Pill>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        {SET_FILTERS.map((f) => (
-          <Pill key={f} selected={f === filter} onClick={() => setFilter(f)}>
-            {FILTER_LABEL[f]}
-          </Pill>
-        ))}
-      </div>
+        {/* Game and completion on ONE row: two axes, but stacking them costs a third of the pinned
+            bar's height and the pill shapes already tell them apart. */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {games.map((g) => (
+            // Game IS a navigation — the server fetches by it — so it stays a link.
+            <Pill key={g.slug} href={`/sets/${g.slug}`} selected={g.slug === gameSlug}>
+              {g.name}
+            </Pill>
+          ))}
+          <span aria-hidden className="mx-1 h-5 w-px bg-hairline" />
+          {SET_FILTERS.map((f) => (
+            <Pill key={f} selected={f === filter} onClick={() => setFilter(f)}>
+              {FILTER_LABEL[f]}
+            </Pill>
+          ))}
+        </div>
+      </StickyBar>
 
       {groups.length === 0 ? (
         <EmptyState

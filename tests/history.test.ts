@@ -115,8 +115,8 @@ describe("getCardHolders", () => {
     await addItem("u3", b.id, { printingId: seed.printings.pikachuNormal, quantity: 1, condition: "NM", acquiredPrice: 7 });
     await addItem("u3", b.id, { printingId: seed.printings.pikachuReverse, quantity: 1, condition: "LP" });
     expect(await getCardHolders("u3", seed.cards.pikachu)).toEqual([
-      { collectionId: b.id, name: "B", quantity: 4, cost: 13, uncostedQuantity: 1 },
-      { collectionId: a.id, name: "A", quantity: 1, cost: null, uncostedQuantity: 1 },
+      { collectionId: b.id, slug: "b", name: "B", quantity: 4, cost: 13, uncostedQuantity: 1 },
+      { collectionId: a.id, slug: "a", name: "A", quantity: 1, cost: null, uncostedQuantity: 1 },
     ]);
     expect(await getCardHolders("someone-else", seed.cards.pikachu)).toEqual([]);
   });

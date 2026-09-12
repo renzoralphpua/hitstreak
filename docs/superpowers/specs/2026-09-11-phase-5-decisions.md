@@ -307,6 +307,64 @@ Pinned in `tests/ui/foundations.test.tsx`.
 
 ---
 
+## 10. What is pinned, and what scrolls
+
+**Settled and implemented 2026-09-12.** Decision 7 pinned `TopNav`. This extends the same offset to
+everything else that stays: `StickyBar` sits at `top-16` — TopNav's exact height — so a page with a
+pinned toolbar and a pinned sidebar lines them up without anyone doing arithmetic.
+
+The rule is *controls stay, content scrolls*. On `/sets` the heading, the search and the pills are
+pinned; only the era sections move. On a collection the same applies to the card toolbar, and the
+whole summary column is pinned too — it is the answer to "what is this worth", and scrolling past it
+to look at a card should not make you scroll back.
+
+Two details are load-bearing and easy to get wrong:
+
+- `bleed` (default) uses negative margins to cancel `main`'s padding. A bar confined to the content
+  column lets rows scroll past in the gutters beside it. `bleed={false}` is for a bar inside one
+  column of a grid, where bleeding would paint over its neighbour.
+- The pinned sidebar is `md:` only. Below that the page is one column and a pinned 380px block
+  would *be* the screen.
+
+Game pills and completion pills moved onto one row on `/sets`: two axes, but stacking them cost a
+third of the pinned bar's height and the pill shapes already tell them apart.
+
+---
+
+## 11. The way back is an arrow
+
+**Settled and implemented 2026-09-12.** Every detail screen opened with a full-width `← Collections`
+line above its heading. That is a whole row of vertical space — expensive now that the row below it
+is pinned — to say what an arrow says.
+
+`BackLink` renders it as a 32px arrow, and `SectionHeading` takes it as `back={{ href, label }}` so
+it lands on the title's line. The label does not disappear: it becomes the accessible name
+(`Back to Collections`) and the tooltip. Applied to the set and collection screens; the card and
+deck screens have a different column shape and still carry the old row.
+
+---
+
+## 12. Collections get slugs too
+
+**Settled and implemented 2026-09-12.** `/collections/my-binder`, not `/collections/7`, matching
+what decision 8's follow-up did for sets.
+
+Two things differ from set slugs, both because a collection is **private**:
+
+- Uniqueness is scoped **per user**, not globally. Two people may each have a "Main Binder"; neither
+  has to apologise, because neither can see the other's.
+- The slug **is regenerated on rename**. A set slug is frozen because it is a URL other people hold;
+  the only link to a collection is the owner's own, so a binder renamed "Slabs" should stop living
+  at `/collections/raw-singles`. Public sharing goes through `share_links.token`, which is
+  untouched by any of this.
+
+Bare ids still resolve and redirect to the slug — every link in the app used one until now, and
+`?from=` parameters of that shape are already in the wild. `collectionIdFromPath` became
+`collectionRefFromPath` and returns the raw segment; resolving it is what proves the reader owns it,
+so "no such collection" and "not yours" stay indistinguishable.
+
+---
+
 ## Still open
 
 The original eight are closed. What remains:

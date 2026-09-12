@@ -1,5 +1,4 @@
 import { cache } from "react";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
@@ -54,17 +53,13 @@ export default async function SetDetailPage({ params }: Params) {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href={`/sets/${set.gameSlug}`} className="text-caption text-muted hover:text-ink">
-        ← Sets
-      </Link>
-
       <div className="flex flex-wrap items-end gap-6">
         <div className="flex flex-col gap-1.5">
           <span className="text-caption text-dim">
             {/* Ingested release dates are full ISO timestamps; show the day only. */}
             {set.gameName} · Released {set.releaseDate?.slice(0, 10) ?? "—"}
           </span>
-          <SectionHeading as="h1" title={set.name} />
+          <SectionHeading as="h1" title={set.name} back={{ href: `/sets/${set.gameSlug}`, label: "Sets" }} />
           <p className="text-muted">
             You own{" "}
             <span className="num font-semibold text-ink">

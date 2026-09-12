@@ -13,7 +13,7 @@ vi.mock("@/app/(app)/collections/actions", () => ({
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import HoldingsTable from "@/app/(app)/collections/[id]/HoldingsTable";
+import HoldingsTable from "@/app/(app)/collections/[slug]/HoldingsTable";
 
 const holding = (over: Partial<Holding>): Holding => ({
   printingId: 1, cardId: 1, cardName: "Umbreon ex", setName: "Prismatic Evolutions",

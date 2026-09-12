@@ -11,7 +11,7 @@ vi.mock("@/app/(app)/collections/actions", () => ({
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import SharePanel from "@/app/(app)/collections/[id]/SharePanel";
+import SharePanel from "@/app/(app)/collections/[slug]/SharePanel";
 
 const TOKEN = "abcdefghijklmnopqrstuv";
 const NEW_TOKEN = "ZYXWVUTSRQPONMLKJIHGFE";

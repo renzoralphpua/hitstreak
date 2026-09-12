@@ -2,11 +2,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { Collection } from "@/lib/collections";
-import type { DialogCard } from "@/app/(app)/collections/[id]/AddItemDialog";
+import type { DialogCard } from "@/app/(app)/collections/[slug]/AddItemDialog";
 
 // The dialog itself is covered by tests/ui/add-item-dialog.test.tsx; here we only care which
 // collection the wrapper hands it.
-vi.mock("@/app/(app)/collections/[id]/AddItemDialog", () => ({
+vi.mock("@/app/(app)/collections/[slug]/AddItemDialog", () => ({
   default: ({ collectionId }: { collectionId: number }) => <div>Dialog:{collectionId}</div>,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
@@ -14,8 +14,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: 
 import AddToCollection from "@/app/(app)/cards/[id]/AddToCollection";
 
 const collections: Collection[] = [
-  { id: 2, name: "Main Collection", createdAt: "2026-09-01" },
-  { id: 5, name: "Trades", createdAt: "2026-09-02" },
+  { id: 2, name: "Main Collection", slug: "main-collection", createdAt: "2026-09-01" },
+  { id: 5, name: "Trades", slug: "trades", createdAt: "2026-09-02" },
 ];
 
 const card: DialogCard = {

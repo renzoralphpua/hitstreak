@@ -12,12 +12,16 @@ export interface BackTarget {
   label: string;
 }
 
-/** `/collections/12?view=grid` → 12. Null for any other shape, so only a real collection is looked up. */
-export function collectionIdFromPath(path: string): number | null {
-  const m = /^\/collections\/(\d+)(?:[/?#]|$)/.exec(path);
-  if (!m) return null;
-  const id = Number(m[1]);
-  return Number.isSafeInteger(id) && id > 0 ? id : null;
+/**
+ * `/collections/my-binder?view=grid` → `my-binder`. Null for any other shape, so only a path that
+ * really addresses a collection is ever looked up.
+ *
+ * A REFERENCE, not an id: the segment is a slug now and an id only for links written before slugs
+ * existed. The caller resolves it — and resolving is what proves the reader owns it.
+ */
+export function collectionRefFromPath(path: string): string | null {
+  const m = /^\/collections\/([A-Za-z0-9][A-Za-z0-9-]{0,120})(?:[/?#]|$)/.exec(path);
+  return m ? m[1] : null;
 }
 
 /**
@@ -37,7 +41,7 @@ export function resolveBack(
   const path = safeNext(from, "");
   if (path === "") return fallback;
 
-  if (collectionIdFromPath(path) != null) {
+  if (collectionRefFromPath(path) != null) {
     // Unnamed means the caller could not find that collection for this user — treat the whole
     // parameter as untrustworthy rather than linking to a collection they may not own.
     return lookup.collectionName ? { href: path, label: lookup.collectionName } : fallback;

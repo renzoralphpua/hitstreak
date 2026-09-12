@@ -1,9 +1,9 @@
 import { cache } from "react";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
-import { getCollection, getCollectionHoldings, getCollectionSummary } from "@/lib/collections";
+import { isNumericId } from "@/lib/slug";
+import { getCollection, getCollectionHoldings, getCollectionSummary, resolveCollectionSlug } from "@/lib/collections";
 import { getShareLink } from "@/lib/share";
 import {
   parseRange,
@@ -31,29 +31,40 @@ import SharePanel from "./SharePanel";
 // Per-user data valued from latest_prices: never prerender or cache across users.
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ slug: string }> };
 
-/** The collection id and the owner, or `notFound()`. `cache` makes this one query per request even
- *  though both `generateMetadata` and the page ask for it. */
-const load = cache(async (id: string) => {
-  const collectionId = parseRouteId(id);
-  if (collectionId == null) notFound();
+/**
+ * The collection, its id and its owner, or `notFound()`.
+ *
+ * A NUMERIC segment is still accepted and redirected to the slug — every link in the app used
+ * `/collections/<id>` until now, and `?from=` parameters already out in the wild carry that shape.
+ * `cache` makes this one query per request even though both `generateMetadata` and the page ask.
+ */
+const load = cache(async (slug: string) => {
   const session = await getSession();
   if (!session) redirect("/sign-in"); // the layout already gates; this is for the user id
-  const collection = await getCollection(session.user.id, collectionId);
+  const userId = session.user.id;
+
+  const bySlug = isNumericId(slug) ? null : await resolveCollectionSlug(userId, slug);
+  const collectionId = bySlug ?? (isNumericId(slug) ? parseRouteId(slug) : null);
+  if (collectionId == null) notFound();
+
+  const collection = await getCollection(userId, collectionId);
   if (!collection) notFound();
-  return { userId: session.user.id, collectionId, collection };
+  // Reached by id: send the reader to the one true URL for this collection.
+  if (bySlug == null && collection.slug) redirect(`/collections/${collection.slug}`);
+  return { userId, collectionId, collection };
 });
 
 export async function generateMetadata({ params }: Params) {
-  const { id } = await params;
-  const { collection } = await load(id);
+  const { slug } = await params;
+  const { collection } = await load(slug);
   return { title: `${collection.name} — Hitstreak` };
 }
 
-export default async function CollectionDetailPage({ params, searchParams }: PageProps<"/collections/[id]">) {
-  const { id } = await params;
-  const { userId, collectionId, collection } = await load(id);
+export default async function CollectionDetailPage({ params, searchParams }: PageProps<"/collections/[slug]">) {
+  const { slug } = await params;
+  const { userId, collectionId, collection } = await load(slug);
   const { range: rawRange } = await searchParams;
   const range = parseRange(rawRange);
   const today = new Date().toISOString().slice(0, 10);
@@ -70,15 +81,15 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
 
   return (
     <div className="grid gap-10 md:grid-cols-[380px_1fr]">
-      <div className="flex flex-col gap-4">
-        <Link href="/collections" className="text-caption text-muted hover:text-ink">
-          ← Collections
-        </Link>
-
+      {/* The summary stays in view while you scroll the cards: it is the answer to "what is this
+          worth", and scrolling past it to look at a card makes you scroll back to see it again.
+          Single-column below md, where a pinned 380px block would BE the screen. */}
+      <div className="flex flex-col gap-4 md:sticky md:top-16 md:max-h-[calc(100dvh-4rem)] md:self-start md:overflow-y-auto md:pt-3 md:pb-6">
         <SectionHeading
           as="h1"
           title={collection.name}
           caption={`${summary.cards} card${summary.cards === 1 ? "" : "s"}`}
+          back={{ href: "/collections", label: "Collections" }}
         />
 
         <MoneyDisplay size="lg" amount={summary.value} />
@@ -98,7 +109,7 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
             height={120}
             label={`${collection.name} value, ${RANGE_CAPTION[range]}`}
           />
-          <RangePills current={range} hrefFor={(r) => `/collections/${collectionId}?range=${r}`} />
+          <RangePills current={range} hrefFor={(r) => `/collections/${collection.slug ?? collectionId}?range=${r}`} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -135,7 +146,7 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
             />
           </div>
         ) : (
-          <CollectionCards collectionId={collectionId} holdings={holdings} />
+          <CollectionCards collectionId={collectionId} href={`/collections/${collection.slug ?? collectionId}`} holdings={holdings} />
         )}
       </div>
     </div>

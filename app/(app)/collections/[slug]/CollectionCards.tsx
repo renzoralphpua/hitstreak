@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import type { Holding } from "@/lib/collections";
 import { VIEW_MODES, type ViewMode } from "@/lib/view-mode";
-import { Pill, SearchField, SectionHeading } from "@/components/ui";
+import { Pill, SearchField, SectionHeading, StickyBar } from "@/components/ui";
 import { usePersisted } from "@/components/ui/usePersisted";
 import CollectionGrid from "./CollectionGrid";
 import HoldingsTable from "./HoldingsTable";
@@ -19,9 +19,12 @@ const asView = (raw: unknown): ViewMode | null =>
  * set of holdings you are looking at.
  */
 export default function CollectionCards({
-  collectionId, holdings,
+  collectionId, href, holdings,
 }: {
   collectionId: number;
+  /** This collection's canonical URL. Distinct from `collectionId`: the id addresses rows, the
+   *  slug addresses the page, and a card's back arrow must return to the page. */
+  href: string;
   holdings: Holding[];
 }) {
   const [view, setView] = usePersisted<ViewMode>("collection.view", "grid", asView);
@@ -41,21 +44,25 @@ export default function CollectionCards({
 
   return (
     <div className="flex flex-col gap-4">
-      <SectionHeading
-        title="Cards"
-        caption={shown.length === holdings.length ? "sorted by value" : `${shown.length} of ${holdings.length}`}
-        trailing={
-          <div className="flex gap-1.5">
-            <Pill selected={view === "grid"} onClick={() => setView("grid")}>Grid</Pill>
-            <Pill selected={view === "list"} onClick={() => setView("list")}>List</Pill>
-          </div>
-        }
-      />
-      <SearchField value={query} onChange={setQuery} placeholder="Filter these cards…" />
+      {/* bleed={false}: this bar lives in the right column of a two-column grid, so it must stop at
+          the column edge rather than paint over the summary beside it. */}
+      <StickyBar bleed={false}>
+        <SectionHeading
+          title="Cards"
+          caption={shown.length === holdings.length ? "sorted by value" : `${shown.length} of ${holdings.length}`}
+          trailing={
+            <div className="flex gap-1.5">
+              <Pill selected={view === "grid"} onClick={() => setView("grid")}>Grid</Pill>
+              <Pill selected={view === "list"} onClick={() => setView("list")}>List</Pill>
+            </div>
+          }
+        />
+        <SearchField value={query} onChange={setQuery} placeholder="Filter these cards…" />
+      </StickyBar>
       {shown.length === 0 ? (
         <p className="text-base text-dim">No card here matches “{query.trim()}”.</p>
       ) : view === "grid" ? (
-        <CollectionGrid holdings={shown} from={`/collections/${collectionId}`} />
+        <CollectionGrid holdings={shown} from={href} />
       ) : (
         <HoldingsTable collectionId={collectionId} holdings={shown} />
       )}

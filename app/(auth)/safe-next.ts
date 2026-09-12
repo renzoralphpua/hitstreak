@@ -1,6 +1,6 @@
 /** Only same-origin absolute paths survive; everything else falls back. Guards against
  *  open redirects incl. `//evil`, `/\evil`, and control-character tricks (`/\t/evil`). */
-export function safeNext(v: unknown, fallback = "/collections"): string {
+export function safeNext(v: unknown, fallback = "/home"): string {
   if (typeof v !== "string" || v.length === 0 || v.length > 2048) return fallback;
   // \p{Cc} = Unicode "Control" (C0 + DEL + C1); the URL parser would otherwise strip
   // tab/newline and turn "/\t/evil" into "//evil".

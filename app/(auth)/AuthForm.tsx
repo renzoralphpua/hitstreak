@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button, Input } from "@/components/ui";
 
-export default function AuthForm({ mode, next = "/collections" }: { mode: "sign-in" | "sign-up"; next?: string }) {
+export default function AuthForm({ mode, next = "/home" }: { mode: "sign-in" | "sign-up"; next?: string }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

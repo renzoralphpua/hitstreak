@@ -6,7 +6,7 @@ const { addItem, refresh } = vi.hoisted(() => ({ addItem: vi.fn(), refresh: vi.f
 vi.mock("@/app/(app)/collections/actions", () => ({ addItemAction: addItem }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import AddItemDialog from "@/app/(app)/collections/[id]/AddItemDialog";
+import AddItemDialog from "@/app/(app)/collections/[slug]/AddItemDialog";
 
 const printings = [
   { printingId: 2, subtype: "Normal", market: 0.25, priceDate: "2026-09-07" },

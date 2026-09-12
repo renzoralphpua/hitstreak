@@ -4,8 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { parseRouteId } from "@/lib/route-id";
 import { getCardDetail } from "@/lib/catalog";
-import { getCardHolders, getCardLots, getCollection, listCollections } from "@/lib/collections";
-import { collectionIdFromPath, resolveBack } from "@/lib/back-link";
+import { getCardHolders, getCardLots, listCollections, resolveCollectionRef } from "@/lib/collections";
+import { collectionRefFromPath, resolveBack } from "@/lib/back-link";
 import { toPlainText, hasText } from "@/lib/card-text";
 import {
   parseRange,
@@ -90,8 +90,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
   // Where "back" goes. The set is the fallback because a card does belong to one, but arriving from
   // a collection, from Home or from an alert and being offered the set is a dead end.
   const fromPath = typeof rawFrom === "string" ? rawFrom : "";
-  const fromCollectionId = collectionIdFromPath(fromPath);
-  const fromCollection = fromCollectionId == null ? null : await getCollection(userId, fromCollectionId);
+  const fromCollection = await resolveCollectionRef(userId, collectionRefFromPath(fromPath));
   const back = resolveBack(
     rawFrom,
     { href: `/sets/${card.setId}`, label: card.setName },
@@ -193,7 +192,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
               {holders.map((h, i) => (
                 <span key={h.collectionId}>
                   {i > 0 && ", "}
-                  <Link href={`/collections/${h.collectionId}`} className="text-ink">
+                  <Link href={`/collections/${h.slug ?? h.collectionId}`} className="text-ink">
                     {h.name}
                   </Link>
                   <span className="num text-dim"> ×{h.quantity}</span>

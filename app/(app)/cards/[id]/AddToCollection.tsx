@@ -2,7 +2,7 @@
 import { useState } from "react";
 import type { Collection } from "@/lib/collections";
 import { Button, Pill } from "@/components/ui";
-import AddItemDialog, { type DialogCard } from "../../collections/[id]/AddItemDialog";
+import AddItemDialog, { type DialogCard } from "../../collections/[slug]/AddItemDialog";
 
 /** Picks which collection the card detail page adds to, then hands the card to `AddItemDialog`
  *  preselected (so the dialog opens straight on the printing/quantity step). */

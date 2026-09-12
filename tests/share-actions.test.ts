@@ -56,7 +56,7 @@ describe("share server actions", () => {
       expect(isShareToken(r.data!.token)).toBe(true);
       expect((await getSharedCollection(r.data!.token))?.collectionId).toBe(mine);
     }
-    expect(revalidatePath).toHaveBeenCalledWith(`/collections/${mine}`);
+    expect(revalidatePath).toHaveBeenCalledWith("/collections/[slug]", "page");
   });
 
   it("regenerate hands back a fresh, enabled token and revalidates", async () => {
@@ -69,14 +69,14 @@ describe("share server actions", () => {
       expect(r.data!.token).not.toBe(before.token);
     }
     expect(await getSharedCollection(before.token)).toBeNull();
-    expect(revalidatePath).toHaveBeenCalledWith(`/collections/${mine}`);
+    expect(revalidatePath).toHaveBeenCalledWith("/collections/[slug]", "page");
   });
 
   it("disable turns the link off and revalidates", async () => {
     signedIn(U1);
     expect(await disableShareAction(mine)).toEqual({ ok: true, data: undefined });
     expect((await getShareLink(U1, mine))?.enabled).toBe(false);
-    expect(revalidatePath).toHaveBeenCalledWith(`/collections/${mine}`);
+    expect(revalidatePath).toHaveBeenCalledWith("/collections/[slug]", "page");
   });
 
   it("another user gets 'Collection not found' for every action and nothing changes", async () => {

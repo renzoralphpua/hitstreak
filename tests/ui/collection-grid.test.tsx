@@ -4,7 +4,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import type { Holding } from "@/lib/collections";
-import CollectionGrid from "@/app/(app)/collections/[id]/CollectionGrid";
+import CollectionGrid from "@/app/(app)/collections/[slug]/CollectionGrid";
 import { parseView } from "@/lib/view-mode";
 
 const holding = (over: Partial<Holding>): Holding => ({

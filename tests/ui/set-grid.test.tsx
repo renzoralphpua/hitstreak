@@ -30,8 +30,8 @@ const pikachu = card({ cardId: 3, name: "Pikachu", number: "005" });
 const cards = [umbreon, charmander, pikachu];
 
 const collections: Collection[] = [
-  { id: 2, name: "Main Collection", createdAt: "2026-09-01" },
-  { id: 5, name: "Trades", createdAt: "2026-09-02" },
+  { id: 2, name: "Main Collection", slug: "main-collection", createdAt: "2026-09-01" },
+  { id: 5, name: "Trades", slug: "trades", createdAt: "2026-09-02" },
 ];
 
 beforeEach(() => {

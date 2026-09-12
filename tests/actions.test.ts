@@ -79,7 +79,7 @@ describe("collection server actions", () => {
     const r = await addItemAction(p.id, { printingId: seed.printings.umbreonHolo, quantity: 2, condition: "NM", acquiredPrice: 1100 });
     expect(r.ok).toBe(true);
     expect((await getCollectionHoldings(U1, p.id)).map((h) => [h.cardName, h.quantity])).toEqual([["Umbreon ex", 2]]);
-    expect(revalidatePath).toHaveBeenCalledWith(`/collections/${p.id}`);
+    expect(revalidatePath).toHaveBeenCalledWith("/collections/[slug]", "page");
   });
 
   it("renames and deletes your own collection, and refuses another user's", async () => {
@@ -90,7 +90,7 @@ describe("collection server actions", () => {
 
     expect(await renameCollectionAction(id, "Renamed")).toEqual({ ok: true, data: undefined });
     expect((await getCollection(U1, id))?.name).toBe("Renamed");
-    expect(revalidatePath).toHaveBeenCalledWith(`/collections/${id}`);
+    expect(revalidatePath).toHaveBeenCalledWith("/collections/[slug]", "page");
 
     const hijack = await renameCollectionAction(otherCollectionId, "hijack");
     expect(hijack.ok).toBe(false);

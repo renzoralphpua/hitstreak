@@ -7,6 +7,10 @@ import { withUser, assertId } from "@/lib/action-utils";
 import * as P from "@/lib/collections";
 import * as S from "@/lib/share";
 
+// The route PATTERN, not a path: an action knows the collection's id, and the URL is now its slug.
+// Revalidating the pattern refreshes whichever instance the reader is on.
+const DETAIL_ROUTE = "/collections/[slug]";
+
 export async function createCollectionAction(name: string) {
   const r = await withUser((u) => P.createCollection(u, name));
   if (r.ok) revalidatePath("/collections");
@@ -19,7 +23,7 @@ export async function renameCollectionAction(id: number, name: string) {
   });
   if (r.ok) {
     revalidatePath("/collections");
-    revalidatePath(`/collections/${id}`);
+    revalidatePath(DETAIL_ROUTE, "page");
   }
   return r;
 }
@@ -40,7 +44,7 @@ export async function addItemAction(collectionId: number, input: P.AddItemInput)
     P.addItem(u, assertId(collectionId), { ...input, printingId: assertId(input.printingId) })
   );
   if (r.ok) {
-    revalidatePath(`/collections/${collectionId}`);
+    revalidatePath(DETAIL_ROUTE, "page");
     revalidatePath("/collections");
     revalidatePath("/sets");
   }
@@ -57,7 +61,7 @@ export async function updateItemAction(
     if (!(await P.updateItem(u, assertId(itemId), patch))) throw new Error("Item not found");
   });
   if (r.ok) {
-    revalidatePath(`/collections/${collectionId}`);
+    revalidatePath(DETAIL_ROUTE, "page");
     revalidatePath("/collections");
     revalidatePath("/home");
   }
@@ -70,7 +74,7 @@ export async function removeItemAction(collectionId: number, itemId: number) {
     if (!(await P.removeItem(u, assertId(itemId)))) throw new Error("Item not found");
   });
   if (r.ok) {
-    revalidatePath(`/collections/${collectionId}`);
+    revalidatePath(DETAIL_ROUTE, "page");
     revalidatePath("/collections");
     revalidatePath("/sets");
   }
@@ -89,7 +93,7 @@ export async function decrementHoldingAction(collectionId: number, printingId: n
     }
   });
   if (r.ok) {
-    revalidatePath(`/collections/${collectionId}`);
+    revalidatePath(DETAIL_ROUTE, "page");
     revalidatePath("/collections");
     revalidatePath("/sets");
   }
@@ -103,7 +107,7 @@ export async function removeHoldingAction(collectionId: number, printingId: numb
     }
   });
   if (r.ok) {
-    revalidatePath(`/collections/${collectionId}`);
+    revalidatePath(DETAIL_ROUTE, "page");
     revalidatePath("/collections");
     revalidatePath("/sets");
   }
@@ -113,18 +117,18 @@ export async function removeHoldingAction(collectionId: number, printingId: numb
 // Share links (lib/share.ts). Only the collection page shows the link, so that is all that revalidates.
 export async function enableShareAction(collectionId: number) {
   const r = await withUser((u) => S.enableShare(u, assertId(collectionId)));
-  if (r.ok) revalidatePath(`/collections/${collectionId}`);
+  if (r.ok) revalidatePath(DETAIL_ROUTE, "page");
   return r;
 }
 export async function regenerateShareAction(collectionId: number) {
   const r = await withUser((u) => S.regenerateShare(u, assertId(collectionId)));
-  if (r.ok) revalidatePath(`/collections/${collectionId}`);
+  if (r.ok) revalidatePath(DETAIL_ROUTE, "page");
   return r;
 }
 export async function disableShareAction(collectionId: number) {
   const r = await withUser(async (u) => {
     if (!(await S.disableShare(u, assertId(collectionId)))) throw new Error("Collection not found");
   });
-  if (r.ok) revalidatePath(`/collections/${collectionId}`);
+  if (r.ok) revalidatePath(DETAIL_ROUTE, "page");
   return r;
 }

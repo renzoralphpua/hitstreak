@@ -103,9 +103,15 @@ export const COLLECTION_SCHEMA_SQL = `
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
     name TEXT NOT NULL,
+    -- Readable URL, unique WITHIN A USER because the route is /collections/<slug> and a collection
+    -- is private. Unlike a set slug this one IS regenerated on rename: nobody else holds a link to
+    -- it, and a binder called "Slabs" should not live at /collections/raw-singles forever. Public
+    -- sharing goes through share_links.token, which is unaffected.
+    slug TEXT,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   );
   CREATE INDEX IF NOT EXISTS idx_collections_user ON collections(user_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_user_slug ON collections(user_id, slug);
 
   -- ONE ROW PER ACQUISITION ("lot"), not per printing+condition. The same card bought twice at
   -- different prices is two rows, because that is what happened: cost basis is the sum over lots.

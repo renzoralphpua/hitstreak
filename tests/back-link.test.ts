@@ -1,19 +1,27 @@
 // `?from=` is untrusted — it arrives in the URL and anyone can type one. These cases pin both
 // halves: an attacker cannot point the arrow off-origin, and cannot put words in it either.
 import { describe, it, expect } from "vitest";
-import { collectionIdFromPath, resolveBack } from "@/lib/back-link";
+import { collectionRefFromPath, resolveBack } from "@/lib/back-link";
 
 const SET = { href: "/sets/9", label: "Obsidian Flames" };
 
-describe("collectionIdFromPath", () => {
-  it("reads the id only from a real collection path", () => {
-    expect(collectionIdFromPath("/collections/12")).toBe(12);
-    expect(collectionIdFromPath("/collections/12?view=grid")).toBe(12);
-    expect(collectionIdFromPath("/collections/12/extra")).toBe(12);
-    expect(collectionIdFromPath("/collections")).toBeNull();
-    expect(collectionIdFromPath("/collections/abc")).toBeNull();
-    expect(collectionIdFromPath("/collectionsevil/1")).toBeNull();
-    expect(collectionIdFromPath("/sets/12")).toBeNull();
+describe("collectionRefFromPath", () => {
+  it("reads the segment only from a real collection path", () => {
+    expect(collectionRefFromPath("/collections/main-binder")).toBe("main-binder");
+    expect(collectionRefFromPath("/collections/main-binder?view=grid")).toBe("main-binder");
+    // Bare ids still resolve: every link said /collections/<id> before slugs existed.
+    expect(collectionRefFromPath("/collections/12")).toBe("12");
+    expect(collectionRefFromPath("/collections/12/extra")).toBe("12");
+    expect(collectionRefFromPath("/collections")).toBeNull();
+    expect(collectionRefFromPath("/collectionsevil/1")).toBeNull();
+    expect(collectionRefFromPath("/sets/12")).toBeNull();
+  });
+
+  it("refuses a segment that is not slug-shaped", () => {
+    // Nothing here can reach a database: a traversal, an encoded path or a leading hyphen is null.
+    for (const p of ["/collections/..%2Fetc", "/collections/-leading", "/collections/a_b", "/collections/a.b"]) {
+      expect(collectionRefFromPath(p), p).toBeNull();
+    }
   });
 });
 

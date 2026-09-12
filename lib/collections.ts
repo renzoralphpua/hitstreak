@@ -2,11 +2,13 @@
 // User collections. Every function takes userId first and scopes through collections.user_id;
 // a wrong owner sees "not found" (false / empty), never someone else's data.
 import { db } from "@/lib/db";
+import { isNumericId, toSlug } from "@/lib/slug";
+import type { Row } from "@libsql/client";
 
 export const CONDITIONS = ["NM", "LP", "MP", "HP", "DMG"] as const;
 export type Condition = (typeof CONDITIONS)[number];
 
-export interface Collection { id: number; name: string; createdAt: string }
+export interface Collection { id: number; name: string; slug: string | null; createdAt: string }
 
 /**
  * One acquisition. Buying the same card twice at different prices makes two lots, because that is
@@ -44,30 +46,90 @@ function cleanName(name: string): string {
   return n;
 }
 
+const rowToCollection = (x: Row): Collection => ({
+  id: Number(x.id),
+  name: String(x.name),
+  slug: x.slug == null ? null : String(x.slug),
+  createdAt: String(x.created_at),
+});
+
+const COLLECTION_COLS = "id, name, slug, created_at";
+
+/**
+ * A readable URL segment, unique among THIS user's collections.
+ *
+ * Recomputed on every rename, unlike a set slug: a collection is private, so the only link that can
+ * go stale is the owner's own, and a binder renamed "Slabs" should stop living at
+ * `/collections/raw-singles`. Public sharing is a `share_links.token`, which this never touches.
+ */
+async function uniqueSlug(userId: string, name: string, excludeId: number | null): Promise<string> {
+  const c = await db();
+  const r = await c.execute({
+    sql: "SELECT slug FROM collections WHERE user_id = ? AND slug IS NOT NULL AND id IS NOT ?",
+    args: [userId, excludeId],
+  });
+  const taken = new Set(r.rows.map((x) => String(x.slug)));
+  // A name of pure punctuation slugs to "", and every collection needs SOME segment.
+  const base = toSlug(name) || "collection";
+  if (!taken.has(base)) return base;
+  // Bounded by construction: at most `taken.size` of these candidates can already be in use.
+  for (let n = 2; n <= taken.size + 2; n++) {
+    const candidate = `${base}-${n}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+  throw new Error("Could not find a free slug"); // unreachable
+}
+
 export async function listCollections(userId: string): Promise<Collection[]> {
   const c = await db();
-  const r = await c.execute({ sql: "SELECT id, name, created_at FROM collections WHERE user_id = ? ORDER BY created_at, id", args: [userId] });
-  return r.rows.map((x) => ({ id: Number(x.id), name: String(x.name), createdAt: String(x.created_at) }));
+  const r = await c.execute({ sql: `SELECT ${COLLECTION_COLS} FROM collections WHERE user_id = ? ORDER BY created_at, id`, args: [userId] });
+  return r.rows.map(rowToCollection);
 }
 
 export async function getCollection(userId: string, id: number): Promise<Collection | null> {
   const c = await db();
-  const r = await c.execute({ sql: "SELECT id, name, created_at FROM collections WHERE id = ? AND user_id = ?", args: [id, userId] });
-  if (r.rows.length === 0) return null;
-  const x = r.rows[0];
-  return { id: Number(x.id), name: String(x.name), createdAt: String(x.created_at) };
+  const r = await c.execute({ sql: `SELECT ${COLLECTION_COLS} FROM collections WHERE id = ? AND user_id = ?`, args: [id, userId] });
+  return r.rows.length === 0 ? null : rowToCollection(r.rows[0]);
+}
+
+/** `my-binder` → its id, for THIS user only. Null when they have no such collection. */
+export async function resolveCollectionSlug(userId: string, slug: string): Promise<number | null> {
+  const c = await db();
+  const r = await c.execute({ sql: "SELECT id FROM collections WHERE user_id = ? AND slug = ?", args: [userId, slug] });
+  return r.rows.length === 0 ? null : Number(r.rows[0].id);
+}
+
+/**
+ * A URL segment — slug or bare id — resolved to the collection it names, for THIS user.
+ *
+ * Both shapes exist because every link in the app said `/collections/<id>` before slugs did, and
+ * `?from=` parameters of that shape are already in the wild. Null covers "no segment", "no such
+ * collection" and "not yours" alike: the caller must not be able to tell them apart.
+ */
+export async function resolveCollectionRef(userId: string, ref: string | null): Promise<Collection | null> {
+  if (!ref) return null;
+  const id = isNumericId(ref) ? Number(ref) : await resolveCollectionSlug(userId, ref);
+  if (id == null || !Number.isSafeInteger(id) || id <= 0) return null;
+  return getCollection(userId, id);
 }
 
 export async function createCollection(userId: string, name: string): Promise<Collection> {
   const c = await db();
-  const r = await c.execute({ sql: "INSERT INTO collections (user_id, name) VALUES (?, ?) RETURNING id, name, created_at", args: [userId, cleanName(name)] });
-  const x = r.rows[0];
-  return { id: Number(x.id), name: String(x.name), createdAt: String(x.created_at) };
+  const clean = cleanName(name);
+  const r = await c.execute({
+    sql: `INSERT INTO collections (user_id, name, slug) VALUES (?, ?, ?) RETURNING ${COLLECTION_COLS}`,
+    args: [userId, clean, await uniqueSlug(userId, clean, null)],
+  });
+  return rowToCollection(r.rows[0]);
 }
 
 export async function renameCollection(userId: string, id: number, name: string): Promise<boolean> {
   const c = await db();
-  const r = await c.execute({ sql: "UPDATE collections SET name = ? WHERE id = ? AND user_id = ?", args: [cleanName(name), id, userId] });
+  const clean = cleanName(name);
+  const r = await c.execute({
+    sql: "UPDATE collections SET name = ?, slug = ? WHERE id = ? AND user_id = ?",
+    args: [clean, await uniqueSlug(userId, clean, id), id, userId],
+  });
   return r.rowsAffected === 1;
 }
 
@@ -287,7 +349,7 @@ export async function getCollectionSummary(userId: string, collectionId: number)
 }
 
 export interface CardHolder {
-  collectionId: number; name: string; quantity: number;
+  collectionId: number; slug: string | null; name: string; quantity: number;
   /** Summed over lots that have a price. Null when none does. */
   cost: number | null;
   /** Copies with no recorded purchase price — `cost` does not cover these. */
@@ -378,7 +440,7 @@ export async function getCardHolders(userId: string, cardId: number): Promise<Ca
   const r = await c.execute({
     // Summed per lot: quantity × that lot's price, so two purchases at different prices add up to
     // what was actually paid rather than to one price times the total.
-    sql: `SELECT po.id, po.name,
+    sql: `SELECT po.id, po.name, po.slug,
                  SUM(ci.quantity) AS quantity,
                  SUM(CASE WHEN ci.acquired_price IS NULL THEN 0 ELSE ci.quantity * ci.acquired_price END) AS cost,
                  SUM(CASE WHEN ci.acquired_price IS NULL THEN ci.quantity ELSE 0 END) AS uncosted,
@@ -392,6 +454,7 @@ export async function getCardHolders(userId: string, cardId: number): Promise<Ca
   });
   return r.rows.map((x) => ({
     collectionId: Number(x.id),
+    slug: x.slug == null ? null : String(x.slug),
     name: String(x.name),
     quantity: Number(x.quantity),
     cost: Number(x.priced_lots) === 0 ? null : Number(x.cost),
