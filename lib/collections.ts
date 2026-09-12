@@ -209,7 +209,7 @@ export async function addItem(userId: string, collectionId: number, input: AddIt
   await assertPrintingExists(input.printingId);
   const c = await db();
   const held = await c.execute({
-    sql: `SELECT COALESCE(SUM(quantity), 0) AS n FROM collection_items
+    sql: `SELECT COALESCE(SUM(quantity), 0) AS n FROM lot_holdings
           WHERE collection_id = ? AND printing_id = ? AND condition = ?`,
     args: [collectionId, input.printingId, condition],
   });
@@ -234,7 +234,7 @@ export async function decrementHolding(userId: string, collectionId: number, pri
   await assertOwnsCollection(userId, collectionId);
   const c = await db();
   const r = await c.execute({
-    sql: `SELECT id, quantity FROM collection_items
+    sql: `SELECT id, quantity FROM lot_holdings
           WHERE collection_id = ? AND printing_id = ? AND condition = ?
           ORDER BY created_at DESC, id DESC LIMIT 1`,
     args: [collectionId, printingId, checkCondition(condition)],
@@ -289,7 +289,7 @@ export async function getCollectionHoldings(userId: string, collectionId: number
     sql: `SELECT ci.id AS item_id, ci.printing_id, ci.quantity, ci.condition, ci.acquired_price, ci.acquired_date,
                  ca.id AS card_id, ca.name AS card_name, ca.number, ca.rarity, ca.image_url, se.name AS set_name, p.subtype,
                  lp.market, lp.date AS price_date
-          FROM collection_items ci
+          FROM lot_holdings ci
           JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
           JOIN printings p ON p.id = ci.printing_id
           JOIN cards ca ON ca.id = p.card_id
@@ -378,7 +378,7 @@ export async function getOwnedCounts(userId: string, cardIds: number[]): Promise
   const c = await db();
   const r = await c.execute({
     sql: `SELECT p.card_id, SUM(ci.quantity) AS n
-          FROM collection_items ci
+          FROM lot_holdings ci
           JOIN collections co ON co.id = ci.collection_id AND co.user_id = ?
           JOIN printings p ON p.id = ci.printing_id
           WHERE p.card_id IN (${cardIds.map(() => "?").join(",")})
@@ -416,8 +416,8 @@ export async function getCardLots(userId: string, cardId: number): Promise<CardL
   const c = await db();
   const r = await c.execute({
     sql: `SELECT ci.id, ci.collection_id, co.name AS collection_name, ci.printing_id, p.subtype,
-                 ci.condition, ci.quantity, ci.acquired_price, ci.acquired_date, lp.market
-          FROM collection_items ci
+                 ci.condition, ci.quantity, ci.sold_quantity, ci.acquired_price, ci.acquired_date, lp.market
+          FROM lot_holdings ci
           JOIN collections co ON co.id = ci.collection_id AND co.user_id = ?
           JOIN printings p ON p.id = ci.printing_id
           LEFT JOIN latest_prices lp ON lp.printing_id = p.id
@@ -456,7 +456,7 @@ export async function getCardHolders(userId: string, cardId: number): Promise<Ca
                  SUM(CASE WHEN ci.acquired_price IS NULL THEN 0 ELSE ci.quantity * ci.acquired_price END) AS cost,
                  SUM(CASE WHEN ci.acquired_price IS NULL THEN ci.quantity ELSE 0 END) AS uncosted,
                  SUM(CASE WHEN ci.acquired_price IS NULL THEN 0 ELSE 1 END) AS priced_lots
-          FROM collection_items ci
+          FROM lot_holdings ci
           JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
           JOIN printings p ON p.id = ci.printing_id
           WHERE p.card_id = ?

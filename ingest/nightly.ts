@@ -39,7 +39,7 @@ export async function materializeCollectionHistory(date: string): Promise<number
           SELECT po.id, ?, COALESCE(SUM(ci.quantity * (
                    SELECT ps.market FROM price_snapshots ps
                    WHERE ps.printing_id = ci.printing_id AND ps.date <= ? ORDER BY ps.date DESC LIMIT 1)), 0)
-          FROM collections po LEFT JOIN collection_items ci ON ci.collection_id = po.id
+          FROM collections po LEFT JOIN lot_holdings ci ON ci.collection_id = po.id
           WHERE true GROUP BY po.id
           ON CONFLICT(collection_id, date) DO UPDATE SET total_value = excluded.total_value`,
     args: [date, date],

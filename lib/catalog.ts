@@ -181,12 +181,12 @@ export async function listSetsWithCompletion(userId: string, gameSlug: string): 
                  (SELECT COUNT(*) FROM cards ca WHERE ca.set_id = se.id AND ca.number IS NULL) AS total_sealed,
                  (SELECT COUNT(DISTINCT ca.id) FROM cards ca
                     JOIN printings p ON p.card_id = ca.id
-                    JOIN collection_items ci ON ci.printing_id = p.id
+                    JOIN lot_holdings ci ON ci.printing_id = p.id AND ci.quantity > 0
                     JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
                   WHERE ca.set_id = se.id AND ca.number IS NOT NULL) AS owned_cards,
                  (SELECT COUNT(DISTINCT ca.id) FROM cards ca
                     JOIN printings p ON p.card_id = ca.id
-                    JOIN collection_items ci ON ci.printing_id = p.id
+                    JOIN lot_holdings ci ON ci.printing_id = p.id AND ci.quantity > 0
                     JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
                   WHERE ca.set_id = se.id AND ca.number IS NULL) AS owned_sealed
           FROM sets se JOIN games g ON g.id = se.game_id
@@ -234,7 +234,7 @@ export async function getSetDetail(userId: string, setId: number): Promise<SetDe
   if (!s) return null;
   const rows = (await c.execute({
     sql: `SELECT ca.id AS card_id, ca.name, ca.number, ca.rarity, ca.image_url, p.id AS printing_id, p.subtype, lp.market, lp.date,
-                 COALESCE((SELECT SUM(ci.quantity) FROM collection_items ci JOIN collections po ON po.id = ci.collection_id AND po.user_id = ? WHERE ci.printing_id = p.id), 0) AS owned
+                 COALESCE((SELECT SUM(ci.quantity) FROM lot_holdings ci JOIN collections po ON po.id = ci.collection_id AND po.user_id = ? WHERE ci.printing_id = p.id), 0) AS owned
           FROM cards ca JOIN printings p ON p.card_id = ca.id LEFT JOIN latest_prices lp ON lp.printing_id = p.id
           WHERE ca.set_id = ?
           ORDER BY ca.number IS NULL, ca.number, ca.name, ca.id, p.id`,
@@ -309,7 +309,7 @@ export async function getCardDetail(userId: string, cardId: number, asOf = new D
   if (!r) return null;
   const ps = (await c.execute({
     sql: `SELECT p.id, p.subtype, lp.market, lp.date,
-                 COALESCE((SELECT SUM(ci.quantity) FROM collection_items ci JOIN collections po ON po.id = ci.collection_id AND po.user_id = ? WHERE ci.printing_id = p.id), 0) AS owned
+                 COALESCE((SELECT SUM(ci.quantity) FROM lot_holdings ci JOIN collections po ON po.id = ci.collection_id AND po.user_id = ? WHERE ci.printing_id = p.id), 0) AS owned
           FROM printings p LEFT JOIN latest_prices lp ON lp.printing_id = p.id WHERE p.card_id = ? ORDER BY p.id`,
     args: [userId, cardId],
   })).rows;

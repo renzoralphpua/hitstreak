@@ -8,8 +8,24 @@ export interface GameSeed {
   slug: string;
 }
 
+/**
+ * The TCGplayer categories we carry.
+ *
+ * Japan is a separate CATEGORY upstream, not a language flag on the English one, and it is modelled
+ * that way here: separate sets, separate products, separate prices. A Japanese print and its English
+ * counterpart are different things to own and trade at different prices, so collapsing them would be
+ * wrong even if the data allowed it.
+ *
+ * Note what Japan does NOT bring with it: pokemontcg.io is English-only, so no era and no set art.
+ * /sets renders a game with no eras as a flat list (lib/set-filters.ts), and a set with no logo gets
+ * the code placeholder — both already handled, neither a special case for this.
+ *
+ * There is no Chinese category to add: TCGplayer publishes 94 categories and Pokemon appears in
+ * exactly two of them, 3 and 85.
+ */
 export const GAMES: GameSeed[] = [
   { tcgplayerCategoryId: 3, name: "Pokémon", slug: "pokemon" },
+  { tcgplayerCategoryId: 85, name: "Pokémon Japan", slug: "pokemon-japan" },
   { tcgplayerCategoryId: 68, name: "One Piece Card Game", slug: "one-piece" },
   { tcgplayerCategoryId: 89, name: "Riftbound", slug: "riftbound" },
 ];

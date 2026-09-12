@@ -406,8 +406,18 @@ Every call now goes through `apitcgFetch`, which serves from `.cache/apitcg/` an
 network for a path it has never seen. Re-running a script costs nothing; `refresh: true` is the only
 way to spend quota on a known path. Pinned in `tests/apitcg.test.ts`.
 
-**Where it still earns its keep:** One Piece and Riftbound card attributes and images, which we have
-no other source for. That is a deliberate, bounded fetch — not a migration.
+**Correction, 2026-09-12 — it earns nothing, and has been removed.** The paragraph that stood here
+claimed API TCG was still worth keeping for One Piece and Riftbound card attributes "which we have no
+other source for". That was never checked against our own database, and it is false: `ingest/catalog.ts`
+has copied every tcgcsv `extendedData` field into `cards.attrs` since Phase 1, so One Piece already had
+100% card images, 7,104 rarities and full card text under `attrs.Description`, and Riftbound the same.
+The single field API TCG adds is `Artist`.
+
+The reasoning error is worth recording because it is repeatable: the two gaps found in tcgcsv were era
+and set art, API TCG had neither, and that should have ended the evaluation at "nothing to offer".
+Instead a third role was invented for it from the symptom that those games look sparse on `/sets` —
+which is about SET metadata, not card attributes. `ingest/apitcg.ts` and its tests are deleted; the key
+in `.env.local` can be revoked.
 
 ---
 

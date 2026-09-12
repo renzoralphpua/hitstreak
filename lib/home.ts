@@ -47,7 +47,7 @@ const PER_COLLECTION = `
          COALESCE(SUM(CASE WHEN lp.market IS NOT NULL AND ci.acquired_price IS NOT NULL THEN ci.quantity ELSE 0 END), 0) AS comparable,
          COALESCE(SUM(CASE WHEN lp.market > ci.acquired_price THEN ci.quantity ELSE 0 END), 0) AS in_profit
   FROM collections po
-  LEFT JOIN collection_items ci ON ci.collection_id = po.id
+  LEFT JOIN lot_holdings ci ON ci.collection_id = po.id
   LEFT JOIN printings p ON p.id = ci.printing_id
   LEFT JOIN latest_prices lp ON lp.printing_id = p.id
   WHERE po.user_id = ?
@@ -113,7 +113,7 @@ const MOVERS = `
          p.subtype, lp.market,
          SUM(ci.quantity) AS quantity,
          SUM(ci.quantity * ci.acquired_price) AS cost
-  FROM collection_items ci
+  FROM lot_holdings ci
   JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
   JOIN printings p ON p.id = ci.printing_id
   JOIN cards ca ON ca.id = p.card_id
@@ -176,7 +176,7 @@ export async function getHomeHistory(
     }),
     c.execute({
       sql: `SELECT ci.quantity, ci.acquired_price, ci.acquired_date
-            FROM collection_items ci
+            FROM lot_holdings ci
             JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
             WHERE ci.acquired_price IS NOT NULL`,
       args: [userId],

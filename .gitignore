@@ -56,5 +56,3 @@ next-env.d.ts
 # claude code
 .claude/
 
-# Cached third-party API responses. Never re-fetched, never committed: see ingest/apitcg.ts.
-.cache/

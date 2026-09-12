@@ -13,7 +13,7 @@ export async function loadOwnedByKey(userId: string, gameSlug: GameSlug): Promis
   const c = await db();
   const rows = (await c.execute({
     sql: `SELECT ca.name, ca.attrs, SUM(ci.quantity) AS n
-          FROM collection_items ci
+          FROM lot_holdings ci
           JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
           JOIN printings p ON p.id = ci.printing_id
           JOIN cards ca ON ca.id = p.card_id
