@@ -566,6 +566,30 @@ or as a catalog with no prices at all, which is at least honest.
 
 ---
 
+## 18. One schema, and what to do when CREATE IF NOT EXISTS cannot reach it
+
+**Settled 2026-09-12.** `lib/schema.ts` stays the single definition and there are still no
+migrations before v1. Two things learned the hard way while adding sales:
+
+**`CREATE TABLE IF NOT EXISTS` silently ignores a changed definition.** Adding `ON DELETE CASCADE`
+to `sales.item_id` did nothing to the live database, because the table already existed — so the file
+said one thing and the database another, which is exactly the drift a single definition is supposed
+to prevent. Caught by reading `sqlite_master`, not by any test. When a constraint changes on a table
+that already exists, the table has to be dropped and recreated; there is no ALTER for a foreign key
+in SQLite.
+
+**Foreign keys ARE enforced.** `PRAGMA foreign_keys` returns 1 on libSQL, unlike bare SQLite. A long
+standing comment in `schema.ts` claimed the opposite and the sales table was designed against it,
+which is how `decrementHolding` came to delete a row that `sales.item_id` pointed at.
+
+The one-off repair scripts are gone — `scripts/backfill-collection-slugs.mts` deleted now its ALTER
+has been applied, because a fresh database gets the column from `CREATE TABLE` and keeping the script
+would make the schema two sources of truth again. `scripts/backfill-set-meta.mts` and
+`backfill-set-slugs.mts` stay: those fetch and derive data rather than change shape, and are meant to
+be re-run whenever a catalog sync brings in new sets.
+
+---
+
 ## Still open
 
 The original eight are closed. What remains:
