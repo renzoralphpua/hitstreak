@@ -8,6 +8,7 @@ import { Button, CardRow, Input, Panel, Pill, SearchField } from "@/components/u
 import { useCardSearch } from "@/components/ui/useCardSearch";
 import { addItemAction } from "../actions";
 import { useDisplay } from "@/components/currency/CurrencyProvider";
+import { inputCurrency, toUsd } from "@/lib/money-input";
 
 /** A card the dialog can add: either picked from search, or handed in preselected (card detail). */
 export interface DialogCard {
@@ -113,7 +114,8 @@ export default function AddItemDialog({ collectionId, label, preselected }: Prop
       return;
     }
     const qty = Number(quantity);
-    const paid = price.trim() === "" ? null : Number(price);
+    // Typed in the display currency, stored in USD — see lib/money-input.ts.
+    const paid = toUsd(price.trim(), display);
     setBusy(true);
     setError(null);
     try {
@@ -220,7 +222,9 @@ export default function AddItemDialog({ collectionId, label, preselected }: Prop
                       />
                     </label>
                     <label className="flex flex-col gap-1.5 text-caption text-dim">
-                      Price paid (each, optional)
+                      {/* The currency is named whenever it is not dollars: 8500 means a very
+                          different purchase in pesos than in USD, and the field has to say which. */}
+                      Price paid (each, optional){inputCurrency(display) ? ` — ${inputCurrency(display)}` : ""}
                       <Input
                         type="number"
                         min={0}

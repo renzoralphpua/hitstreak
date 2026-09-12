@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/format";
 import { Button, Input, Panel, PriceDelta } from "@/components/ui";
 import { updateItemAction, removeItemAction } from "@/app/(app)/collections/actions";
 import { useDisplay } from "@/components/currency/CurrencyProvider";
+import { fromUsd, inputCurrency, toUsd } from "@/lib/money-input";
 
 /**
  * One row per ACQUISITION, which is the only place in the app that shows them.
@@ -48,8 +49,9 @@ export default function YourCopies({ lots }: { lots: CardLot[] }) {
       updateItemAction(lot.collectionId, lot.itemId, {
         quantity,
         // Empty clears the figure rather than leaving the old one — "I do not know what I paid" has
-        // to be expressible, or an accidental entry can never be undone.
-        acquiredPrice: price === "" ? null : Number(price),
+        // to be expressible, or an accidental entry can never be undone. A value is read in the
+        // display currency and stored in USD.
+        acquiredPrice: toUsd(price, display),
         acquiredDate: date === "" ? null : date,
       })
     );
@@ -98,8 +100,12 @@ export default function YourCopies({ lots }: { lots: CardLot[] }) {
                     defaultValue={lot.quantity} className="w-20" required
                   />
                   <Input
-                    name="price" label="Paid each" type="number" min={0} step="0.01"
-                    defaultValue={lot.acquiredPrice ?? ""} placeholder="—" className="w-28"
+                    name="price"
+                    label={`Paid each${inputCurrency(display) ? ` (${inputCurrency(display)})` : ""}`}
+                    type="number" min={0} step="0.01"
+                    // Converted out for editing, converted back on save: the field must show the
+                    // same currency the rest of the row is read in.
+                    defaultValue={fromUsd(lot.acquiredPrice, display)} placeholder="—" className="w-28"
                   />
                   <Input name="date" label="Bought" type="date" defaultValue={lot.acquiredDate ?? ""} className="w-40" />
                   <Button type="submit" size="sm" disabled={busy === lot.itemId}>Save</Button>

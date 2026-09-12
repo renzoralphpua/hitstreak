@@ -7,6 +7,7 @@ import { Button, CardRow, Input, Pill, SearchField } from "@/components/ui";
 import { useCardSearch, type CardHit } from "@/components/ui/useCardSearch";
 import { createAlertAction } from "./actions";
 import { useDisplay } from "@/components/currency/CurrencyProvider";
+import { inputCurrency, placeholderAmount, toUsd } from "@/lib/money-input";
 
 type Picked = Omit<AlertCard, "printingId">;
 
@@ -25,7 +26,8 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
   const { hits, settled, error: searchError } = useCardSearch(q, card == null);
 
   const printing = card?.printings.find((p) => p.printingId === printingId) ?? null;
-  const t = Number(threshold);
+  // USD, because both the hint and the stored alert compare against a USD market price.
+  const t = toUsd(threshold, display) ?? Number.NaN;
   const hint =
     printing?.market != null && printing.market > 0 && threshold.trim() !== "" && Number.isFinite(t) && t > 0
       ? `${Math.round((Math.abs(t - printing.market) / printing.market) * 100)}% ${t >= printing.market ? "over" : "under"} today`
@@ -122,13 +124,15 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
               </Pill>
             </div>
             <label className="flex flex-col gap-1.5 text-caption text-dim">
-              Price (USD)
+              Price{inputCurrency(display) ? ` (${inputCurrency(display)})` : " (USD)"}
               <Input
                 type="number"
                 min={0.01}
                 step={0.01}
                 inputMode="decimal"
-                placeholder={printing?.market != null ? formatMoney(printing.market, { display }).slice(1) : "0.00"}
+                // Not formatMoney().slice(1): that assumed a one-character leading symbol, which is
+                // wrong for a currency whose symbol trails the number or runs to three letters.
+                placeholder={placeholderAmount(printing?.market ?? null, display)}
                 value={threshold}
                 onChange={(e) => setThreshold(e.target.value)}
               />
