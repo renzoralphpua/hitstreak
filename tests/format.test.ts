@@ -9,7 +9,7 @@ describe("format", () => {
     expect(formatMoney(1465, { compact: true })).toBe("$1,465");
   });
   it("splitMoney: whole and cents for the display style ($4,812 + .40)", () => {
-    expect(splitMoney(4812.4)).toEqual({ whole: "$4,812", cents: ".40" });
+    expect(splitMoney(4812.4)).toEqual({ whole: "$4,812", cents: ".40", rest: "" });
   });
   it("formatPercent: one decimal, sign", () => {
     expect(formatPercent(0.0282)).toBe("+2.8%");

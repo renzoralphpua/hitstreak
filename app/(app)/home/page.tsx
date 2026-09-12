@@ -11,6 +11,7 @@ import {
   LineChart, RangePills, Button, CardRow,
 } from "@/components/ui";
 
+import { getDisplay } from "@/lib/display";
 export const metadata = { title: "Home — Hitstreak" };
 // Every figure here is this user's own holdings valued from latest_prices.
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ const DECKS_SHOWN = 3;
  * what changes is how much of the value-against-cost story you can see.
  */
 export default async function HomePage({ searchParams }: PageProps<"/home">) {
+  const display = await getDisplay();
   const session = await getSession();
   if (!session) redirect("/sign-in");
   const userId = session.user.id;
@@ -85,7 +87,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <StatTile label="Paid" value={formatMoney(summary.cost)} />
+          <StatTile label="Paid" value={formatMoney(summary.cost, { display })} />
           {/* Not "Gain" — that is the headline above, and a stat tile restating its own headline is
               the duplication the UI audit already flagged on the collection page. */}
           <StatTile
@@ -117,7 +119,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
                   </span>
                 </span>
                 <span className="ml-auto flex flex-col items-end">
-                  <span className="num font-semibold text-ink">{formatMoney(l.value)}</span>
+                  <span className="num font-semibold text-ink">{formatMoney(l.value, { display })}</span>
                   {l.cost > 0 ? (
                     <PriceDelta format="percent" amount={l.gain} ratio={l.ratio} />
                   ) : (
@@ -193,9 +195,9 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
                     <Link href={`/cards/${a.cardId}?from=/home`} className="block">
                       <CardRow
                         name={a.cardName}
-                        subtitle={`${a.direction === "above" ? "Rises above" : "Drops below"} ${formatMoney(a.threshold)}`}
+                        subtitle={`${a.direction === "above" ? "Rises above" : "Drops below"} ${formatMoney(a.threshold, { display })}`}
                         imageUrl={a.imageUrl}
-                        right={<span className="num font-semibold text-ink">{formatMoney(a.market)}</span>}
+                        right={<span className="num font-semibold text-ink">{formatMoney(a.market, { display })}</span>}
                       />
                     </Link>
                   </li>
@@ -210,7 +212,10 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
 }
 
 /** Winners and losers share a shape; only the order and the sign differ. */
-function MoverColumn({ title, movers }: { title: string; movers: Awaited<ReturnType<typeof getMovers>>["winners"] }) {
+// Server component, so it awaits the display rather than reading a context — cache() makes this
+// the same read the page already did, not a second one.
+async function MoverColumn({ title, movers }: { title: string; movers: Awaited<ReturnType<typeof getMovers>>["winners"] }) {
+  const display = await getDisplay();
   return (
     <div className="flex flex-col gap-2.5">
       <span className="text-caption font-semibold uppercase tracking-label text-muted">{title}</span>
@@ -227,10 +232,10 @@ function MoverColumn({ title, movers }: { title: string; movers: Awaited<ReturnT
                   imageUrl={m.imageUrl}
                   right={
                   <>
-                    <span className="num font-semibold text-ink">{formatMoney(m.value)}</span>
+                    <span className="num font-semibold text-ink">{formatMoney(m.value, { display })}</span>
                     <span className={`num text-caption font-medium ${m.gain > 0 ? "text-gain" : "text-accent"}`}>
                       {m.gain > 0 ? "+" : "−"}
-                      {formatMoney(Math.abs(m.gain))} · {formatPercent(m.ratio)}
+                      {formatMoney(Math.abs(m.gain), { display })} · {formatPercent(m.ratio)}
                     </span>
                     </>
                   }

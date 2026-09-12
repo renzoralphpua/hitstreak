@@ -13,6 +13,7 @@ import { db, closeDb } from "@/lib/db";
 import { isCalendarDate } from "./prices";
 import { evaluateAlert, type Direction } from "@/lib/alerts";
 import { alertEmail, mailerFromEnv, type Mailer } from "./mailer";
+import { ingestRates } from "./fx";
 
 export interface NightlyOptions {
   date: string;          // YYYY-MM-DD — the date collection_history is valued as of (alerts always use the current price)
@@ -23,7 +24,10 @@ export interface NightlyOptions {
 
 export interface NightlySummary {
   date: string; collections: number; alerts: number; fired: number; rearmed: number;
-  emailFailed: number; skippedNoMailer: number; emailDisabled: boolean; elapsedMs: number;
+  emailFailed: number; skippedNoMailer: number; emailDisabled: boolean;
+  /** Display-currency rates written. 0 means the feed was unreachable and dollars still work. */
+  fxRates: number;
+  elapsedMs: number;
 }
 
 /** INSERT … SELECT over all collections: value = Σ quantity × market in force on `date` (the newest
@@ -74,7 +78,17 @@ export async function runNightly(opts: NightlyOptions): Promise<NightlySummary> 
   if (!isCalendarDate(opts.date)) throw new Error(`runNightly: date must be YYYY-MM-DD, got ${opts.date}`);
   const startedAt = Date.now();
   const now = opts.now ?? (() => new Date().toISOString());
-  const s: NightlySummary = { date: opts.date, collections: 0, alerts: 0, fired: 0, rearmed: 0, emailFailed: 0, skippedNoMailer: 0, emailDisabled: opts.mailer === null, elapsedMs: 0 };
+  const s: NightlySummary = { date: opts.date, collections: 0, alerts: 0, fired: 0, rearmed: 0, emailFailed: 0, skippedNoMailer: 0, emailDisabled: opts.mailer === null, fxRates: 0, elapsedMs: 0 };
+
+  // Display-only FX, and not worth failing a night's run over: a missing rate falls back to dollars,
+  // and a stale one keeps working while saying how old it is.
+  try {
+    const fx = await ingestRates();
+    s.fxRates = fx.written;
+    console.log(`[nightly] fx: ${fx.written} rates as of ${fx.date}${fx.skipped.length ? ` (no rate for ${fx.skipped.join(", ")})` : ""}`);
+  } catch (e) {
+    console.log(`[nightly] fx: skipped — ${e instanceof Error ? e.message : String(e)}`);
+  }
 
   s.collections = await materializeCollectionHistory(opts.date);
   console.log(`[nightly] collection_history: ${s.collections} collections valued as of ${opts.date}`);

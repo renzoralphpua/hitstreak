@@ -11,6 +11,7 @@ import { formatMoney } from "@/lib/format";
 import { SectionHeading, Panel, StatTile, TierBadge, ValidationList, CardRow, Button } from "@/components/ui";
 import CopyDeckButton from "./CopyDeckButton";
 
+import { getDisplay } from "@/lib/display";
 // Owned / missing / cost are per-user: never prerender or cache across users.
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export async function generateMetadata({ params }: PageProps<"/decks/[id]">) {
 }
 
 export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]">) {
+  const display = await getDisplay();
   const { id } = await params;
   const { userId, deck } = await load(id);
   const gap = analyzeGap(deck, await loadOwnedByKey(userId, deck.gameSlug));
@@ -76,7 +78,7 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile label="You own" value={`${gap.owned} / ${gap.total}`} />
         <StatTile label="Missing" value={`${gap.missing} card${gap.missing === 1 ? "" : "s"}`} />
-        <StatTile label="Cost to complete" value={formatMoney(gap.missingCost)} tone={gap.missing === 0 ? "gain" : "default"} />
+        <StatTile label="Cost to complete" value={formatMoney(gap.missingCost, { display })} tone={gap.missing === 0 ? "gain" : "default"} />
       </div>
       {gap.unpricedMissing > 0 && (
         <p className="text-caption text-dim">
@@ -104,7 +106,7 @@ export default async function DeckDetailPage({ params }: PageProps<"/decks/[id]"
                     right={
                       <>
                         <span className="text-base font-semibold text-ink">×{l.missing}</span>
-                        <span className="text-micro text-dim">{l.missingCost == null ? "no price" : formatMoney(l.missingCost)}</span>
+                        <span className="text-micro text-dim">{l.missingCost == null ? "no price" : formatMoney(l.missingCost, { display })}</span>
                       </>
                     }
                   />

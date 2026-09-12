@@ -5,6 +5,7 @@ import type { Holding } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { Button, CardRow, PriceDelta } from "@/components/ui";
 import { addItemAction, decrementHoldingAction, removeHoldingAction } from "../actions";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 
 /** A holding is one printing+condition; its lots share a row, so the row keys on both. */
 const keyOf = (h: Holding) => `${h.printingId}|${h.condition}`;
@@ -19,6 +20,7 @@ const keyOf = (h: Holding) => `${h.printingId}|${h.condition}`;
  * price later. `−` takes a copy off the newest lot. Per-lot editing lives on the card page.
  */
 export default function HoldingsTable({ collectionId, holdings }: { collectionId: number; holdings: Holding[] }) {
+  const display = useDisplay();
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export default function HoldingsTable({ collectionId, holdings }: { collectionId
                       <span className="text-micro text-dim">no price</span>
                     </>
                   ) : (
-                    <span className="text-stat font-semibold text-ink">{formatMoney(h.value)}</span>
+                    <span className="text-stat font-semibold text-ink">{formatMoney(h.value, { display })}</span>
                   )}
                   <PriceDelta amount={h.value != null && h.cost != null ? h.value - h.cost : null} />
                   {/* Cost covers only the priced lots, so a partly-uncosted holding's gain is

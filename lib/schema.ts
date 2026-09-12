@@ -66,6 +66,15 @@ export const SCHEMA_SQL = `
   );
   CREATE INDEX IF NOT EXISTS idx_snapshots_date ON price_snapshots(date); -- used by ingest/prices.ts (rows at a given date) and later by movers queries
 
+  -- Display-only FX rates, refreshed by the nightly ingest. rate is units per 1 USD; USD itself is
+  -- never stored, because it is 1 by definition and the app must work before this table is ever
+  -- filled. Prices and cost basis remain USD everywhere else -- see lib/currency.ts.
+  CREATE TABLE IF NOT EXISTS fx_rates (
+    code TEXT PRIMARY KEY,
+    rate REAL NOT NULL CHECK (rate > 0),
+    date TEXT NOT NULL             -- YYYY-MM-DD, the feed's own day
+  );
+
   -- Current price per printing: O(1) app reads and the write-on-change diff base.
   CREATE TABLE IF NOT EXISTS latest_prices (
     printing_id INTEGER PRIMARY KEY REFERENCES printings(id),

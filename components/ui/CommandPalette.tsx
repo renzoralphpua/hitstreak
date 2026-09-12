@@ -6,6 +6,7 @@ import type { PrintingPrice } from "@/lib/catalog";
 import Icon from "./Icon";
 import SearchField from "./SearchField";
 import { cn } from "./cn";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 
 interface Hit {
   cardId: number; name: string; number: string | null; rarity: string | null;
@@ -42,6 +43,7 @@ const lowest = (ps: PrintingPrice[]) =>
  * tell "I have this" from "I could have this".
  */
 export default function CommandPalette() {
+  const display = useDisplay();
   const router = useRouter();
   const pathname = usePathname();
   // Openness is DERIVED, not stored: the palette is open while the path it opened on is still the
@@ -125,7 +127,7 @@ export default function CommandPalette() {
       href: `/cards/${h.cardId}?from=${from}`,
       name: h.name,
       caption: [h.setName, h.number, h.rarity].filter(Boolean).join(" · "),
-      right: formatMoney(lowest(h.printings)),
+      right: formatMoney(lowest(h.printings), { display }),
       imageUrl: h.imageUrl,
     });
     return [
@@ -142,7 +144,7 @@ export default function CommandPalette() {
         })),
       },
     ].filter((g) => g.rows.length > 0);
-  }, [results, settled, from]);
+  }, [results, settled, from, display]);
 
   const flat = useMemo(() => groups.flatMap((g) => g.rows), [groups]);
 

@@ -6,6 +6,8 @@ import { getCollectionHistory, parseRange, rangeStart, chartFrom, withLivePoint,
 import { formatMoney } from "@/lib/format";
 import { SectionHeading, MoneyDisplay, PriceDelta, CardRow, LineChart, RangePills, EmptyState } from "@/components/ui";
 
+import { getDisplay } from "@/lib/display";
+import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
 // The token is the credential: no caching across requests, and never indexed.
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,7 @@ export async function generateMetadata({ params }: PageProps<"/s/[token]">) {
 }
 
 export default async function SharedCollectionPage({ params, searchParams }: PageProps<"/s/[token]">) {
+  const display = await getDisplay();
   const { token } = await params;
   const { range: rawRange } = await searchParams;
   const shared = await load(token);
@@ -31,6 +34,7 @@ export default async function SharedCollectionPage({ params, searchParams }: Pag
   const stats = seriesStats(history);
 
   return (
+    <CurrencyProvider display={display}>
     <div className="flex min-h-dvh flex-col">
       <header className="flex h-16 items-center gap-4 border-b border-hairline px-6 md:px-10">
         <Link href="/" className="font-display text-wordmark text-ink">Hitstreak</Link>
@@ -67,7 +71,7 @@ export default async function SharedCollectionPage({ params, searchParams }: Pag
                     imageUrl={h.imageUrl}
                     right={
                       <>
-                        <span className="text-stat font-semibold text-ink">{formatMoney(h.value)}</span>
+                        <span className="text-stat font-semibold text-ink">{formatMoney(h.value, { display })}</span>
                         <span className="text-micro text-dim">×{h.quantity}</span>
                       </>
                     }
@@ -79,5 +83,6 @@ export default async function SharedCollectionPage({ params, searchParams }: Pag
         </div>
       </main>
     </div>
+    </CurrencyProvider>
   );
 }

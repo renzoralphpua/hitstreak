@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/format";
 import { Button, CardRow, Input, Panel, Pill, SearchField } from "@/components/ui";
 import { useCardSearch } from "@/components/ui/useCardSearch";
 import { addItemAction } from "../actions";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 
 /** A card the dialog can add: either picked from search, or handed in preselected (card detail). */
 export interface DialogCard {
@@ -32,6 +33,7 @@ function lowestMarket(printings: PrintingPrice[]): number | null {
 /** Search → printing → quantity/condition/price, then `addItemAction`. No portal, no modal
  *  library: a fixed overlay with a Panel, closed by Escape or Cancel. */
 export default function AddItemDialog({ collectionId, label, preselected }: Props) {
+  const display = useDisplay();
   const router = useRouter();
   const headingId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -166,7 +168,7 @@ export default function AddItemDialog({ collectionId, label, preselected }: Prop
                             subtitle={h.subtitle}
                             imageUrl={h.imageUrl}
                             onClick={() => pick(h)}
-                            right={<span className="text-base font-semibold text-ink">{formatMoney(lowestMarket(h.printings))}</span>}
+                            right={<span className="text-base font-semibold text-ink">{formatMoney(lowestMarket(h.printings), { display })}</span>}
                           />
                         </li>
                       ))}
@@ -189,7 +191,7 @@ export default function AddItemDialog({ collectionId, label, preselected }: Prop
                           selected={p.printingId === printingId}
                           onClick={() => setPrintingId(p.printingId)}
                         >
-                          {p.subtype} · {formatMoney(p.market)}
+                          {p.subtype} · {formatMoney(p.market, { display })}
                         </Pill>
                       ))}
                     </div>

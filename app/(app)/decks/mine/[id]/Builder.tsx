@@ -18,6 +18,7 @@ import { formatMoney } from "@/lib/format";
 import { Button, CardRow, Panel, SearchField, SectionHeading, StatTile, ValidationList } from "@/components/ui";
 import { useCardSearch, type CardHit } from "@/components/ui/useCardSearch";
 import { saveDeckAction } from "../../actions";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 
 /** "clean" = as loaded, "dirty" = edited since the last save, otherwise the server's own verdict. */
 type Saved = "clean" | "dirty" | ValidationResult;
@@ -37,6 +38,7 @@ const lineFromHit = (hit: CardHit, zone: Zone): DeckLine => ({
 });
 
 export default function Builder({ deck, owned }: { deck: DeckDetail; owned: Record<string, number> }) {
+  const display = useDisplay();
   const router = useRouter();
   const [lines, setLines] = useState<DeckLine[]>(deck.cards);
   const [q, setQ] = useState("");
@@ -149,7 +151,7 @@ export default function Builder({ deck, owned }: { deck: DeckDetail; owned: Reco
                 <li key={h.cardId}>
                   <CardRow
                     name={h.name}
-                    subtitle={`${h.setName} · ${h.number ?? "—"} · own ${ownedOfHit(h)} · ${formatMoney(cheapest(h.printings))}`}
+                    subtitle={`${h.setName} · ${h.number ?? "—"} · own ${ownedOfHit(h)} · ${formatMoney(cheapest(h.printings), { display })}`}
                     imageUrl={h.imageUrl}
                     onClick={() => add(h)}
                   />
@@ -182,7 +184,7 @@ export default function Builder({ deck, owned }: { deck: DeckDetail; owned: Reco
           <div className="grid gap-3">
             <StatTile label="Cards" value={String(gap.total)} />
             <StatTile label="You own" value={`${gap.owned} / ${gap.total}`} tone={gap.missing === 0 && gap.total > 0 ? "gain" : "default"} />
-            <StatTile label="Cost to complete" value={formatMoney(gap.missingCost)} tone={gap.missing === 0 ? "gain" : "default"} />
+            <StatTile label="Cost to complete" value={formatMoney(gap.missingCost, { display })} tone={gap.missing === 0 ? "gain" : "default"} />
           </div>
           {gap.unpricedMissing > 0 && (
             <p className="text-caption text-dim">
@@ -216,6 +218,7 @@ function ZoneGroup({ zone, lines, onQuantity }: { zone: Zone; lines: GapLine[]; 
 }
 
 function LineRow({ line, onQuantity }: { line: GapLine; onQuantity: OnQuantity }) {
+  const display = useDisplay();
   const single = isSingleCardZone(line.zone);
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2">
@@ -245,7 +248,7 @@ function LineRow({ line, onQuantity }: { line: GapLine; onQuantity: OnQuantity }
         {line.name} <span className="text-caption text-dim">{line.setName} · {line.number ?? "—"}</span>
       </span>
       <span className={`num text-caption ${line.missing === 0 ? "text-gain" : "text-accent"}`}>own {line.owned}</span>
-      <span className="num w-16 text-right text-caption text-muted">{formatMoney(line.market)}</span>
+      <span className="num w-16 text-right text-caption text-muted">{formatMoney(line.market, { display })}</span>
     </li>
   );
 }

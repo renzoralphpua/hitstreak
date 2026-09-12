@@ -7,6 +7,7 @@ import type { Collection } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { CardTile, EmptyState, Pill, SectionHeading } from "@/components/ui";
 import { addItemAction } from "../../../collections/actions";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 
 type Filter = "all" | "owned" | "missing";
 
@@ -167,6 +168,7 @@ function Tiles({
   setId: number;
   onAdd?: (c: SetCard) => void;
 }) {
+  const display = useDisplay();
   return (
     <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
       {items.map((c) => (
@@ -175,7 +177,7 @@ function Tiles({
             name={c.name}
             // A sealed product has no card number; its subtitle is what it IS.
             subtitle={c.number ?? "Sealed"}
-            price={formatMoney(c.lowestMarket)}
+            price={formatMoney(c.lowestMarket, { display })}
             quantity={quantityOf(c)}
             imageUrl={c.imageUrl}
             onClick={onAdd ? () => onAdd(c) : undefined}

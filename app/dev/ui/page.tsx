@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 import {
   Button,
   Pill,
@@ -63,6 +64,7 @@ function Section({ name, children }: { name: string; children: ReactNode }) {
 }
 
 export default function Gallery() {
+  const display = useDisplay();
   if (process.env.NODE_ENV === "production") notFound();
 
   const [period, setPeriod] = useState("30D");
@@ -136,7 +138,7 @@ export default function Gallery() {
       <Section name="StatTile">
         <Variants>
           <div className="grid grid-cols-3 gap-3">
-            <StatTile label="Paid" value={formatMoney(1465)} />
+            <StatTile label="Paid" value={formatMoney(1465, { display })} />
             <StatTile label="Gain" value={formatDelta(908.25)} tone="gain" />
             <StatTile label="Loss" value={formatDelta(-6.8)} tone="loss" />
           </div>
@@ -216,17 +218,17 @@ export default function Gallery() {
             <CardTile
               name="Umbreon ex"
               subtitle="Prismatic Evolutions · 161/131"
-              price={formatMoney(1465)}
+              price={formatMoney(1465, { display })}
               quantity={1}
               imageUrl={null}
               delta={<PriceDelta amount={362.25} ratio={0.33} />}
             />
-            <CardTile name="Charizard ex" subtitle="Obsidian Flames · 125/197" price={formatMoney(850)} quantity={3} imageUrl={null} />
-            <CardTile name="Pidgeot ex" subtitle="Obsidian Flames · 164/197" price={formatMoney(23.35)} quantity={0} imageUrl={null} />
+            <CardTile name="Charizard ex" subtitle="Obsidian Flames · 125/197" price={formatMoney(850, { display })} quantity={3} imageUrl={null} />
+            <CardTile name="Pidgeot ex" subtitle="Obsidian Flames · 164/197" price={formatMoney(23.35, { display })} quantity={0} imageUrl={null} />
             <CardTile
               name="Monkey.D.Luffy"
               subtitle="Awakening of the New Era · OP05-119"
-              price={formatMoney(18.2)}
+              price={formatMoney(18.2, { display })}
               quantity={1}
               imageUrl={null}
               onClick={() => {}}
@@ -244,7 +246,7 @@ export default function Gallery() {
               imageUrl={null}
               right={
                 <>
-                  <span>{formatMoney(46.5)}</span>
+                  <span>{formatMoney(46.5, { display })}</span>
                   <PriceDelta amount={4.2} ratio={0.1} />
                 </>
               }
@@ -255,7 +257,7 @@ export default function Gallery() {
               imageUrl={null}
               right={
                 <>
-                  <span>{formatMoney(18.2)}</span>
+                  <span>{formatMoney(18.2, { display })}</span>
                   <PriceDelta amount={-1.1} ratio={-0.06} />
                 </>
               }
@@ -267,8 +269,8 @@ export default function Gallery() {
               imageUrl={null}
               right={
                 <>
-                  <span className="text-base font-semibold">{formatMoney(1465)}</span>
-                  <span className="text-micro opacity-70">re-arms below {formatMoney(1450)}</span>
+                  <span className="text-base font-semibold">{formatMoney(1465, { display })}</span>
+                  <span className="text-micro opacity-70">re-arms below {formatMoney(1450, { display })}</span>
                 </>
               }
             />

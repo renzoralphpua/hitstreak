@@ -456,6 +456,50 @@ Pinned in `tests/set-match.test.ts`, where every case is a real pair that went w
 
 ---
 
+## 15. Currency is a DISPLAY conversion, and says so
+
+**Settled and implemented 2026-09-12.** A switcher in the header renders every figure in one of 20
+currencies, Philippine Peso included. Everything remains stored in USD.
+
+That limit is the decision, not a shortcut. One rate — today's — is applied to every amount on the
+page, historical ones included, so a peso figure means *"what this is worth in pesos today"*, never
+what it was worth in pesos when it was bought. True multi-currency means recording the currency and
+the rate at the moment of each acquisition; that is a schema change and a different feature. Nothing
+here forecloses it.
+
+**Cookie, not localStorage.** Every other preference in this app lives in localStorage (decision 7),
+but money is rendered by server components on most screens and only the server can re-render those.
+A cookie is the one store both halves can read, so the FIRST paint is already in the right currency
+— a page that renders dollars and swaps to pesos on hydration is worse than one that never offered
+the choice. Changing it writes the cookie and calls `router.refresh()`.
+
+**Two ways to reach it, one source.** Server components `await getDisplay()`, memoised per request by
+`cache()`; client components read a context seeded from that same server value, so hydration agrees.
+`MoneyDisplay` and `PriceDelta` read it themselves rather than taking a prop — they render from
+about twenty places, and threading a currency through each would put the same argument in every
+money-adjacent signature.
+
+**It fails to dollars, deliberately.** An unknown code, a currency with no stored rate, a rate feed
+that has never run, a render with no request scope at all: each falls back to USD. Showing a
+converted figure at a guessed rate is worse than showing the currency the data is actually in. A
+currency we hold no rate for appears in the switcher but disabled, saying so.
+
+Rates come from `open.er-api.com` (no key, USD base) into an `fx_rates` table, refreshed by the
+nightly ingest — never on a page load, because a currency toggle must not put a third-party host on
+the critical path of rendering a collection. A rate that disappears from the feed keeps its last
+known value and its old date rather than vanishing mid-session.
+
+Two traps, both pinned in `tests/currency.test.ts`:
+
+- `maximumFractionDigits: 0` throws on currencies whose minimum is 2, so the compact format has to
+  bring the minimum down with it. JPY, KRW and IDR have no minor unit and ignore both.
+- `splitMoney` dims the minor unit, and it cannot find one by searching for `"."`. Half these locales
+  use a comma, and several put the symbol AFTER the number — de-DE renders `1.262,86 €`, where
+  slicing from the separator would dim the euro sign too. It is built from `formatToParts`, and
+  returns a third part for whatever trails the fraction.
+
+---
+
 ## Still open
 
 The original eight are closed. What remains:

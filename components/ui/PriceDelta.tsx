@@ -1,4 +1,6 @@
+"use client";
 import { formatDelta, formatPercent } from "@/lib/format";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 import { cn } from "./cn";
 
 type Props = {
@@ -22,6 +24,7 @@ type Props = {
  * reads against cost basis (a quiet week, or anything bought at today’s price).
  */
 export default function PriceDelta({ amount, ratio, caption, className, format = "full" }: Props) {
+  const display = useDisplay();
   if (amount == null || !Number.isFinite(amount)) return <span className={cn("text-dim", className)}>—</span>;
   if (amount === 0) {
     return (
@@ -42,7 +45,7 @@ export default function PriceDelta({ amount, ratio, caption, className, format =
   }
   return (
     <span className={cn("num text-base font-medium", up ? "text-gain" : "text-accent", className)}>
-      {up ? "▲" : "▼"} {formatDelta(amount)}
+      {up ? "▲" : "▼"} {formatDelta(amount, display)}
       {ratio != null && <> ({formatPercent(ratio)})</>}
       {caption && <span className="ml-1 font-normal text-dim">{caption}</span>}
     </span>

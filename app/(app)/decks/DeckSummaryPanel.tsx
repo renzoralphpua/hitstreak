@@ -1,12 +1,15 @@
+"use client";
 import Link from "next/link";
 import type { DeckSummary } from "@/lib/decks/data";
 import type { GapAnalysis } from "@/lib/decks/gap";
 import { formatMoney } from "@/lib/format";
 import { Panel, ProgressBar, TierBadge } from "@/components/ui";
 
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 /** One meta deck in the browser: name, archetype, You own x / N, $ to complete, completion bar.
  *  Server component — no hooks; a `Link` around a `Panel`, like `SetPanel` on /sets. */
 export default function DeckSummaryPanel({ deck, gap }: { deck: DeckSummary; gap: GapAnalysis }) {
+  const display = useDisplay();
   const ratio = gap.total > 0 ? gap.owned / gap.total : 0;
   const complete = gap.missing === 0 && gap.total > 0;
   return (
@@ -28,7 +31,7 @@ export default function DeckSummaryPanel({ deck, gap }: { deck: DeckSummary; gap
               <span className="font-semibold text-gain">Complete</span>
             ) : (
               <>
-                <span className="font-semibold text-ink">{formatMoney(gap.missingCost)}</span> <span className="text-muted">to complete</span>
+                <span className="font-semibold text-ink">{formatMoney(gap.missingCost, { display })}</span> <span className="text-muted">to complete</span>
               </>
             )}
           </span>

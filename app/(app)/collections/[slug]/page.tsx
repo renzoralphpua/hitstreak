@@ -29,6 +29,7 @@ import CollectionHeading from "./CollectionHeading";
 import AddItemDialog from "./AddItemDialog";
 import SharePanel from "./SharePanel";
 
+import { getDisplay } from "@/lib/display";
 // Per-user data valued from latest_prices: never prerender or cache across users.
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,7 @@ export async function generateMetadata({ params }: Params) {
 }
 
 export default async function CollectionDetailPage({ params, searchParams }: PageProps<"/collections/[slug]">) {
+  const display = await getDisplay();
   const { slug } = await params;
   const { userId, collectionId, collection } = await load(slug);
   const { range: rawRange } = await searchParams;
@@ -121,10 +123,10 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <StatTile label="Paid" value={formatMoney(summary.cost)} />
+          <StatTile label="Paid" value={formatMoney(summary.cost, { display })} />
           <StatTile
             label="Gain"
-            value={`${gainSign}${formatMoney(Math.abs(summary.gain))}`}
+            value={`${gainSign}${formatMoney(Math.abs(summary.gain), { display })}`}
             tone={summary.gain >= 0 ? "gain" : "loss"}
           />
           {summary.unpriced > 0 && (

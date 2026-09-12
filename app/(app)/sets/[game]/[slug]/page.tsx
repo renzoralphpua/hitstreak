@@ -9,6 +9,7 @@ import { formatMoney } from "@/lib/format";
 import { SectionHeading, ProgressBar } from "@/components/ui";
 import SetGrid from "./SetGrid";
 
+import { getDisplay } from "@/lib/display";
 // Owned counts and values are per-user: never prerender or cache across users.
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export async function generateMetadata({ params }: Params) {
 }
 
 export default async function SetDetailPage({ params }: Params) {
+  const display = await getDisplay();
   const { game, slug } = await params;
   const { userId, detail } = await load(game, slug);
   const { set, stats } = detail;
@@ -79,8 +81,8 @@ export default async function SetDetailPage({ params }: Params) {
                 sealed
               </>
             )}
-            {" · "}set value <span className="num font-semibold text-ink">{formatMoney(stats.setValue)}</span> ·
-            your copies worth <span className="num font-semibold text-ink">{formatMoney(stats.ownedValue)}</span>
+            {" · "}set value <span className="num font-semibold text-ink">{formatMoney(stats.setValue, { display })}</span> ·
+            your copies worth <span className="num font-semibold text-ink">{formatMoney(stats.ownedValue, { display })}</span>
           </p>
         </div>
 
@@ -97,7 +99,7 @@ export default async function SetDetailPage({ params }: Params) {
             className="h-2"
           />
           <span className="text-caption text-dim">
-            Missing cards cost <span className="num font-semibold text-ink">{formatMoney(stats.missingCost)}</span>{" "}
+            Missing cards cost <span className="num font-semibold text-ink">{formatMoney(stats.missingCost, { display })}</span>{" "}
             to complete
           </span>
         </div>

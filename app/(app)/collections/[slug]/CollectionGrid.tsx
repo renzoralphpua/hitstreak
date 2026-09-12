@@ -1,8 +1,10 @@
+"use client";
 import Link from "next/link";
 import type { Holding } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { CardTile, PriceDelta } from "@/components/ui";
 
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 /**
  * A collection as card art. This is the READING view — there are no controls on a tile, because the
  * quantity stepper, per-lot editing and removal all live in the list. A tile is a link to the card
@@ -18,6 +20,7 @@ import { CardTile, PriceDelta } from "@/components/ui";
  *    dollar delta is one click away in the list.
  */
 export default function CollectionGrid({ holdings, from }: { holdings: Holding[]; from: string }) {
+  const display = useDisplay();
   return (
     <ul className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {holdings.map((h) => {
@@ -28,7 +31,7 @@ export default function CollectionGrid({ holdings, from }: { holdings: Holding[]
               <CardTile
                 name={h.cardName}
                 subtitle={[h.setName, h.number, h.subtype].filter(Boolean).join(" · ")}
-                price={h.value == null ? "—" : formatMoney(h.value)}
+                price={h.value == null ? "—" : formatMoney(h.value, { display })}
                 quantity={h.quantity}
                 quantityDisplay="multiple"
                 imageUrl={h.imageUrl}

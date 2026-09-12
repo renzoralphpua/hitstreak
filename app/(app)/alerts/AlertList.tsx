@@ -6,11 +6,16 @@ import { formatMoney, formatPercent } from "@/lib/format";
 import { Button, CardRow } from "@/components/ui";
 import { cn } from "@/components/ui/cn";
 import { deleteAlertAction } from "./actions";
+import type { Display } from "@/lib/currency";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 
 const day = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-const line = (a: Alert) => `${a.direction === "above" ? "Rises above" : "Drops below"} ${formatMoney(a.threshold)}`;
+// Takes the display rather than reading it: this is module scope, where a hook cannot go.
+const line = (a: Alert, display: Display) =>
+  `${a.direction === "above" ? "Rises above" : "Drops below"} ${formatMoney(a.threshold, { display })}`;
 
 function Group({ title, alerts, onDelete, busyId }: { title: string; alerts: Alert[]; onDelete: (a: Alert) => void; busyId: number | null }) {
+  const display = useDisplay();
   if (alerts.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
@@ -19,8 +24,8 @@ function Group({ title, alerts, onDelete, busyId }: { title: string; alerts: Ale
         {alerts.map((a) => {
           const triggered = !a.armed;
           const detail = triggered
-            ? `${line(a)} · emailed ${a.lastFiredAt ? day.format(new Date(a.lastFiredAt)) : "—"}`
-            : line(a);
+            ? `${line(a, display)} · emailed ${a.lastFiredAt ? day.format(new Date(a.lastFiredAt)) : "—"}`
+            : line(a, display);
           return (
             <li key={a.id}>
               <CardRow
@@ -30,10 +35,10 @@ function Group({ title, alerts, onDelete, busyId }: { title: string; alerts: Ale
                 imageUrl={a.imageUrl}
                 right={
                   <>
-                    <span className="text-base font-semibold">{formatMoney(a.market)}</span>
+                    <span className="text-base font-semibold">{formatMoney(a.market, { display })}</span>
                     {triggered ? (
                       <span className="text-micro opacity-70">
-                        re-arms {a.direction === "above" ? "below" : "above"} {formatMoney(a.threshold)}
+                        re-arms {a.direction === "above" ? "below" : "above"} {formatMoney(a.threshold, { display })}
                       </span>
                     ) : a.change30d ? (
                       // Same up/down tone as the mockup's watching rows; a 0 change stays dim.
@@ -72,12 +77,13 @@ function Group({ title, alerts, onDelete, busyId }: { title: string; alerts: Ale
 }
 
 export default function AlertList({ alerts }: { alerts: Alert[] }) {
+  const display = useDisplay();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
   async function remove(a: Alert) {
-    if (!window.confirm(`Delete the ${line(a).toLowerCase()} alert for ${a.cardName}?`)) return;
+    if (!window.confirm(`Delete the ${line(a, display).toLowerCase()} alert for ${a.cardName}?`)) return;
     setBusyId(a.id);
     setError(null);
     try {

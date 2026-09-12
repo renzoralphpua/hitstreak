@@ -5,6 +5,7 @@ import type { CardLot } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { Button, Input, Panel, PriceDelta } from "@/components/ui";
 import { updateItemAction, removeItemAction } from "@/app/(app)/collections/actions";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 
 /**
  * One row per ACQUISITION, which is the only place in the app that shows them.
@@ -17,6 +18,7 @@ import { updateItemAction, removeItemAction } from "@/app/(app)/collections/acti
  * bought last week, and the collection screen's stepper cannot express that.
  */
 export default function YourCopies({ lots }: { lots: CardLot[] }) {
+  const display = useDisplay();
   const router = useRouter();
   const [editing, setEditing] = useState<number | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
@@ -110,16 +112,16 @@ export default function YourCopies({ lots }: { lots: CardLot[] }) {
                     {lot.acquiredPrice == null ? (
                       <span className="text-dim">not recorded</span>
                     ) : (
-                      <span className="font-semibold text-ink">{formatMoney(lot.acquiredPrice)}</span>
+                      <span className="font-semibold text-ink">{formatMoney(lot.acquiredPrice, { display })}</span>
                     )}
                     {lot.quantity > 1 && lot.cost != null && (
-                      <span className="text-dim"> · {formatMoney(lot.cost)} total</span>
+                      <span className="text-dim"> · {formatMoney(lot.cost, { display })} total</span>
                     )}
                   </span>
                   <span className="num text-caption text-muted">
                     Now{" "}
                     <span className="font-semibold text-ink">
-                      {lot.value == null ? "—" : formatMoney(lot.value)}
+                      {lot.value == null ? "—" : formatMoney(lot.value, { display })}
                     </span>
                   </span>
                   {gain != null && lot.cost! > 0 && (

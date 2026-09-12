@@ -9,6 +9,7 @@ import { Dialog, MenuButton, MenuItem, MoneyDisplay, Panel, PriceDelta } from "@
 import CollectionForm from "./CollectionForm";
 import SharePanel from "./[slug]/SharePanel";
 import { deleteCollectionAction } from "./actions";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 
 /**
  * One collection, as a tile.
@@ -28,6 +29,7 @@ export default function CollectionTile({
   shareLink: ShareLink | null;
 }) {
   const router = useRouter();
+  const display = useDisplay();
   const [renaming, setRenaming] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +95,7 @@ export default function CollectionTile({
             <span className="num">
               <span className="font-semibold text-ink">{summary.sealed}</span> sealed
             </span>
-            <span className="num">paid {formatMoney(summary.cost)}</span>
+            <span className="num">paid {formatMoney(summary.cost, { display })}</span>
             {summary.unpriced > 0 && <span className="num">{summary.unpriced} unpriced</span>}
           </div>
         </>

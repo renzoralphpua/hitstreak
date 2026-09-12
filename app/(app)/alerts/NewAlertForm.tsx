@@ -6,12 +6,14 @@ import { formatMoney } from "@/lib/format";
 import { Button, CardRow, Input, Pill, SearchField } from "@/components/ui";
 import { useCardSearch, type CardHit } from "@/components/ui/useCardSearch";
 import { createAlertAction } from "./actions";
+import { useDisplay } from "@/components/currency/CurrencyProvider";
 
 type Picked = Omit<AlertCard, "printingId">;
 
 /** Search → printing → direction → threshold → create. `preselected` (from `/alerts?printing=`)
  *  skips the search step and starts on that printing. */
 export default function NewAlertForm({ preselected }: { preselected?: AlertCard | null }) {
+  const display = useDisplay();
   const router = useRouter();
   const [q, setQ] = useState("");
   const [card, setCard] = useState<Picked | null>(preselected ?? null);
@@ -103,7 +105,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
             <div className="flex flex-wrap gap-2">
               {card.printings.map((p) => (
                 <Pill key={p.printingId} selected={p.printingId === printingId} onClick={() => setPrintingId(p.printingId)}>
-                  {p.subtype} · {formatMoney(p.market)}
+                  {p.subtype} · {formatMoney(p.market, { display })}
                 </Pill>
               ))}
             </div>
@@ -126,7 +128,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
                 min={0.01}
                 step={0.01}
                 inputMode="decimal"
-                placeholder={printing?.market != null ? formatMoney(printing.market).slice(1) : "0.00"}
+                placeholder={printing?.market != null ? formatMoney(printing.market, { display }).slice(1) : "0.00"}
                 value={threshold}
                 onChange={(e) => setThreshold(e.target.value)}
               />

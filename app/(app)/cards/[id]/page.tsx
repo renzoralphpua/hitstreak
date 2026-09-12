@@ -32,6 +32,7 @@ import {
 import AddToCollection from "./AddToCollection";
 import YourCopies from "./YourCopies";
 
+import { getDisplay } from "@/lib/display";
 // "You own" counts are per-user: never prerender or cache across users.
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ const MAX_ATTRS = 8;
 const SKIP_ATTRS = new Set(["number", "rarity"]);
 
 export default async function CardDetailPage({ params, searchParams }: PageProps<"/cards/[id]">) {
+  const display = await getDisplay();
   const { id } = await params;
   const { userId, detail } = await load(id);
   const { card, printings } = detail;
@@ -174,7 +176,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
                 className="grid grid-cols-[1.6fr_1fr_1fr] items-center gap-3 border-b border-hairline-soft py-2 last:border-b-0"
               >
                 <span className="text-ink">{p.subtype}</span>
-                <span className="num text-right font-semibold text-ink">{formatMoney(p.market)}</span>
+                <span className="num text-right font-semibold text-ink">{formatMoney(p.market, { display })}</span>
                 <span className={p.owned > 0 ? "num text-right text-ink" : "num text-right text-dim"}>
                   {p.owned > 0 ? p.owned : "—"}
                 </span>
@@ -217,7 +219,7 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
             <span className="font-semibold text-ink">Price history</span>
             {stats && (
               <span className="num ml-auto text-caption text-dim">
-                Low {formatMoney(stats.low)} · High {formatMoney(stats.high)}
+                Low {formatMoney(stats.low, { display })} · High {formatMoney(stats.high, { display })}
               </span>
             )}
           </div>
