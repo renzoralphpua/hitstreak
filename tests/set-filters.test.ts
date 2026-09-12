@@ -1,50 +1,16 @@
-// Grouping and filtering for /sets. Pure functions on purpose — the interesting behaviour is which
+// Grouping for /sets. Pure functions on purpose — the interesting behaviour is which
 // era a set lands in and in what order, and none of that needs a database or React to check.
 import { describe, it, expect } from "vitest";
 import type { SetCompletion } from "@/lib/catalog";
 import {
-  groupByEra, isUngroupedOnly, matchesFilter, parseCollapsed, parseSetFilter, toggleCollapsed, UNGROUPED,
+  groupByEra, isUngroupedOnly, parseCollapsed, toggleCollapsed, UNGROUPED,
 } from "@/lib/set-filters";
 
 const set = (over: Partial<SetCompletion>): SetCompletion => ({
   id: 1, slug: "prismatic-evolutions", name: "Prismatic Evolutions", code: "PRE", releaseDate: "2025-01-17",
-  totalCards: 100, ownedCards: 40, series: "Scarlet & Violet", seriesRank: 15,
+  totalCards: 100, ownedCards: 40, totalSealed: 6, ownedSealed: 1,
+  series: "Scarlet & Violet", seriesRank: 15,
   logoUrl: null, symbolUrl: null, ...over,
-});
-
-describe("parseSetFilter", () => {
-  it("accepts only the known filters", () => {
-    expect(parseSetFilter(undefined)).toBe("all");
-    expect(parseSetFilter("started")).toBe("started");
-    expect(parseSetFilter("nonsense")).toBe("all");
-    expect(parseSetFilter(["started", "complete"])).toBe("all"); // a repeated key is not a choice
-  });
-});
-
-describe("matchesFilter", () => {
-  const started = set({ ownedCards: 40 });
-  const untouched = set({ ownedCards: 0 });
-  const finished = set({ ownedCards: 100 });
-  const sealed = set({ totalCards: 0, ownedCards: 0 });
-
-  it("treats a sealed-only set as outside every completion filter", () => {
-    // 0 of 0 is not "complete", and a product group is not a set you are part-way through.
-    for (const f of ["started", "incomplete", "complete"] as const) {
-      expect(matchesFilter(sealed, f), f).toBe(false);
-    }
-    expect(matchesFilter(sealed, "sealed")).toBe(true);
-    expect(matchesFilter(sealed, "all")).toBe(true);
-  });
-
-  it("separates started, incomplete and complete", () => {
-    expect(matchesFilter(started, "started")).toBe(true);
-    expect(matchesFilter(untouched, "started")).toBe(false);
-    expect(matchesFilter(started, "incomplete")).toBe(true);
-    expect(matchesFilter(untouched, "incomplete")).toBe(true);   // untouched is still incomplete
-    expect(matchesFilter(finished, "incomplete")).toBe(false);
-    expect(matchesFilter(finished, "complete")).toBe(true);
-    expect(matchesFilter(started, "complete")).toBe(false);
-  });
 });
 
 describe("groupByEra", () => {

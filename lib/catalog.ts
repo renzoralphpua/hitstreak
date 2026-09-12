@@ -148,6 +148,9 @@ export async function listGames(): Promise<Game[]> {
 export interface SetCompletion {
   id: number; slug: string | null; name: string; code: string | null; releaseDate: string | null;
   totalCards: number; ownedCards: number;
+  /** Sealed products belonging to this set: ETBs, booster boxes, bundles, blisters. Counted apart
+   *  from cards because they are a different thing to own, not a subset of the card list. */
+  totalSealed: number; ownedSealed: number;
   /** The era, in the game's own vocabulary. Null for TCGplayer product groups that are not sets —
    *  /sets gathers those under "Promos & products". Filled by scripts/backfill-set-meta.mts. */
   series: string | null;
@@ -157,26 +160,41 @@ export interface SetCompletion {
   symbolUrl: string | null;
 }
 
-/** Completion counts CARDS (rows with a number — sealed products are excluded), owned = at least one copy in any of the user's collections. */
+/**
+ * Every set in a game, with how much of it you hold.
+ *
+ * Cards and SEALED products are counted apart. Both live in `cards`; a null `number` is what marks a
+ * sealed product, and the two are different things to own — "40 of 200" means nothing if half of
+ * those 200 are booster boxes.
+ *
+ * Owned means at least one copy in any of the user's collections.
+ */
 export async function listSetsWithCompletion(userId: string, gameSlug: string): Promise<SetCompletion[]> {
   const c = await db();
   const rows = (await c.execute({
     sql: `SELECT se.id, se.slug, se.name, se.code, se.release_date, se.series, se.series_rank, se.logo_url, se.symbol_url,
                  (SELECT COUNT(*) FROM cards ca WHERE ca.set_id = se.id AND ca.number IS NOT NULL) AS total_cards,
+                 (SELECT COUNT(*) FROM cards ca WHERE ca.set_id = se.id AND ca.number IS NULL) AS total_sealed,
                  (SELECT COUNT(DISTINCT ca.id) FROM cards ca
                     JOIN printings p ON p.card_id = ca.id
                     JOIN collection_items ci ON ci.printing_id = p.id
                     JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
-                  WHERE ca.set_id = se.id AND ca.number IS NOT NULL) AS owned_cards
+                  WHERE ca.set_id = se.id AND ca.number IS NOT NULL) AS owned_cards,
+                 (SELECT COUNT(DISTINCT ca.id) FROM cards ca
+                    JOIN printings p ON p.card_id = ca.id
+                    JOIN collection_items ci ON ci.printing_id = p.id
+                    JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
+                  WHERE ca.set_id = se.id AND ca.number IS NULL) AS owned_sealed
           FROM sets se JOIN games g ON g.id = se.game_id
           WHERE g.slug = ?
           ORDER BY se.series_rank IS NULL, se.series_rank DESC, se.release_date DESC, se.name`,
-    args: [userId, gameSlug],
+    args: [userId, userId, gameSlug],
   })).rows;
   return rows.map((r) => ({
     id: Number(r.id), slug: r.slug == null ? null : String(r.slug), name: String(r.name), code: r.code == null ? null : String(r.code),
     releaseDate: r.release_date == null ? null : String(r.release_date),
     totalCards: Number(r.total_cards), ownedCards: Number(r.owned_cards),
+    totalSealed: Number(r.total_sealed), ownedSealed: Number(r.owned_sealed),
     series: r.series == null ? null : String(r.series),
     seriesRank: r.series_rank == null ? null : Number(r.series_rank),
     logoUrl: r.logo_url == null ? null : String(r.logo_url),
@@ -184,8 +202,27 @@ export async function listSetsWithCompletion(userId: string, gameSlug: string): 
   }));
 }
 
-export interface SetCard { cardId: number; name: string; number: string; rarity: string | null; imageUrl: string | null; lowestMarket: number | null; ownedQuantity: number; printings: PrintingPrice[] }
-export interface SetDetail { set: { id: number; slug: string | null; name: string; code: string | null; releaseDate: string | null; gameSlug: string; gameName: string }; cards: SetCard[]; stats: { totalCards: number; ownedCards: number; setValue: number; ownedValue: number; missingCost: number } }
+export interface SetCard {
+  cardId: number; name: string;
+  /** Null on a SEALED product — that is exactly what distinguishes one from a card. */
+  number: string | null;
+  rarity: string | null; imageUrl: string | null; lowestMarket: number | null; ownedQuantity: number;
+  printings: PrintingPrice[];
+}
+export interface SetDetail {
+  set: { id: number; slug: string | null; name: string; code: string | null; releaseDate: string | null; gameSlug: string; gameName: string };
+  cards: SetCard[];
+  /** The set's sealed products, in the same shape. They live in the same table as the cards and were
+   *  simply filtered out of every query until now. */
+  sealed: SetCard[];
+  stats: {
+    totalCards: number; ownedCards: number;
+    totalSealed: number; ownedSealed: number;
+    /** Cards only: the sum of each card's cheapest printing. A booster box is not part of what it
+     *  costs to complete a set, so sealed is deliberately left out of all three figures. */
+    setValue: number; ownedValue: number; missingCost: number;
+  };
+}
 
 export async function getSetDetail(userId: string, setId: number): Promise<SetDetail | null> {
   const c = await db();
@@ -195,32 +232,45 @@ export async function getSetDetail(userId: string, setId: number): Promise<SetDe
     sql: `SELECT ca.id AS card_id, ca.name, ca.number, ca.rarity, ca.image_url, p.id AS printing_id, p.subtype, lp.market, lp.date,
                  COALESCE((SELECT SUM(ci.quantity) FROM collection_items ci JOIN collections po ON po.id = ci.collection_id AND po.user_id = ? WHERE ci.printing_id = p.id), 0) AS owned
           FROM cards ca JOIN printings p ON p.card_id = ca.id LEFT JOIN latest_prices lp ON lp.printing_id = p.id
-          WHERE ca.set_id = ? AND ca.number IS NOT NULL
-          ORDER BY ca.number, ca.id, p.id`,
+          WHERE ca.set_id = ?
+          ORDER BY ca.number IS NULL, ca.number, ca.name, ca.id, p.id`,
     args: [userId, setId],
   })).rows;
-  const cards = new Map<number, SetCard>();
+  // One pass over cards AND sealed — they differ only by `number`, so splitting them in SQL would
+  // mean running the same join twice.
+  const byId = new Map<number, SetCard>();
   for (const r of rows) {
     const id = Number(r.card_id);
     const market = r.market == null ? null : Number(r.market);
     const owned = Number(r.owned);
-    const card = cards.get(id) ?? { cardId: id, name: String(r.name), number: String(r.number), rarity: r.rarity == null ? null : String(r.rarity), imageUrl: r.image_url == null ? null : String(r.image_url), lowestMarket: null, ownedQuantity: 0, printings: [] };
+    const card = byId.get(id) ?? { cardId: id, name: String(r.name), number: r.number == null ? null : String(r.number), rarity: r.rarity == null ? null : String(r.rarity), imageUrl: r.image_url == null ? null : String(r.image_url), lowestMarket: null, ownedQuantity: 0, printings: [] };
     card.printings.push({ printingId: Number(r.printing_id), subtype: String(r.subtype), market, priceDate: r.date == null ? null : String(r.date) });
     card.ownedQuantity += owned;
     if (market != null && (card.lowestMarket == null || market < card.lowestMarket)) card.lowestMarket = market;
-    cards.set(id, card);
+    byId.set(id, card);
   }
-  const list = [...cards.values()];
+  const all = [...byId.values()];
+  const cards = all.filter((x) => x.number != null);
+  const sealed = all.filter((x) => x.number == null);
+  // A set with neither is a TCGplayer group we have no products for. There is nothing to show, so
+  // the page 404s rather than rendering an empty shell — and /sets does not link to it.
+  if (all.length === 0) return null;
+
   let setValue = 0, ownedValue = 0, missingCost = 0, ownedCards = 0;
-  for (const card of list) {
+  for (const card of cards) {
     if (card.lowestMarket != null) setValue += card.lowestMarket;
     if (card.ownedQuantity > 0) { ownedCards++; if (card.lowestMarket != null) ownedValue += card.lowestMarket; }
     else if (card.lowestMarket != null) missingCost += card.lowestMarket;
   }
   return {
     set: { id: Number(s.id), slug: s.set_slug == null ? null : String(s.set_slug), name: String(s.name), code: s.code == null ? null : String(s.code), releaseDate: s.release_date == null ? null : String(s.release_date), gameSlug: String(s.slug), gameName: String(s.game_name) },
-    cards: list,
-    stats: { totalCards: list.length, ownedCards, setValue, ownedValue, missingCost },
+    cards,
+    sealed,
+    stats: {
+      totalCards: cards.length, ownedCards,
+      totalSealed: sealed.length, ownedSealed: sealed.filter((x) => x.ownedQuantity > 0).length,
+      setValue, ownedValue, missingCost,
+    },
   };
 }
 

@@ -1,35 +1,15 @@
-// Grouping and filtering for /sets, kept out of the page so both are testable without a database
-// and without React. Nothing here touches lib/db.
+// Grouping for /sets, kept out of the page so it is testable without a database and without
+// React. Nothing here touches lib/db.
 import type { SetCompletion } from "@/lib/catalog";
 
 /** Sets with no `series` are TCGplayer product groups rather than sets in the game's own sense. */
 export const UNGROUPED = "Promos & products";
 
-export const SET_FILTERS = ["all", "started", "incomplete", "complete", "sealed"] as const;
-export type SetFilter = (typeof SET_FILTERS)[number];
-
-export function parseSetFilter(raw: string | string[] | undefined): SetFilter {
-  return typeof raw === "string" && (SET_FILTERS as readonly string[]).includes(raw) ? (raw as SetFilter) : "all";
-}
-
-/** A set with no numbered cards is sealed-only — there is nothing to complete, so completion
- *  filters must not silently swallow it, and "complete" must not claim 0 of 0 is finished. */
-const isSealedOnly = (s: SetCompletion) => s.totalCards === 0;
-
-export function matchesFilter(s: SetCompletion, filter: SetFilter): boolean {
-  switch (filter) {
-    case "started":
-      return !isSealedOnly(s) && s.ownedCards > 0;
-    case "incomplete":
-      return !isSealedOnly(s) && s.ownedCards < s.totalCards;
-    case "complete":
-      return !isSealedOnly(s) && s.ownedCards === s.totalCards;
-    case "sealed":
-      return isSealedOnly(s);
-    default:
-      return true;
-  }
-}
+// There is deliberately NO completion filter here. /sets is a CATALOG — sets are how a game groups
+// its cards — and filtering a catalog by "started / incomplete / complete" answers a question nobody
+// asked while browsing it. "Sealed only" was worse: it classified a SET by something every set
+// contains, because sealed products live inside their set (cards.number IS NULL), not beside it.
+// Completion still SHOWS on each tile. It is information, not a way to slice the list.
 
 /**
  * True when grouping has nothing to say: every set landed in the single ungrouped bucket.

@@ -2,9 +2,7 @@
 import { useMemo, useCallback } from "react";
 import type { SetCompletion } from "@/lib/catalog";
 import { VIEW_MODES, type ViewMode } from "@/lib/view-mode";
-import {
-  groupByEra, isUngroupedOnly, matchesFilter, SET_FILTERS, UNGROUPED, type SetFilter,
-} from "@/lib/set-filters";
+import { groupByEra, isUngroupedOnly, UNGROUPED } from "@/lib/set-filters";
 import { EmptyState, Icon, Pill, SearchField, SectionHeading, StickyBar } from "@/components/ui";
 import { usePersisted } from "@/components/ui/usePersisted";
 import SetPanel from "./SetPanel";
@@ -22,18 +20,8 @@ function SetList({ sets, view, gameSlug }: { sets: SetCompletion[]; view: ViewMo
   );
 }
 
-const FILTER_LABEL: Record<SetFilter, string> = {
-  all: "All",
-  started: "Started",
-  incomplete: "Incomplete",
-  complete: "Complete",
-  sealed: "Sealed only",
-};
-
 const asView = (raw: unknown): ViewMode | null =>
   typeof raw === "string" && (VIEW_MODES as readonly string[]).includes(raw) ? (raw as ViewMode) : null;
-const asFilter = (raw: unknown): SetFilter | null =>
-  typeof raw === "string" && (SET_FILTERS as readonly string[]).includes(raw) ? (raw as SetFilter) : null;
 const asClosed = (raw: unknown): string[] | null =>
   Array.isArray(raw) && raw.every((x) => typeof x === "string") ? (raw as string[]) : null;
 
@@ -56,7 +44,6 @@ export default function SetBrowser({
   games: { slug: string; name: string }[];
 }) {
   const [view, setView] = usePersisted<ViewMode>("sets.view", "grid", asView);
-  const [filter, setFilter] = usePersisted<SetFilter>("sets.filter", "all", asFilter);
   // Per game: an era name from one game means nothing in another, so folds must not leak across.
   const [closed, setClosed] = usePersisted<string[]>(`sets.closed.${gameSlug}`, [], asClosed);
   const [query, setQuery] = usePersisted<string>("sets.query", "", (r) => (typeof r === "string" ? r : null));
@@ -70,14 +57,10 @@ export default function SetBrowser({
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
     return groupByEra(
-      sets.filter(
-        (s) =>
-          matchesFilter(s, filter) &&
-          // Code as well as name: "PRE" and "SV08" are how a set is actually referred to.
-          (q === "" || s.name.toLowerCase().includes(q) || (s.code ?? "").toLowerCase().includes(q))
-      )
+      // Code as well as name: "PRE" and "SV08" are how a set is actually referred to.
+      sets.filter((s) => q === "" || s.name.toLowerCase().includes(q) || (s.code ?? "").toLowerCase().includes(q))
     );
-  }, [sets, filter, query]);
+  }, [sets, query]);
 
   const shown = groups.reduce((n, g) => n + g.sets.length, 0);
   // One Piece and Riftbound have no era data from any source, so every set lands in the one
@@ -103,19 +86,11 @@ export default function SetBrowser({
 
         <SearchField value={query} onChange={setQuery} placeholder="Filter sets by name or code…" />
 
-        {/* Game and completion on ONE row: two axes, but stacking them costs a third of the pinned
-            bar's height and the pill shapes already tell them apart. */}
         <div className="flex flex-wrap items-center gap-1.5">
           {games.map((g) => (
             // Game IS a navigation — the server fetches by it — so it stays a link.
             <Pill key={g.slug} href={`/sets/${g.slug}`} selected={g.slug === gameSlug}>
               {g.name}
-            </Pill>
-          ))}
-          <span aria-hidden className="mx-1 h-5 w-px bg-hairline" />
-          {SET_FILTERS.map((f) => (
-            <Pill key={f} selected={f === filter} onClick={() => setFilter(f)}>
-              {FILTER_LABEL[f]}
             </Pill>
           ))}
         </div>
@@ -127,9 +102,7 @@ export default function SetBrowser({
           body={
             query.trim() !== ""
               ? `No set in ${gameName} matches “${query.trim()}”.`
-              : filter === "all"
-                ? "The nightly ingest fills this in."
-                : "No set in this game matches that filter."
+              : "The nightly ingest fills this in."
           }
         />
       ) : flat ? (

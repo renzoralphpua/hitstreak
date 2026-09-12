@@ -50,6 +50,8 @@ export default async function SetDetailPage({ params }: Params) {
   const collections = await listCollections(userId);
   const ratio = stats.totalCards > 0 ? stats.ownedCards / stats.totalCards : 0;
   const pct = Math.round(ratio * 100);
+  // A set with no numbered cards (a few TCGplayer groups are sealed only) has no completion to show.
+  const hasCards = stats.totalCards > 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -65,11 +67,24 @@ export default async function SetDetailPage({ params }: Params) {
             <span className="num font-semibold text-ink">
               {stats.ownedCards} of {stats.totalCards}
             </span>{" "}
-            cards · set value <span className="num font-semibold text-ink">{formatMoney(stats.setValue)}</span> ·
+            cards
+            {/* Sealed is counted apart, and only mentioned by a set that has any — "0 of 0 sealed"
+                is noise on the many sets that ship none. */}
+            {stats.totalSealed > 0 && (
+              <>
+                {" · "}
+                <span className="num font-semibold text-ink">
+                  {stats.ownedSealed} of {stats.totalSealed}
+                </span>{" "}
+                sealed
+              </>
+            )}
+            {" · "}set value <span className="num font-semibold text-ink">{formatMoney(stats.setValue)}</span> ·
             your copies worth <span className="num font-semibold text-ink">{formatMoney(stats.ownedValue)}</span>
           </p>
         </div>
 
+        {hasCards && (
         <div className="flex w-[220px] flex-col gap-1.5 md:ml-auto">
           <div className="flex items-baseline justify-between text-caption text-muted">
             <span>Set completion</span>
@@ -86,9 +101,10 @@ export default async function SetDetailPage({ params }: Params) {
             to complete
           </span>
         </div>
+        )}
       </div>
 
-      <SetGrid cards={detail.cards} collections={collections} setId={detail.set.id} />
+      <SetGrid cards={detail.cards} sealed={detail.sealed} collections={collections} setId={detail.set.id} />
     </div>
   );
 }

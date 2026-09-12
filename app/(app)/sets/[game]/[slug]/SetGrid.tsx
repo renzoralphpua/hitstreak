@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { SetCard } from "@/lib/catalog";
 import type { Collection } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
-import { CardTile, EmptyState, Pill } from "@/components/ui";
+import { CardTile, EmptyState, Pill, SectionHeading } from "@/components/ui";
 import { addItemAction } from "../../../collections/actions";
 
 type Filter = "all" | "owned" | "missing";
@@ -20,7 +20,16 @@ const FILTERS: Array<{ key: Filter; label: string }> = [
  *  to the target collection: the count bumps immediately, then `router.refresh()` re-reads the truth
  *  (the optimistic bumps are dropped as soon as new server data arrives). A failed add is reverted
  *  and reported above the grid. */
-export default function SetGrid({ cards, collections, setId }: { cards: SetCard[]; collections: Collection[]; setId: number }) {
+export default function SetGrid({
+  cards, sealed, collections, setId,
+}: {
+  cards: SetCard[];
+  /** The set's ETBs, booster boxes and bundles. Same shape, same add behaviour, own section — they
+   *  are part of the set, but they are not cards and must not be counted as though they were. */
+  sealed: SetCard[];
+  collections: Collection[];
+  setId: number;
+}) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
   const [targetCollectionId, setTargetCollectionId] = useState<number | null>(collections[0]?.id ?? null);
@@ -37,15 +46,19 @@ export default function SetGrid({ cards, collections, setId }: { cards: SetCard[
   const optimistic = added.base === cards ? added.counts : {};
 
   const quantityOf = (card: SetCard) => card.ownedQuantity + (optimistic[card.cardId] ?? 0);
-  const ownedCount = cards.filter((c) => quantityOf(c) > 0).length;
+  const keep = (c: SetCard) =>
+    filter === "all" ? true : filter === "owned" ? quantityOf(c) > 0 : quantityOf(c) === 0;
+  // The pills count everything the filter acts on, cards and sealed together, because that is what
+  // choosing one changes on screen.
+  const everything = [...cards, ...sealed];
+  const ownedCount = everything.filter((c) => quantityOf(c) > 0).length;
   const counts: Record<Filter, number> = {
-    all: cards.length,
+    all: everything.length,
     owned: ownedCount,
-    missing: cards.length - ownedCount,
+    missing: everything.length - ownedCount,
   };
-  const visible = cards.filter((c) =>
-    filter === "all" ? true : filter === "owned" ? quantityOf(c) > 0 : quantityOf(c) === 0
-  );
+  const visible = cards.filter(keep);
+  const visibleSealed = sealed.filter(keep);
 
   const canAdd = targetCollectionId != null;
 
@@ -112,34 +125,66 @@ export default function SetGrid({ cards, collections, setId }: { cards: SetCard[
         </p>
       )}
 
-      {visible.length === 0 ? (
+      {visible.length + visibleSealed.length === 0 ? (
         <EmptyState
           title={filter === "owned" ? "You don't own any of these yet" : "Nothing missing here"}
           body={
             filter === "owned"
               ? "Tap a card in the full set to add your first copy."
-              : "You own every card in this set."
+              : "You own everything in this set."
           }
         />
       ) : (
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-        {visible.map((c) => (
-          <div key={c.cardId} className="flex flex-col gap-1">
-            <CardTile
-              name={c.name}
-              subtitle={c.number}
-              price={formatMoney(c.lowestMarket)}
-              quantity={quantityOf(c)}
-              imageUrl={c.imageUrl}
-              onClick={canAdd ? () => add(c) : undefined}
-            />
-            <Link href={`/cards/${c.cardId}?from=${encodeURIComponent(`/sets/${setId}`)}`} className="text-caption text-accent">
-              Details
-            </Link>
-          </div>
-        ))}
-      </div>
+        <>
+          <Tiles items={visible} quantityOf={quantityOf} setId={setId} onAdd={canAdd ? add : undefined} />
+
+          {visibleSealed.length > 0 && (
+            <div className="flex flex-col gap-3">
+              {/* Sealed sits BELOW the cards, under its own heading, rather than mixed into the grid:
+                  a booster box next to a card reads as another card, and it is priced nothing like
+                  one. Inside the set, though — it is part of this release, not a separate product. */}
+              <SectionHeading
+                title="Sealed"
+                caption={`${visibleSealed.length} product${visibleSealed.length === 1 ? "" : "s"}`}
+                className="border-b border-hairline pb-1.5"
+              />
+              <Tiles items={visibleSealed} quantityOf={quantityOf} setId={setId} onAdd={canAdd ? add : undefined} />
+            </div>
+          )}
+        </>
       )}
+    </div>
+  );
+}
+
+/** One grid of tiles. Cards and sealed products render identically — only the heading above them
+ *  differs — so the layout lives in one place. */
+function Tiles({
+  items, quantityOf, setId, onAdd,
+}: {
+  items: SetCard[];
+  quantityOf: (c: SetCard) => number;
+  setId: number;
+  onAdd?: (c: SetCard) => void;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+      {items.map((c) => (
+        <div key={c.cardId} className="flex flex-col gap-1">
+          <CardTile
+            name={c.name}
+            // A sealed product has no card number; its subtitle is what it IS.
+            subtitle={c.number ?? "Sealed"}
+            price={formatMoney(c.lowestMarket)}
+            quantity={quantityOf(c)}
+            imageUrl={c.imageUrl}
+            onClick={onAdd ? () => onAdd(c) : undefined}
+          />
+          <Link href={`/cards/${c.cardId}?from=${encodeURIComponent(`/sets/${setId}`)}`} className="text-caption text-accent">
+            Details
+          </Link>
+        </div>
+      ))}
     </div>
   );
 }
