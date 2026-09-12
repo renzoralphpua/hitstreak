@@ -269,7 +269,7 @@ function CardPicker({ gameSlug, initialQuery, onPick }: { gameSlug: string; init
     <div className="flex flex-col gap-2">
       <SearchField value={q} onChange={setQ} placeholder={`Search for “${initialQuery}”…`} />
       {hits.length > 0 && (
-        <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+        <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto overflow-x-clip">
           {hits.map((h: CardHit) => (
             <li key={h.cardId}>
               <CardRow

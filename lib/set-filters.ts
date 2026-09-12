@@ -31,6 +31,17 @@ export function matchesFilter(s: SetCompletion, filter: SetFilter): boolean {
   }
 }
 
+/**
+ * True when grouping has nothing to say: every set landed in the single ungrouped bucket.
+ *
+ * That is the shape for a game we have no era data for at all — One Piece and Riftbound, where no
+ * source publishes one. A lone foldable "Promos & products" heading over the whole catalog is a
+ * label that distinguishes nothing and a fold whose only move is to hide everything, so the caller
+ * should render the sets flat instead.
+ */
+export const isUngroupedOnly = (groups: SetGroup[]): boolean =>
+  groups.length === 1 && groups[0].series === UNGROUPED;
+
 export interface SetGroup {
   /** The era's name, or `UNGROUPED`. */
   series: string;

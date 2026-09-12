@@ -206,7 +206,7 @@ export default function CommandPalette() {
               <SearchField value={query} onChange={setQuery} placeholder="Search cards, sets and decks…" autoFocus />
             </div>
 
-            <div className="max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[60vh] overflow-y-auto overflow-x-clip">
               {q.length < MIN_QUERY ? (
                 <p className="p-4 text-caption text-dim">Type at least {MIN_QUERY} characters. Try a name, a number, or a rarity like “SIR”.</p>
               ) : failed ? (

@@ -144,7 +144,7 @@ export default function Builder({ deck, owned }: { deck: DeckDetail; owned: Reco
         <div className="flex flex-col gap-2.5">
           <SearchField value={q} onChange={setQ} placeholder={`Search ${deck.gameName}…`} />
           {hits.length > 0 && (
-            <ul className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto">
+            <ul className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto overflow-x-clip">
               {hits.map((h) => (
                 <li key={h.cardId}>
                   <CardRow

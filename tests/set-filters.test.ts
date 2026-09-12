@@ -3,7 +3,7 @@
 import { describe, it, expect } from "vitest";
 import type { SetCompletion } from "@/lib/catalog";
 import {
-  groupByEra, matchesFilter, parseCollapsed, parseSetFilter, toggleCollapsed, UNGROUPED,
+  groupByEra, isUngroupedOnly, matchesFilter, parseCollapsed, parseSetFilter, toggleCollapsed, UNGROUPED,
 } from "@/lib/set-filters";
 
 const set = (over: Partial<SetCompletion>): SetCompletion => ({
@@ -80,6 +80,35 @@ describe("groupByEra", () => {
   it("keeps the query's order within an era", () => {
     const groups = groupByEra([set({ id: 1, name: "B" }), set({ id: 2, name: "A" })]);
     expect(groups[0].sets.map((s) => s.name)).toEqual(["B", "A"]);
+  });
+});
+
+describe("isUngroupedOnly", () => {
+  it("is true when a game has no era data at all", () => {
+    // One Piece and Riftbound: no source publishes a series, so everything lands in one bucket and
+    // the heading would name nothing. /sets renders these flat, with no fold.
+    const groups = groupByEra([
+      set({ id: 1, name: "OP01: Romance Dawn", series: null, seriesRank: null }),
+      set({ id: 2, name: "OP02: Paramount War", series: null, seriesRank: null }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(isUngroupedOnly(groups)).toBe(true);
+  });
+
+  it("is false as soon as ONE era exists to contrast with", () => {
+    const groups = groupByEra([
+      set({ id: 1, series: null, seriesRank: null }),
+      set({ id: 2, series: "Mega Evolution", seriesRank: 16 }),
+    ]);
+    expect(isUngroupedOnly(groups)).toBe(false);
+  });
+
+  it("is false for a single REAL era — that heading still says something", () => {
+    expect(isUngroupedOnly(groupByEra([set({ id: 1, series: "XY", seriesRank: 9 })]))).toBe(false);
+  });
+
+  it("is false for nothing at all, so an empty state is never mistaken for a flat list", () => {
+    expect(isUngroupedOnly([])).toBe(false);
   });
 });
 

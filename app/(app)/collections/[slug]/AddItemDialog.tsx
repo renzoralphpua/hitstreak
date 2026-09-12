@@ -158,7 +158,7 @@ export default function AddItemDialog({ collectionId, label, preselected }: Prop
                 <>
                   <SearchField value={q} onChange={setQ} placeholder="Search cards…" autoFocus />
                   {hits.length > 0 && (
-                    <ul className="flex max-h-80 flex-col gap-2 overflow-y-auto">
+                    <ul className="flex max-h-80 flex-col gap-2 overflow-y-auto overflow-x-clip">
                       {hits.map((h) => (
                         <li key={h.cardId}>
                           <CardRow

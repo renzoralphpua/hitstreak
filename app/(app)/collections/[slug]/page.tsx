@@ -81,10 +81,14 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
 
   return (
     <div className="grid gap-10 md:grid-cols-[380px_1fr]">
-      {/* The summary stays in view while you scroll the cards: it is the answer to "what is this
+      {/* overflow-x-clip is not decoration: CSS makes the OTHER axis compute to `auto` whenever one
+          axis is not `visible`, so `overflow-y-auto` alone put a horizontal scrollbar under this
+          column. `clip` is the one value that does not force its counterpart.
+
+          The summary stays in view while you scroll the cards: it is the answer to "what is this
           worth", and scrolling past it to look at a card makes you scroll back to see it again.
           Single-column below md, where a pinned 380px block would BE the screen. */}
-      <div className="flex flex-col gap-4 md:sticky md:top-16 md:max-h-[calc(100dvh-4rem)] md:self-start md:overflow-y-auto md:pt-3 md:pb-6">
+      <div className="flex flex-col gap-4 md:sticky md:top-16 md:max-h-[calc(100dvh-4rem)] md:self-start md:overflow-y-auto md:overflow-x-clip md:pt-3 md:pb-6">
         <SectionHeading
           as="h1"
           title={collection.name}

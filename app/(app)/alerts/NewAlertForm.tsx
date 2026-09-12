@@ -68,7 +68,7 @@ export default function NewAlertForm({ preselected }: { preselected?: AlertCard 
         <>
           <SearchField value={q} onChange={setQ} placeholder="Search cards…" />
           {hits.length > 0 && (
-            <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto">
+            <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto overflow-x-clip">
               {hits.map((h) => (
                 <li key={h.cardId}>
                   <CardRow name={h.name} subtitle={h.subtitle} imageUrl={h.imageUrl} onClick={() => pick(h)} />

@@ -2,10 +2,25 @@
 import { useMemo, useCallback } from "react";
 import type { SetCompletion } from "@/lib/catalog";
 import { VIEW_MODES, type ViewMode } from "@/lib/view-mode";
-import { groupByEra, matchesFilter, SET_FILTERS, UNGROUPED, type SetFilter } from "@/lib/set-filters";
+import {
+  groupByEra, isUngroupedOnly, matchesFilter, SET_FILTERS, UNGROUPED, type SetFilter,
+} from "@/lib/set-filters";
 import { EmptyState, Icon, Pill, SearchField, SectionHeading, StickyBar } from "@/components/ui";
 import { usePersisted } from "@/components/ui/usePersisted";
 import SetPanel from "./SetPanel";
+
+/** Grid or list for one run of sets. The grid earns extra columns on a wide screen (decision 8). */
+function SetList({ sets, view, gameSlug }: { sets: SetCompletion[]; view: ViewMode; gameSlug: string }) {
+  return view === "grid" ? (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {sets.map((s) => <SetPanel key={s.id} set={s} view={view} gameSlug={gameSlug} />)}
+    </div>
+  ) : (
+    <div className="flex flex-col gap-2">
+      {sets.map((s) => <SetPanel key={s.id} set={s} view={view} gameSlug={gameSlug} />)}
+    </div>
+  );
+}
 
 const FILTER_LABEL: Record<SetFilter, string> = {
   all: "All",
@@ -65,6 +80,10 @@ export default function SetBrowser({
   }, [sets, filter, query]);
 
   const shown = groups.reduce((n, g) => n + g.sets.length, 0);
+  // One Piece and Riftbound have no era data from any source, so every set lands in the one
+  // ungrouped bucket. Render those flat: a single "Promos & products" heading over the whole
+  // catalog names nothing, and its fold can only hide the page.
+  const flat = isUngroupedOnly(groups);
 
   return (
     <div className="flex flex-col gap-5">
@@ -113,6 +132,8 @@ export default function SetBrowser({
                 : "No set in this game matches that filter."
           }
         />
+      ) : flat ? (
+        <SetList sets={groups[0].sets} view={view} gameSlug={gameSlug} />
       ) : (
         groups.map((g) => {
           const isClosed = collapsed.has(g.series);
@@ -131,22 +152,13 @@ export default function SetBrowser({
                   {g.totalCards > 0 && ` · ${g.ownedCards} / ${g.totalCards}`}
                 </span>
               </button>
-              {!isClosed &&
-                (view === "grid" ? (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                    {g.sets.map((s) => <SetPanel key={s.id} set={s} view={view} gameSlug={gameSlug} />)}
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {g.sets.map((s) => <SetPanel key={s.id} set={s} view={view} gameSlug={gameSlug} />)}
-                  </div>
-                ))}
+              {!isClosed && <SetList sets={g.sets} view={view} gameSlug={gameSlug} />}
             </div>
           );
         })
       )}
 
-      {groups.some((g) => g.series === UNGROUPED) && (
+      {!flat && groups.some((g) => g.series === UNGROUPED) && (
         <p className="text-caption text-dim">
           &ldquo;{UNGROUPED}&rdquo; holds the TCGplayer product groups that are not sets in the game&rsquo;s own
           sense — decks, blisters, promo collections — so they have no era to sit in.
