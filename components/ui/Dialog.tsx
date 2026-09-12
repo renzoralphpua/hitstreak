@@ -34,20 +34,32 @@ export default function Dialog({
   // anyone navigating by keyboard, and invisible to everyone else — so it never gets noticed.
   const opener = useRef<HTMLElement | null>(null);
 
+  // Held in a ref and NOT in the effect's deps. `onClose` is almost always an inline arrow, so it is
+  // a new function on every render — depending on it re-ran this effect on every keystroke, and the
+  // `panel.focus()` below then yanked focus out of whatever field was being typed into. The effect
+  // must run when the dialog OPENS and at no other time.
+  const latestClose = useRef(onClose);
+  // Updated in an effect, not during render: a ref written while rendering is unsafe once React
+  // renders concurrently, and the only reader is a keydown handler that cannot fire before commit.
+  useEffect(() => {
+    latestClose.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
     opener.current = document.activeElement as HTMLElement | null;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") latestClose.current();
     };
     document.addEventListener("keydown", onKey);
-    // jsdom has no layout, and a real browser may not have painted yet; neither should throw.
-    panel.current?.focus?.();
+    // Focus the panel, but never over a field the content has already autofocused — a dialog whose
+    // whole purpose is one input should leave the cursor in it.
+    if (!panel.current?.contains(document.activeElement)) panel.current?.focus?.();
     return () => {
       document.removeEventListener("keydown", onKey);
       opener.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
