@@ -71,7 +71,7 @@ export default function SetBrowser({
   return (
     <div className="flex flex-col gap-5">
       {/* Everything you steer the list WITH stays put; only the list itself scrolls. */}
-      <StickyBar>
+      <StickyBar atTop>
         <SectionHeading
           as="h1"
           title="Sets"

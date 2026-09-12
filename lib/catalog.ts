@@ -101,16 +101,18 @@ export async function searchJumpTargets(userId: string, q: string, limit = 4): P
   const c = await db();
   const [sets, decks] = await Promise.all([
     c.execute({
-      sql: `SELECT se.id, se.slug, se.name, g.name AS game, se.code
+      // g.slug as well as g.name: the name captions the row, but the set's URL is
+      // /sets/<game>/<slug> and without the game segment every jump target 404s.
+      sql: `SELECT se.id, se.slug, se.name, g.name AS game, g.slug AS game_slug, se.code
             FROM sets se JOIN games g ON g.id = se.game_id
-            WHERE se.name LIKE ? ESCAPE '\' OR se.code LIKE ? ESCAPE '\'
+            WHERE se.name LIKE ? ESCAPE '\\' OR se.code LIKE ? ESCAPE '\\'
             ORDER BY se.series_rank IS NULL, se.series_rank DESC, se.release_date DESC LIMIT ?`,
       args: [like, like, limit],
     }),
     c.execute({
       sql: `SELECT d.id, d.name, g.name AS game, d.owner_user_id IS NULL AS is_meta
             FROM decks d JOIN games g ON g.id = d.game_id
-            WHERE d.name LIKE ? ESCAPE '\' AND (d.owner_user_id IS NULL OR d.owner_user_id = ?)
+            WHERE d.name LIKE ? ESCAPE '\\' AND (d.owner_user_id IS NULL OR d.owner_user_id = ?)
             ORDER BY d.owner_user_id IS NULL, d.updated_at DESC LIMIT ?`,
       args: [like, userId, limit],
     }),
@@ -118,7 +120,9 @@ export async function searchJumpTargets(userId: string, q: string, limit = 4): P
   return [
     ...sets.rows.map((r) => ({
       kind: "set" as const, id: Number(r.id), name: String(r.name),
-      href: `/sets/${r.slug == null ? Number(r.id) : String(r.slug)}`,
+      // The id is still a valid segment — that route redirects it to the slug — so a set the slug
+      // backfill has not reached yet is reachable rather than broken.
+      href: `/sets/${String(r.game_slug)}/${r.slug == null ? Number(r.id) : String(r.slug)}`,
       caption: [String(r.game), r.code == null ? null : String(r.code)].filter(Boolean).join(" · "),
     })),
     ...decks.rows.map((r) => ({

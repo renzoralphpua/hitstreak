@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { SetCard } from "@/lib/catalog";
 import type { Collection } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
-import { CardTile, EmptyState, Pill, SectionHeading } from "@/components/ui";
+import { CardTile, EmptyState, Pill, SectionHeading, StickyBar } from "@/components/ui";
 import { addItemAction } from "../../../collections/actions";
 import { useDisplay } from "@/components/currency/CurrencyProvider";
 
@@ -90,6 +90,9 @@ export default function SetGrid({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Pinned: choosing which collection a tap adds to is the one control you need at the BOTTOM
+          of a 200-card grid, and scrolling back up to change it was the whole friction. */}
+      <StickyBar>
       <div className="flex flex-wrap items-center gap-1.5">
         {FILTERS.map((f) => (
           <Pill key={f.key} selected={filter === f.key} onClick={() => setFilter(f.key)}>
@@ -119,6 +122,7 @@ export default function SetGrid({
           )}
         </div>
       </div>
+      </StickyBar>
 
       {error && (
         <p role="alert" className="text-base text-accent">
