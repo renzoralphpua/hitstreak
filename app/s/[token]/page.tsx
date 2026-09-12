@@ -3,11 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSharedCollection } from "@/lib/share";
 import { getCollectionHistory, parseRange, rangeStart, chartFrom, withLivePoint, seriesStats, RANGE_CAPTION } from "@/lib/history";
-import { formatMoney } from "@/lib/format";
-import { SectionHeading, MoneyDisplay, PriceDelta, CardRow, LineChart, RangePills, EmptyState } from "@/components/ui";
+import { SectionHeading, MoneyDisplay, PriceDelta, LineChart, RangePills } from "@/components/ui";
 
 import { getDisplay } from "@/lib/display";
 import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
+import SharedCards from "./SharedCards";
 // The token is the credential: no caching across requests, and never indexed.
 export const dynamic = "force-dynamic";
 
@@ -57,30 +57,7 @@ export default async function SharedCollectionPage({ params, searchParams }: Pag
           </div>
           {shared.unpriced > 0 && <p className="text-caption text-dim">{shared.unpriced} {shared.unpriced === 1 ? "copy has" : "copies have"} no market price yet.</p>}
         </div>
-        <div className="flex flex-col gap-4">
-          <SectionHeading title="Cards" caption="sorted by value" />
-          {shared.holdings.length === 0 ? (
-            <EmptyState title="Nothing here yet" />
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {shared.holdings.map((h) => (
-                <li key={`${h.printingId}|${h.condition}`}>
-                  <CardRow
-                    name={h.cardName}
-                    subtitle={[h.setName, h.number, h.subtype, h.condition].filter(Boolean).join(" · ")}
-                    imageUrl={h.imageUrl}
-                    right={
-                      <>
-                        <span className="text-stat font-semibold text-ink">{formatMoney(h.value, { display })}</span>
-                        <span className="text-micro text-dim">×{h.quantity}</span>
-                      </>
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <SharedCards holdings={shared.holdings} />
       </main>
     </div>
     </CurrencyProvider>

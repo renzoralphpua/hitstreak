@@ -58,7 +58,12 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
     );
   }
 
-  const triggered = alerts.filter((a) => !a.armed).slice(0, ALERTS_SHOWN);
+  // A PREVIEW of the alerts list, not just the triggered ones. Showing nothing until something fires
+  // made the block look broken to anyone who had set alerts and was waiting on them — the common
+  // case, since an alert exists precisely because it has NOT happened yet. Triggered lead, because
+  // they are the ones that want acting on.
+  const preview = [...alerts.filter((a) => !a.armed), ...alerts.filter((a) => a.armed)].slice(0, ALERTS_SHOWN);
+  const triggeredCount = alerts.filter((a) => !a.armed).length;
   const decks = myDecks.slice(0, DECKS_SHOWN);
 
   return (
@@ -182,15 +187,17 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
               title="Alerts"
               trailing={
                 <Link href="/alerts" className="text-caption font-semibold text-accent">
-                  All {alerts.length} alert{alerts.length === 1 ? "" : "s"}
+                  {triggeredCount > 0
+                    ? `${triggeredCount} triggered · all ${alerts.length}`
+                    : `All ${alerts.length} alert${alerts.length === 1 ? "" : "s"}`}
                 </Link>
               }
             />
-            {triggered.length === 0 ? (
-              <EmptyState title="Nothing triggered" body="Alerts you set will show here when a price crosses them." />
+            {preview.length === 0 ? (
+              <EmptyState title="No alerts yet" body="Set one on a card and it will show here, watching." />
             ) : (
               <ul className="flex flex-col gap-2">
-                {triggered.map((a) => (
+                {preview.map((a) => (
                   <li key={a.id}>
                     <Link href={`/cards/${a.cardId}?from=/home`} className="block">
                       <CardRow
