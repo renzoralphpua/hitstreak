@@ -141,6 +141,43 @@ export const COLLECTION_SCHEMA_SQL = `
   );
   CREATE INDEX IF NOT EXISTS idx_items_collection ON collection_items(collection_id);
   CREATE INDEX IF NOT EXISTS idx_items_printing ON collection_items(printing_id);
+
+  -- A sale DRAWS DOWN a lot; it never deletes one. The acquisition stays on the books, which is what
+  -- makes a sold card a historical row rather than a hole -- and what stops a sale reading as a
+  -- price crash in collection_history.
+  --
+  -- unit_cost is SNAPSHOTTED from the lot at the moment of sale, deliberately. Realised profit is a
+  -- fact about a day that has passed; editing the lot's acquired_price afterwards must not rewrite
+  -- what you made. It is NULL when the lot never had a cost basis, which is honest -- proceeds are
+  -- known, profit is not.
+  --
+  -- Money is USD here like everywhere else; a price handed over in pesos is converted on the way in
+  -- (lib/money-input.ts). Selling is in person at events, so fees are usually 0 and venue is free
+  -- text rather than a marketplace picker.
+  CREATE TABLE IF NOT EXISTS sales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id INTEGER NOT NULL REFERENCES collection_items(id),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    unit_price REAL NOT NULL CHECK (unit_price >= 0),  -- dollars, per copy
+    fees REAL NOT NULL DEFAULT 0 CHECK (fees >= 0),    -- dollars, for the whole sale
+    unit_cost REAL,                                    -- dollars per copy, as the lot stood that day
+    sold_date TEXT NOT NULL,                           -- YYYY-MM-DD
+    venue TEXT,                                        -- "Manila Card Con", "traded with Miguel"
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_sales_item ON sales(item_id);
+  CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(sold_date);
+
+  -- What a lot actually still holds. Every ownership query reads THIS, not collection_items, so a
+  -- sold copy stops counting as owned in exactly one place instead of nineteen.
+  CREATE VIEW IF NOT EXISTS lot_holdings AS
+    SELECT ci.id, ci.collection_id, ci.printing_id, ci.condition, ci.acquired_price, ci.acquired_date,
+           ci.created_at,
+           ci.quantity AS acquired_quantity,
+           COALESCE(s.sold, 0) AS sold_quantity,
+           ci.quantity - COALESCE(s.sold, 0) AS quantity
+    FROM collection_items ci
+    LEFT JOIN (SELECT item_id, SUM(quantity) AS sold FROM sales GROUP BY item_id) s ON s.item_id = ci.id;
 `;
 
 // Phase 3: materialized collection value, share links, price alerts. FKs are documentation (unenforced

@@ -10,12 +10,19 @@ const pts = [
 ];
 
 describe("LineChart", () => {
-  it("draws a step path across the range and labels the svg", () => {
+  it("connects points diagonally and labels the svg", () => {
     render(<LineChart points={pts} from="2026-08-08" to="2026-09-07" label="Umbreon ex market price, 30D" />);
     const svg = screen.getByRole("img", { name: "Umbreon ex market price, 30D" });
     const d = svg.querySelector("path")!.getAttribute("d")!;
     expect(d).toMatch(/^M0\.0 /);            // first point sits on the left edge
-    expect(d).toMatch(/ H[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+ H800$/); // step, step, carried to the right edge
+    // Straight segments between points, then the last value carried FLAT to the right edge —
+    // there is no data after it and sloping into the future would invent a trend.
+    const segs = d.match(/L[\d.]+ [\d.]+/g)!;
+    expect(segs).toHaveLength(3);
+    expect(d).not.toMatch(/[HV]/); // no step risers, which is what this replaced
+    // The carry to the right edge shares the last point's y, so the tail is flat rather than
+    // sloped: there is no data after it and a slope would invent a trend.
+    expect(segs[2]).toBe(`L800 ${segs[1].split(" ")[1]}`);
     expect(d).not.toMatch(/NaN/);
     // axis labels at both ends
     expect(screen.getByText("Aug 8")).toBeInTheDocument();
