@@ -5,6 +5,7 @@ import type { CardLot } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
 import { Button, Input, Panel, PriceDelta } from "@/components/ui";
 import { updateItemAction, removeItemAction } from "@/app/(app)/collections/actions";
+import SellDialog from "./SellDialog";
 import { useDisplay } from "@/components/currency/CurrencyProvider";
 import { fromUsd, inputCurrency, toUsd } from "@/lib/money-input";
 
@@ -133,7 +134,17 @@ export default function YourCopies({ lots }: { lots: CardLot[] }) {
                   {gain != null && lot.cost! > 0 && (
                     <PriceDelta amount={gain} ratio={gain / lot.cost!} />
                   )}
+                  {/* A lot drawn down to nothing stays on the page — it is what happened, and the
+                      realised profit hangs off it — but it says so instead of showing a bare 0. */}
+                  {lot.soldQuantity > 0 && (
+                    <span className="num text-caption text-dim">
+                      {lot.quantity === 0
+                        ? `all ${lot.soldQuantity} sold`
+                        : `${lot.soldQuantity} sold`}
+                    </span>
+                  )}
                   <div className="ml-auto flex gap-1.5">
+                    <SellDialog lot={lot} />
                     <Button size="sm" variant="secondary" onClick={() => setEditing(lot.itemId)}>Edit</Button>
                     <Button size="sm" variant="secondary" disabled={busy === lot.itemId} onClick={() => remove(lot)}>
                       Remove

@@ -420,7 +420,11 @@ export interface CardLot {
   printingId: number;
   subtype: string;
   condition: Condition;
+  /** Copies still held: acquired minus sold. */
   quantity: number;
+  /** Copies of this lot that have been sold. A lot with quantity 0 and soldQuantity > 0 is not an
+   *  empty row — it is history, and the UI says so rather than showing a mysterious zero. */
+  soldQuantity: number;
   acquiredPrice: number | null;
   acquiredDate: string | null;
   /** This printing's current price, so a lot can be read against what it cost. */
@@ -455,6 +459,7 @@ export async function getCardLots(userId: string, cardId: number): Promise<CardL
     const acquiredPrice = x.acquired_price == null ? null : Number(x.acquired_price);
     const market = x.market == null ? null : Number(x.market);
     return {
+      soldQuantity: Number(x.sold_quantity ?? 0),
       itemId: Number(x.id),
       collectionId: Number(x.collection_id),
       collectionName: String(x.collection_name),

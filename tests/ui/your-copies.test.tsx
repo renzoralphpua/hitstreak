@@ -8,18 +8,20 @@ import type { CardLot } from "@/lib/collections";
 const { update, remove, refresh } = vi.hoisted(() => ({ update: vi.fn(), remove: vi.fn(), refresh: vi.fn() }));
 vi.mock("@/app/(app)/collections/actions", () => ({ updateItemAction: update, removeItemAction: remove }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
+// SellDialog imports the sale actions, which reach lib/db at module load.
+vi.mock("@/app/(app)/collections/sale-actions", () => ({ sellLotAction: vi.fn(), unsellAction: vi.fn() }));
 
 import YourCopies from "@/app/(app)/cards/[id]/YourCopies";
 
 const lot = (over: Partial<CardLot>): CardLot => ({
   itemId: 1, collectionId: 2, collectionName: "Main", printingId: 9, subtype: "Holofoil",
-  condition: "NM", quantity: 1, acquiredPrice: 1101.5, acquiredDate: "2025-02-12",
+  condition: "NM", quantity: 1, soldQuantity: 0, acquiredPrice: 1101.5, acquiredDate: "2025-02-12",
   market: 1465, cost: 1101.5, value: 1465, ...over,
 });
 
 /** Last year at one price, this year at another — the case that was impossible before lots. */
 const older = lot({});
-const newer = lot({ itemId: 2, quantity: 2, acquiredPrice: 1400, acquiredDate: "2026-08-02", cost: 2800, value: 2930 });
+const newer = lot({ itemId: 2, quantity: 2, soldQuantity: 0, acquiredPrice: 1400, acquiredDate: "2026-08-02", cost: 2800, value: 2930 });
 
 beforeEach(() => {
   update.mockReset().mockResolvedValue({ ok: true });

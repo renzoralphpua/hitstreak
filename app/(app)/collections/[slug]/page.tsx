@@ -5,6 +5,7 @@ import { parseRouteId } from "@/lib/route-id";
 import { isNumericId } from "@/lib/slug";
 import { getCollection, getCollectionHoldings, getCollectionSummary, resolveCollectionSlug } from "@/lib/collections";
 import { getShareLink } from "@/lib/share";
+import { realisedFor } from "@/lib/sales";
 import {
   parseRange,
   rangeStart,
@@ -72,10 +73,11 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
   const range = parseRange(rawRange);
   const today = new Date().toISOString().slice(0, 10);
   const from = rangeStart(range, today);
-  const [holdings, summary, shareLink] = await Promise.all([
+  const [holdings, summary, shareLink, realised] = await Promise.all([
     getCollectionHoldings(userId, collectionId),
     getCollectionSummary(userId, collectionId),
     getShareLink(userId, collectionId),
+    realisedFor(userId, collectionId),
   ]);
   // collection_history is materialized nightly; tonight's live value is the final point until then.
   const history = withLivePoint(await getCollectionHistory(userId, collectionId, from, today), today, summary.value);
@@ -133,6 +135,38 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
             <StatTile label="Unpriced" value={String(summary.unpriced)} className="col-span-2" />
           )}
         </div>
+        {/* Realised sits beside unrealised rather than inside it: one is what the collection might
+            make, the other is what it already has, and adding them would be a third number that is
+            neither. Absent entirely until something has actually sold. */}
+        {realised.quantity > 0 && (
+          <div className="flex flex-col gap-1.5 rounded-tile border border-hairline bg-ground px-3 py-2.5">
+            <div className="flex items-baseline justify-between">
+              <span className="text-caption font-semibold uppercase tracking-label text-muted">Realised</span>
+              <span className="num text-caption text-dim">
+                {realised.quantity} sold
+              </span>
+            </div>
+            <MoneyDisplay amount={realised.proceeds} />
+            {realised.uncostedQuantity === realised.quantity ? (
+              <span className="text-caption text-dim">No cost recorded, so there is no profit to show.</span>
+            ) : (
+              <PriceDelta
+                amount={realised.gain}
+                ratio={realised.cost > 0 ? realised.gain / realised.cost : null}
+                caption="vs. paid"
+              />
+            )}
+            {realised.uncostedQuantity > 0 && realised.uncostedQuantity < realised.quantity && (
+              <span className="text-caption text-dim">
+                {realised.uncostedQuantity} of them had no recorded cost, so the profit above leaves them out.
+              </span>
+            )}
+            {realised.fees > 0 && (
+              <span className="num text-caption text-dim">after {formatMoney(realised.fees, { display })} in fees</span>
+            )}
+          </div>
+        )}
+
         {summary.unpriced > 0 && (
           <p className="text-caption text-dim">
             {summary.unpriced} {summary.unpriced === 1 ? "copy has" : "copies have"} no market price yet, so
