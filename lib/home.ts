@@ -175,7 +175,10 @@ export async function getHomeHistory(
       args: [userId, from, to],
     }),
     c.execute({
-      sql: `SELECT ci.quantity, ci.acquired_price, ci.acquired_date
+      // acquired_quantity, NOT the view's `quantity`. This builds a cost basis for every past date,
+      // and `quantity` is what is held TODAY — using it would restate what you had paid in August
+      // according to what you still hold in September, i.e. rewrite history every time you sell.
+      sql: `SELECT ci.acquired_quantity AS quantity, ci.acquired_price, ci.acquired_date
             FROM lot_holdings ci
             JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
             WHERE ci.acquired_price IS NOT NULL`,

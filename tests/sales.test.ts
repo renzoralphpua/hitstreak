@@ -8,6 +8,7 @@ import { closeDb } from "@/lib/db";
 import { seedMiniCatalog } from "./helpers/seed";
 import {
   createCollection, addItem, getCollectionHoldings, getCollectionSummary, getOwnedCounts, updateItem,
+  decrementHolding, removeHolding, getCardHolders,
 } from "@/lib/collections";
 import { sellLot, unsell, listSales, realisedFor, realisedAsOf, realisedOf } from "@/lib/sales";
 
@@ -74,11 +75,12 @@ describe("sellLot", () => {
   it("FREEZES the cost basis at the moment of sale", async () => {
     // Realised profit is a fact about a day that has passed. Editing what the lot cost afterwards
     // must not rewrite what you made on a sale that already happened.
-    await updateItem(U, collectionId, lotId, { quantity: 3, acquiredPrice: 5, acquiredDate: "2026-08-01" });
+    // No quantity: updateItem sets the ACQUIRED count, and this test is about the price only.
+    await updateItem(U, lotId, { acquiredPrice: 5 });
     const [sale] = await listSales(U, collectionId);
     expect(sale.unitCost).toBe(1100);
     expect(realisedOf(sale).gain).toBe(400);
-    await updateItem(U, collectionId, lotId, { quantity: 3, acquiredPrice: 1100, acquiredDate: "2026-08-01" });
+    await updateItem(U, lotId, { acquiredPrice: 1100 });
   });
 
   it("lets the lot be sold out entirely, and keeps it visible when it is", async () => {
@@ -148,5 +150,65 @@ describe("unsell", () => {
   it("will not undo someone else's sale", async () => {
     const [any] = await listSales(U, collectionId);
     expect(await unsell(OTHER, any.id)).toBe(false);
+  });
+});
+
+// Every case below is a defect an adversarial audit of the lot_holdings migration found and
+// reproduced. None was visible to the existing suite, because with no sales the view returns exactly
+// what the table did — so a broken migration and a correct one look identical.
+describe("the migration's sharp edges", () => {
+  it("decrements the lot that still HOLDS copies, not the newest one", async () => {
+    // The newest lot being fully sold used to make the '−' button target it, throw on the sales
+    // foreign key, and report a constraint failure as "could not reach the server".
+    const col = (await createCollection(U, "Two Lots")).id;
+    const printingId = seed.printings.shanksNormal;
+    await addItem(U, col, { printingId, quantity: 2, condition: "NM", acquiredPrice: 10 });
+    await addItem(U, col, { printingId, quantity: 1, condition: "NM", acquiredPrice: 20 });
+
+    const newest = (await getCollectionHoldings(U, col))[0].lots[0];
+    await sellLot(U, { itemId: newest.itemId, quantity: 1, unitPrice: 30, soldDate: "2026-09-01" });
+    expect((await getCollectionHoldings(U, col))[0].quantity).toBe(2);
+
+    // The newest lot now holds nothing; the decrement must fall through to the older one.
+    await expect(decrementHolding(U, col, printingId, "NM")).resolves.toBe(true);
+    expect((await getCollectionHoldings(U, col))[0].quantity).toBe(1);
+  });
+
+  it("draws a sold-from lot down rather than deleting it", async () => {
+    // Deleting the acquisition a sale points at throws — foreign keys ARE enforced in libSQL, which
+    // the schema comment used to deny.
+    const col = (await createCollection(U, "Sold Once")).id;
+    const printingId = seed.printings.shanksNormal;
+    await addItem(U, col, { printingId, quantity: 1, condition: "NM", acquiredPrice: 10 });
+    const lot = (await getCollectionHoldings(U, col))[0].lots[0];
+    await sellLot(U, { itemId: lot.itemId, quantity: 1, unitPrice: 40, soldDate: "2026-09-02" });
+
+    // Nothing held, but removing the holding must not destroy the sale.
+    await expect(removeHolding(U, col, printingId, "NM")).resolves.toBe(false);
+    expect(await listSales(U, col)).toHaveLength(1);
+    expect((await realisedFor(U, col)).proceeds).toBe(40);
+  });
+
+  it("never lets an edit push held below zero", async () => {
+    const col = (await createCollection(U, "Edit Guard")).id;
+    await addItem(U, col, { printingId: seed.printings.shanksNormal, quantity: 4, condition: "NM", acquiredPrice: 10 });
+    const lot = (await getCollectionHoldings(U, col))[0].lots[0];
+    await sellLot(U, { itemId: lot.itemId, quantity: 3, unitPrice: 50, soldDate: "2026-09-03" });
+
+    // Asking for 1 acquired when 3 have been sold would make held −2, and a negative quantity
+    // propagates into every total in the app.
+    await updateItem(U, lot.itemId, { quantity: 1 });
+    expect((await getCollectionHoldings(U, col))[0].quantity).toBe(0);
+  });
+
+  it("stops listing a collection as holding a card once every copy is sold", async () => {
+    const col = (await createCollection(U, "All Gone")).id;
+    await addItem(U, col, { printingId: seed.printings.shanksNormal, quantity: 1, condition: "NM", acquiredPrice: 10 });
+    const lot = (await getCollectionHoldings(U, col))[0].lots[0];
+    expect((await getCardHolders(U, seed.cards.shanks)).some((h) => h.collectionId === col)).toBe(true);
+
+    await sellLot(U, { itemId: lot.itemId, quantity: 1, unitPrice: 60, soldDate: "2026-09-04" });
+    // The card page said "In your collections: All Gone ×0" — a holding of nothing.
+    expect((await getCardHolders(U, seed.cards.shanks)).some((h) => h.collectionId === col)).toBe(false);
   });
 });

@@ -156,7 +156,10 @@ export const COLLECTION_SCHEMA_SQL = `
   -- text rather than a marketplace picker.
   CREATE TABLE IF NOT EXISTS sales (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    item_id INTEGER NOT NULL REFERENCES collection_items(id),
+    -- CASCADE because deleting a collection deletes its lots, and a sale cannot outlive the
+    -- acquisition it drew from. Code refuses to delete a lot that HAS sales (lib/collections.ts);
+    -- this is the backstop for deleting the whole collection.
+    item_id INTEGER NOT NULL REFERENCES collection_items(id) ON DELETE CASCADE,
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     unit_price REAL NOT NULL CHECK (unit_price >= 0),  -- dollars, per copy
     fees REAL NOT NULL DEFAULT 0 CHECK (fees >= 0),    -- dollars, for the whole sale
@@ -180,7 +183,10 @@ export const COLLECTION_SCHEMA_SQL = `
     LEFT JOIN (SELECT item_id, SUM(quantity) AS sold FROM sales GROUP BY item_id) s ON s.item_id = ci.id;
 `;
 
-// Phase 3: materialized collection value, share links, price alerts. FKs are documentation (unenforced
+// Phase 3: materialized collection value, share links, price alerts. NOTE: foreign keys ARE enforced
+// here -- libSQL turns them on by default (PRAGMA foreign_keys returns 1), unlike bare SQLite. An
+// earlier comment claimed the opposite and the sales table was designed against it; deleting a row a
+// FK points at THROWS rather than silently orphaning. (was: FKs are documentation, unenforced
 // in SQLite); lib/collections.ts deleteCollection clears the two collection-scoped tables itself.
 export const HISTORY_SCHEMA_SQL = `
   -- One row per collection per day, written by ingest/nightly.ts (value as of that day's prices).

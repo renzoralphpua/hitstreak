@@ -234,16 +234,22 @@ export async function decrementHolding(userId: string, collectionId: number, pri
   await assertOwnsCollection(userId, collectionId);
   const c = await db();
   const r = await c.execute({
-    sql: `SELECT id, quantity FROM lot_holdings
-          WHERE collection_id = ? AND printing_id = ? AND condition = ?
+    // `quantity > 0` is load-bearing: a fully-sold lot is still a row in the view, and without this
+    // the newest-first pick lands on a lot with nothing left while an older one still holds copies.
+    sql: `SELECT id, quantity, acquired_quantity, sold_quantity FROM lot_holdings
+          WHERE collection_id = ? AND printing_id = ? AND condition = ? AND quantity > 0
           ORDER BY created_at DESC, id DESC LIMIT 1`,
     args: [collectionId, printingId, checkCondition(condition)],
   });
   if (r.rows.length === 0) return false;
   const id = Number(r.rows[0].id);
-  const quantity = Number(r.rows[0].quantity);
+  const acquired = Number(r.rows[0].acquired_quantity);
+  const sold = Number(r.rows[0].sold_quantity);
+  // UPDATE vs DELETE is decided by the ACQUIRED count, not the held one. A lot with sales must never
+  // be deleted: `sales.item_id` references it, so the delete throws (foreign keys ARE enforced here),
+  // and the user saw a constraint failure reported as "could not reach the server".
   await c.execute(
-    quantity > 1
+    acquired > 1 || sold > 0
       ? { sql: "UPDATE collection_items SET quantity = quantity - 1 WHERE id = ?", args: [id] }
       : { sql: "DELETE FROM collection_items WHERE id = ?", args: [id] }
   );
@@ -254,21 +260,40 @@ export async function decrementHolding(userId: string, collectionId: number, pri
 export async function removeHolding(userId: string, collectionId: number, printingId: number, condition: string): Promise<boolean> {
   await assertOwnsCollection(userId, collectionId);
   const c = await db();
+  const cond = checkCondition(condition);
+  // A lot that has been sold from cannot be un-acquired: the sale is a fact about a day that
+  // happened, and deleting the acquisition would either throw on the foreign key or orphan the sale
+  // and silently change what the collection realised. Those lots are drawn down to zero instead.
+  await c.execute({
+    sql: `UPDATE collection_items SET quantity = (SELECT SUM(s.quantity) FROM sales s WHERE s.item_id = collection_items.id)
+          WHERE collection_id = ? AND printing_id = ? AND condition = ?
+            AND EXISTS (SELECT 1 FROM sales s WHERE s.item_id = collection_items.id)`,
+    args: [collectionId, printingId, cond],
+  });
   const r = await c.execute({
-    sql: "DELETE FROM collection_items WHERE collection_id = ? AND printing_id = ? AND condition = ?",
-    args: [collectionId, printingId, checkCondition(condition)],
+    sql: `DELETE FROM collection_items
+          WHERE collection_id = ? AND printing_id = ? AND condition = ?
+            AND NOT EXISTS (SELECT 1 FROM sales s WHERE s.item_id = collection_items.id)`,
+    args: [collectionId, printingId, cond],
   });
   return r.rowsAffected > 0;
 }
 
+/** `quantity` here is the ACQUIRED count, not what is held — held is acquired minus sold, and this
+ *  edits the acquisition. Setting it below what has already been sold is floored, never negative. */
 export async function updateItem(userId: string, itemId: number, patch: { quantity?: number; acquiredPrice?: number | null; acquiredDate?: string | null }): Promise<boolean> {
   if (patch.quantity !== undefined) checkQuantity(patch.quantity);
   const price = patch.acquiredPrice === undefined ? undefined : checkPrice(patch.acquiredPrice);
   const date = patch.acquiredDate === undefined ? undefined : checkDate(patch.acquiredDate);
   const c = await db();
   const r = await c.execute({
+    // A lot can never be edited below what has already been sold from it: that would make held
+    // (acquired - sold) NEGATIVE, and a negative quantity propagates into every total in the app.
     sql: `UPDATE collection_items SET
-            quantity = COALESCE(?, quantity),
+            quantity = MAX(
+              COALESCE(?, quantity),
+              COALESCE((SELECT SUM(s.quantity) FROM sales s WHERE s.item_id = collection_items.id), 0)
+            ),
             acquired_price = CASE WHEN ? THEN ? ELSE acquired_price END,
             acquired_date = CASE WHEN ? THEN ? ELSE acquired_date END
           WHERE id = ? AND collection_id IN (SELECT id FROM collections WHERE user_id = ?)`,
@@ -460,7 +485,11 @@ export async function getCardHolders(userId: string, cardId: number): Promise<Ca
           JOIN collections po ON po.id = ci.collection_id AND po.user_id = ?
           JOIN printings p ON p.id = ci.printing_id
           WHERE p.card_id = ?
-          GROUP BY po.id ORDER BY quantity DESC, po.name`,
+          GROUP BY po.id
+          -- A fully-sold lot is still a row in the view, so without this a collection that has sold
+          -- every copy is still listed as holding the card, at x0.
+          HAVING SUM(ci.quantity) > 0
+          ORDER BY quantity DESC, po.name`,
     args: [userId, cardId],
   });
   return r.rows.map((x) => ({
