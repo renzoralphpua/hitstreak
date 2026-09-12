@@ -411,6 +411,51 @@ no other source for. That is a deliberate, bounded fetch — not a migration.
 
 ---
 
+## 14. Joining TCGplayer to pokemontcg.io, carefully
+
+**Settled and implemented 2026-09-12.** The era headings on `/sets` come from pokemontcg.io's
+`series`, but our catalog is TCGplayer's. The first matcher joined them on name, then fell back to
+`ptcgoCode` with no corroboration — and that fallback was quietly producing **wrong history**:
+
+| set | filed under | actually |
+|---|---|---|
+| XY Promos (2013) | Base (1999) | XY |
+| EX Battle Stadium (2004) | Sword & Shield (2021) | EX |
+| EX Team Rocket Returns (2004) | Platinum (2009) | EX |
+| Trading Card Game Classic (2023) | HeartGold & SoulSilver (2011) | no era |
+
+Our `PR` code covers 22 product groups and collides with pokemontcg.io's Wizards Black Star Promos,
+so **every promo group from every era was filed under Base**. Seventeen sets were affected by that
+one collision.
+
+`lib/set-match.ts` now resolves in five tiers, most trustworthy first:
+
+1. **exact name**, with accents folded (`Pokemon GO` ↔ `Pokémon GO`)
+2. **era prefix stripped** — TCGplayer writes `SM - Guardians Rising`, upstream writes `Guardians Rising`
+3. **name variant** — a trailing print run or an upstream-absent "Set" (`Base Set (Shadowless)` → `Base`)
+4. **known era token on a space**, but only when the upstream series AGREES with the token — that
+   corroboration is what keeps `SM Base Set` from becoming the 1999 `Base`
+5. **ptcgoCode corroborated by release year** (within 1), then **the era token alone** — an era with
+   no art, which is honest: we know the product's era without claiming to know a set it is part of
+
+The result is **178 of 220 with an era** (was 147) and **151 with art** (was 147). Everything is
+written on every run, including nulls, so a re-run can CLEAR a bad match rather than only add.
+
+The 42 that stay ungrouped are genuinely era-less: twelve McDonald's promo years, Battle Academy,
+Trick or Trade, World Championship Decks, Jumbo Cards, Blister Exclusives. An adversarial audit of
+all 220 assignments raised seven problems and confirmed exactly one — `Base Set (Shadowless)`, now
+tier 3. Rumble, Best of Promos, e-Reader Sample Cards and Nintendo Promos were each argued for an
+era and each survived scrutiny as correctly null.
+
+Two failures worth remembering: our own release dates are the ingest date for ~19 sets, and those now
+FAIL the year guard rather than matching wrongly — failing closed is the safe direction. And a ``
+cannot anchor an era token, because the token is usually followed by the set number (`ME06`) and
+there is no word boundary between "E" and "0".
+
+Pinned in `tests/set-match.test.ts`, where every case is a real pair that went wrong.
+
+---
+
 ## Still open
 
 The original eight are closed. What remains:

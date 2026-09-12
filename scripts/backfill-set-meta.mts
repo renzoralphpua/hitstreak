@@ -19,6 +19,9 @@
 // way — where to render this set's art from — so configuring R2 later is a re-run, not a rewrite.
 import { db, closeDb } from "@/lib/db";
 import { rawArchiverFromEnv } from "@/ingest/r2";
+// The join rules live in lib so they can be tested without a database or a network:
+// see tests/set-match.ts for the production mismatches each tier exists to prevent.
+import { indexUpstream, rankSeries, resolveSetMeta } from "@/lib/set-match";
 
 const arg = (k: string) => { const i = process.argv.indexOf(`--${k}`); return i === -1 ? undefined : process.argv[i + 1]; };
 const has = (k: string) => process.argv.includes(`--${k}`);
@@ -32,25 +35,6 @@ interface ApiSet {
   images?: { symbol?: string; logo?: string };
 }
 
-/**
- * Orders eras oldest to newest by when each one STARTED, using the source's dates.
- *
- * Ours cannot do this job: 19 Pokemon sets carry the ingest date rather than a real release, and
- * every POP Series is among them — so ranking by our own MIN or MAX puts Base Set and XY above
- * Mega Evolution. Returns a map of series name to rank, higher being newer.
- */
-function rankSeries(api: ApiSet[]): Map<string, number> {
-  const earliest = new Map<string, string>();
-  for (const s of api) {
-    const seen = earliest.get(s.series);
-    if (!seen || s.releaseDate < seen) earliest.set(s.series, s.releaseDate);
-  }
-  const ordered = [...earliest.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  return new Map(ordered.map(([series], i) => [series, i]));
-}
-
-/** Names differ in punctuation and casing between the two sources far more than in substance. */
-const norm = (s: string) => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
 
 /** pokemontcg.io 500s intermittently, so a single attempt fails a run that is otherwise fine. */
 async function fetchPokemonSets(attempts = 4): Promise<ApiSet[]> {
@@ -101,36 +85,39 @@ async function main(): Promise<number> {
 
   const api = await fetchPokemonSets();
   const rank = rankSeries(api);
-  const byName = new Map(api.map((s) => [norm(s.name), s]));
-  const byCode = new Map(api.filter((s) => s.ptcgoCode).map((s) => [s.ptcgoCode!.toUpperCase(), s]));
+  const idx = indexUpstream(api);
 
   const mine = (await c.execute({
-    sql: `SELECT se.id, se.name, se.code FROM sets se JOIN games g ON g.id = se.game_id WHERE g.slug = ? ORDER BY se.name`,
+    sql: `SELECT se.id, se.name, se.code, se.release_date FROM sets se JOIN games g ON g.id = se.game_id WHERE g.slug = ? ORDER BY se.name`,
     args: [game],
   })).rows;
 
-  let matched = 0, mirroredCount = 0;
+  let matched = 0, tokenOnly = 0, mirroredCount = 0;
   const unmatched: string[] = [];
   for (const row of mine) {
     const name = String(row.name);
     const code = row.code == null ? null : String(row.code).toUpperCase();
-    const hit = byName.get(norm(name)) ?? (code ? byCode.get(code) : undefined);
-    if (!hit) { unmatched.push(name); continue; }
-    matched++;
+    const { upstream: hit, series } = resolveSetMeta(name, code, row.release_date == null ? null : String(row.release_date), idx);
+    if (!series) unmatched.push(name);
+    else if (hit) matched++;
+    else tokenOnly++;
+
     const setId = Number(row.id);
-    const logo = dry ? hit.images?.logo ?? null : await mirror(r2, hit.images?.logo, `sets/${game}/${hit.id}/logo.png`);
-    const symbol = dry ? hit.images?.symbol ?? null : await mirror(r2, hit.images?.symbol, `sets/${game}/${hit.id}/symbol.png`);
+    const logo = !hit || dry ? hit?.images?.logo ?? null : await mirror(r2, hit.images?.logo, `sets/${game}/${hit.id}/logo.png`);
+    const symbol = !hit || dry ? hit?.images?.symbol ?? null : await mirror(r2, hit.images?.symbol, `sets/${game}/${hit.id}/symbol.png`);
     if (mirroring && logo?.startsWith(process.env.R2_PUBLIC_BASE_URL!)) mirroredCount++;
     if (dry) continue;
+    // Written for EVERY set, including the ones that resolve to nothing: a re-run must be able to
+    // CLEAR a match an earlier, looser rule got wrong, not just add new ones.
     await c.execute({
       sql: `UPDATE sets SET series = ?, series_rank = ?, logo_url = ?, symbol_url = ? WHERE id = ?`,
-      args: [hit.series, rank.get(hit.series) ?? null, logo, symbol, setId],
+      args: [series, series ? rank.get(series) ?? null : null, logo, symbol, setId],
     });
   }
 
-  console.log(`${game}: ${mine.length} sets · matched ${matched} · unmatched ${unmatched.length} (they become "Promos & products")`);
+  console.log(`${game}: ${mine.length} sets · ${matched} matched with art · ${tokenOnly} era-only · ${unmatched.length} ungrouped ("Promos & products")`);
   if (mirroring) console.log(`mirrored ${mirroredCount} logos into R2`);
-  if (unmatched.length) console.log(`  unmatched sample: ${unmatched.slice(0, 6).join(", ")}${unmatched.length > 6 ? " …" : ""}`);
+  if (unmatched.length) console.log(`  ungrouped: ${unmatched.join(", ")}`);
   if (dry) console.log("--dry: nothing was written");
   return 0;
 }
