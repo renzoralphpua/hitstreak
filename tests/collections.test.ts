@@ -102,7 +102,10 @@ describe("collections", () => {
   it("summarizes value, cost, gain, unpriced count", async () => {
     const [p] = await listCollections(U1);
     const s = await getCollectionSummary(U1, p.id);
-    expect(s.cards).toBe(5);           // 1 Umbreon + 3 Pikachu + 1 bundle (quantities)
+    // Cards and sealed are counted apart: the bundle has no card number, and "5 cards" would have
+    // claimed you own five cards when one of them is a box.
+    expect(s.cards).toBe(4);           // 1 Umbreon + 3 Pikachu (quantities)
+    expect(s.sealed).toBe(1);          // the bundle
     expect(s.value).toBeCloseTo(1465.75); // + 3 × 0.25 Pikachu; bundle has null market → excluded
     expect(s.cost).toBeCloseTo(1100.6); // 1100 Umbreon + 3 × 0.2 Pikachu; bundle has no price
     expect(s.gain).toBeCloseTo(365.15);

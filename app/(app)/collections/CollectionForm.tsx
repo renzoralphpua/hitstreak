@@ -1,10 +1,14 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Input } from "@/components/ui";
+import { Button, Dialog, Input } from "@/components/ui";
 import { createCollectionAction, renameCollectionAction } from "./actions";
 
-type Props = { mode: "create" } | { mode: "rename"; id: number; name: string; onDone?: () => void };
+type Props =
+  /** `variant: "button"` is the header affordance: a Create button that opens the field in a dialog,
+   *  because a full form does not belong beside a page title. */
+  | { mode: "create"; variant?: "form" | "button" }
+  | { mode: "rename"; id: number; name: string; onDone?: () => void };
 
 /** Create a collection, or rename one inline. Errors from the action surface as role="alert". */
 export default function CollectionForm(props: Props) {
@@ -12,6 +16,9 @@ export default function CollectionForm(props: Props) {
   const [name, setName] = useState(props.mode === "rename" ? props.name : "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const asButton = props.mode === "create" && props.variant === "button";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,7 +33,10 @@ export default function CollectionForm(props: Props) {
         setError(res.error);
         return;
       }
-      if (props.mode === "create") setName("");
+      if (props.mode === "create") {
+        setName("");
+        setOpen(false);
+      }
       router.refresh();
       if (props.mode === "rename") props.onDone?.();
     } catch {
@@ -36,20 +46,21 @@ export default function CollectionForm(props: Props) {
     }
   }
 
-  return (
+  const field = (
     <form onSubmit={submit} className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <Input
-          className="max-w-xs"
+          className={asButton ? undefined : "max-w-xs"}
           aria-label="Collection name"
           placeholder="New collection…"
           maxLength={80}
+          autoFocus={asButton}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         {props.mode === "create" ? (
           <Button type="submit" disabled={busy} className="shrink-0">
-            Create collection
+            {asButton ? "Create" : "Create collection"}
           </Button>
         ) : (
           <>
@@ -69,15 +80,15 @@ export default function CollectionForm(props: Props) {
       )}
     </form>
   );
-}
 
-/** "Rename" button that swaps itself for the inline rename form. */
-export function RenameToggle({ id, name }: { id: number; name: string }) {
-  const [open, setOpen] = useState(false);
-  if (open) return <CollectionForm mode="rename" id={id} name={name} onDone={() => setOpen(false)} />;
+  if (!asButton) return field;
+
   return (
-    <Button variant="secondary" onClick={() => setOpen(true)}>
-      Rename
-    </Button>
+    <>
+      <Button onClick={() => setOpen(true)}>Create</Button>
+      <Dialog open={open} onClose={() => setOpen(false)} title="New collection" className="max-w-md">
+        {field}
+      </Dialog>
+    </>
   );
 }

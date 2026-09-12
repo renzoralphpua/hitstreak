@@ -37,7 +37,14 @@ export interface Holding {
   uncostedQuantity: number;
   lots: Lot[];            // newest first
 }
-export interface CollectionSummary { cards: number; value: number; cost: number; gain: number; unpriced: number }
+export interface CollectionSummary {
+  /** Numbered cards only. Sealed products are counted separately because they are a different kind
+   *  of thing to own — "40 cards" and "40 booster boxes" are not the same collection. */
+  cards: number;
+  /** Sealed products: ETBs, booster boxes, bundles, blisters. `cards.number IS NULL` marks them. */
+  sealed: number;
+  value: number; cost: number; gain: number; unpriced: number;
+}
 
 const NAME_MAX = 80;
 function cleanName(name: string): string {
@@ -339,13 +346,14 @@ export async function getCollectionHoldings(userId: string, collectionId: number
 
 export async function getCollectionSummary(userId: string, collectionId: number): Promise<CollectionSummary> {
   const h = await getCollectionHoldings(userId, collectionId);
-  let cards = 0, value = 0, cost = 0, unpriced = 0;
+  let cards = 0, sealed = 0, value = 0, cost = 0, unpriced = 0;
   for (const x of h) {
-    cards += x.quantity;
+    // A holding with no card number is a sealed product, not a card.
+    if (x.number == null) sealed += x.quantity; else cards += x.quantity;
     if (x.value == null) unpriced += x.quantity; else value += x.value;
     if (x.cost != null) cost += x.cost;
   }
-  return { cards, value, cost, gain: value - cost, unpriced };
+  return { cards, sealed, value, cost, gain: value - cost, unpriced };
 }
 
 export interface CardHolder {

@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { listCollections, getCollectionSummary } from "@/lib/collections";
-import { formatMoney } from "@/lib/format";
-import { SectionHeading, Panel, StatTile, PriceDelta, MoneyDisplay, EmptyState } from "@/components/ui";
-import CollectionForm, { RenameToggle } from "./CollectionForm";
-import DeleteCollectionButton from "./DeleteCollectionButton";
+import { getShareLink } from "@/lib/share";
+import { SectionHeading, EmptyState } from "@/components/ui";
+import CollectionForm from "./CollectionForm";
+import CollectionTile from "./CollectionTile";
 
 export const metadata = { title: "Collections — Hitstreak" };
 // Per-user data valued from latest_prices: never prerender or cache across users.
@@ -17,12 +16,25 @@ export default async function CollectionsPage() {
   const userId = session.user.id;
 
   const collections = await listCollections(userId);
-  const summaries = await Promise.all(collections.map((p) => getCollectionSummary(userId, p.id)));
+  // One round of queries per collection, in parallel. A person has a handful of these, not a page of
+  // them — if that stops being true, this is the spot to batch.
+  const rows = await Promise.all(
+    collections.map(async (collection) => ({
+      collection,
+      summary: await getCollectionSummary(userId, collection.id),
+      shareLink: await getShareLink(userId, collection.id),
+    }))
+  );
   const n = collections.length;
 
   return (
     <div className="flex flex-col gap-5">
-      <SectionHeading as="h1" title="Your collections" caption={`${n} collection${n === 1 ? "" : "s"}`} />
+      <SectionHeading
+        as="h1"
+        title="Your collections"
+        caption={`${n} collection${n === 1 ? "" : "s"}`}
+        trailing={<CollectionForm mode="create" variant="button" />}
+      />
 
       {n === 0 ? (
         <EmptyState
@@ -31,49 +43,11 @@ export default async function CollectionsPage() {
           action={<CollectionForm mode="create" />}
         />
       ) : (
-        <>
-          <div className="flex flex-col gap-3">
-            {collections.map((p, i) => {
-              const s = summaries[i];
-              return (
-                <Panel key={p.id} className="flex flex-col gap-3">
-                  <div className="flex flex-wrap items-baseline justify-between gap-3">
-                    <Link href={`/collections/${p.slug ?? p.id}`} className="font-semibold text-ink">
-                      {p.name}
-                    </Link>
-                    <div className="flex flex-col items-end gap-1">
-                      <MoneyDisplay amount={s.value} />
-                      <PriceDelta
-                        amount={s.gain}
-                        ratio={s.cost > 0 ? s.gain / s.cost : null}
-                        caption="vs. paid"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <StatTile label="Paid" value={formatMoney(s.cost)} />
-                    <StatTile label="Cards" value={String(s.cards)} />
-                    {s.unpriced > 0 ? (
-                      <StatTile label="Unpriced" value={String(s.unpriced)} />
-                    ) : (
-                      <StatTile label="Priced" value={String(s.cards - s.unpriced)} />
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <RenameToggle id={p.id} name={p.name} />
-                    <DeleteCollectionButton id={p.id} name={p.name} count={s.cards} />
-                  </div>
-                </Panel>
-              );
-            })}
-          </div>
-
-          <Panel>
-            <CollectionForm mode="create" />
-          </Panel>
-        </>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {rows.map((r) => (
+            <CollectionTile key={r.collection.id} {...r} />
+          ))}
+        </div>
       )}
     </div>
   );

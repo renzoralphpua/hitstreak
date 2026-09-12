@@ -25,6 +25,7 @@ import {
   RangePills,
 } from "@/components/ui";
 import CollectionCards from "./CollectionCards";
+import CollectionHeading from "./CollectionHeading";
 import AddItemDialog from "./AddItemDialog";
 import SharePanel from "./SharePanel";
 
@@ -89,11 +90,14 @@ export default async function CollectionDetailPage({ params, searchParams }: Pag
           worth", and scrolling past it to look at a card makes you scroll back to see it again.
           Single-column below md, where a pinned 380px block would BE the screen. */}
       <div className="flex flex-col gap-4 md:sticky md:top-16 md:max-h-[calc(100dvh-4rem)] md:self-start md:overflow-y-auto md:overflow-x-clip md:pt-3 md:pb-6">
-        <SectionHeading
-          as="h1"
-          title={collection.name}
-          caption={`${summary.cards} card${summary.cards === 1 ? "" : "s"}`}
-          back={{ href: "/collections", label: "Collections" }}
+        <CollectionHeading
+          id={collectionId}
+          name={collection.name}
+          caption={
+            summary.sealed > 0
+              ? `${summary.cards} card${summary.cards === 1 ? "" : "s"} · ${summary.sealed} sealed`
+              : `${summary.cards} card${summary.cards === 1 ? "" : "s"}`
+          }
         />
 
         <MoneyDisplay size="lg" amount={summary.value} />

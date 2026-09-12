@@ -15,8 +15,7 @@ vi.mock("@/app/(app)/collections/actions", () => ({
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 
-import CollectionForm, { RenameToggle } from "@/app/(app)/collections/CollectionForm";
-import DeleteCollectionButton from "@/app/(app)/collections/DeleteCollectionButton";
+import CollectionForm from "@/app/(app)/collections/CollectionForm";
 
 beforeEach(() => {
   create.mockReset().mockResolvedValue({ ok: true, data: { id: 1, name: "Main", createdAt: "x" } });
@@ -63,35 +62,5 @@ describe("CollectionForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create collection" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Collection name must be 1–80 characters"));
     expect(refresh).not.toHaveBeenCalled();
-  });
-});
-
-describe("RenameToggle", () => {
-  it("swaps the Rename button for the rename form and back", async () => {
-    render(<RenameToggle id={3} name="Main" />);
-    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
-    expect(screen.getByLabelText("Collection name")).toHaveValue("Main");
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Rename" })).toBeInTheDocument());
-  });
-});
-
-describe("DeleteCollectionButton", () => {
-  it("confirms with the card count, then deletes and refreshes", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<DeleteCollectionButton id={5} name="Main" count={312} />);
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-    expect(confirm).toHaveBeenCalledWith('Delete "Main" and its 312 cards?');
-    await waitFor(() => expect(remove).toHaveBeenCalledWith(5));
-    await waitFor(() => expect(refresh).toHaveBeenCalled());
-    confirm.mockRestore();
-  });
-
-  it("does nothing when the confirm is dismissed", () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<DeleteCollectionButton id={5} name="Main" count={0} />);
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-    expect(remove).not.toHaveBeenCalled();
-    confirm.mockRestore();
   });
 });

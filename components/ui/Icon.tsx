@@ -89,6 +89,10 @@ const ICONS = {
   /** Back: the return link at the top of a detail screen. */
   "arrow-left": { d: "M19 12 H5 M11 6 L5 12 L11 18" },
 
+  /** Overflow menu: the actions that do not earn a button of their own. Three dots drawn as
+   *  zero-length strokes, so the round linecap makes them without any fill. */
+  more: { d: "M6 12 h.01 M12 12 h.01 M18 12 h.01", round: true },
+
   // — status ————————————————————————————————————————————————————
   /** Legal / owned / satisfied. */
   check: { d: "M4 12.5 L9.5 18 L20 6", round: true },
