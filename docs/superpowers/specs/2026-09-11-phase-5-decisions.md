@@ -365,6 +365,52 @@ so "no such collection" and "not yours" stay indistinguishable.
 
 ---
 
+## 13. API TCG is not the single source (and its quota is not free)
+
+**Settled 2026-09-12.** Evaluated and rejected as a replacement for pokemontcg.io + tcgcsv. The
+account has a **1,000-request cap**, so this was settled once and the evidence is written down here
+rather than re-fetched.
+
+What it has: all 220 of our Pokemon sets, 87 One Piece, 13 Riftbound — every one carrying
+`markets.tcgplayer.id`, which joins to `sets.tcgplayer_group_id` at a **100% rate**. Product
+`attributes` are rich (rarity, HP, attacks, artist) and every product carries a TCGplayer price
+block.
+
+What it does not have, and why that decides it:
+
+- **`serie` is null on every set of every game.** The field is in their schema; nothing populates it.
+  Their own docs mark the product-level one "(not in use)". The 16 era headings on `/sets` are built
+  from that concept, so this alone rules out consolidation.
+- **No set art.** `logo` is absent on all 320.
+- **`code` is what we already store.** 214 of 220 are byte-identical to our tcgcsv codes, and 5 of
+  the 6 differences are API TCG having *no* code where we have one. And the code does not encode the
+  era: prefixes abbreviate the set NAME (`PRC` = Primal Clash, an XY set), `SV` is Supreme Victors
+  (Platinum) while `SVE` is Scarlet & Violet, and Mega Evolution sets carry MEG/PFL/CRI/ASC/ME.
+- **Price history is per product**, starting 2026-03-25. 55k printings would be 55k requests to cover
+  what 180 daily tcgcsv archives cover, over a shallower window.
+
+The era data *does* exist one layer out — `apitcg/pokemon-tcg-data/sets/en.json` on GitHub has
+`series` on all 171 of its sets. But that file **is pokemontcg.io's data** (`id: "base1"`, art hosted
+on `images.pokemontcg.io`), and joining it against our 73 era-less sets adds **zero** coverage: those
+73 are TCGplayer product groups — Battle Academy, Blister Exclusives, Kids WB Promos — that are not
+sets in the game's own sense and have no era to be given. That is what `UNGROUPED` is for.
+
+**Two traps, both sprung during the evaluation and both now guarded by `ingest/apitcg.ts`:**
+
+1. `/api/{tcg}/sets` **ignores `page` and `limit`** and returns the whole list every time. A
+   "paginate until a short page" loop therefore never terminates and re-fetches the same 220 rows —
+   it also inflated an early count to "2,640 Pokemon sets", which was 220 counted twelve times.
+2. Fan-out. Seven agents probing endpoints in parallel cost ~160 requests in a few minutes.
+
+Every call now goes through `apitcgFetch`, which serves from `.cache/apitcg/` and only reaches the
+network for a path it has never seen. Re-running a script costs nothing; `refresh: true` is the only
+way to spend quota on a known path. Pinned in `tests/apitcg.test.ts`.
+
+**Where it still earns its keep:** One Piece and Riftbound card attributes and images, which we have
+no other source for. That is a deliberate, bounded fetch — not a migration.
+
+---
+
 ## Still open
 
 The original eight are closed. What remains:
