@@ -293,12 +293,19 @@ export async function thirtyDayChange(printingId: number, asOf: string): Promise
 }
 
 export interface CardDetail {
-  card: { id: number; name: string; number: string | null; rarity: string | null; imageUrl: string | null; setId: number; setName: string; gameSlug: string; gameName: string; attrs: Record<string, string> };
+  card: {
+    id: number; name: string; number: string | null; rarity: string | null; imageUrl: string | null;
+    setId: number; setName: string;
+    /** The set's URL segment. Null until the slug backfill reaches it — the route accepts the id and
+     *  redirects, so a caller can fall back without producing a dead link. */
+    setSlug: string | null;
+    gameSlug: string; gameName: string; attrs: Record<string, string>;
+  };
   printings: Array<PrintingPrice & { owned: number; change30d: Change | null }>;
 }
 export async function getCardDetail(userId: string, cardId: number, asOf = new Date().toISOString().slice(0, 10)): Promise<CardDetail | null> {
   const c = await db();
-  const r = (await c.execute({ sql: "SELECT ca.*, se.name AS set_name, g.slug AS game_slug, g.name AS game_name FROM cards ca JOIN sets se ON se.id = ca.set_id JOIN games g ON g.id = se.game_id WHERE ca.id = ?", args: [cardId] })).rows[0];
+  const r = (await c.execute({ sql: "SELECT ca.*, se.name AS set_name, se.slug AS set_slug, g.slug AS game_slug, g.name AS game_name FROM cards ca JOIN sets se ON se.id = ca.set_id JOIN games g ON g.id = se.game_id WHERE ca.id = ?", args: [cardId] })).rows[0];
   if (!r) return null;
   const ps = (await c.execute({
     sql: `SELECT p.id, p.subtype, lp.market, lp.date,
@@ -319,7 +326,7 @@ export async function getCardDetail(userId: string, cardId: number, asOf = new D
   let attrs: Record<string, string> = {};
   try { attrs = JSON.parse(String(r.attrs ?? "{}")); } catch { /* keep {} */ }
   return {
-    card: { id: Number(r.id), name: String(r.name), number: r.number == null ? null : String(r.number), rarity: r.rarity == null ? null : String(r.rarity), imageUrl: r.image_url == null ? null : String(r.image_url), setId: Number(r.set_id), setName: String(r.set_name), gameSlug: String(r.game_slug), gameName: String(r.game_name), attrs },
+    card: { id: Number(r.id), name: String(r.name), number: r.number == null ? null : String(r.number), rarity: r.rarity == null ? null : String(r.rarity), imageUrl: r.image_url == null ? null : String(r.image_url), setId: Number(r.set_id), setName: String(r.set_name), setSlug: r.set_slug == null ? null : String(r.set_slug), gameSlug: String(r.game_slug), gameName: String(r.game_name), attrs },
     printings,
   };
 }

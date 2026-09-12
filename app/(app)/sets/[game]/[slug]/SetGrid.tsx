@@ -22,14 +22,16 @@ const FILTERS: Array<{ key: Filter; label: string }> = [
  *  (the optimistic bumps are dropped as soon as new server data arrives). A failed add is reverted
  *  and reported above the grid. */
 export default function SetGrid({
-  cards, sealed, collections, setId,
+  cards, sealed, collections, setHref,
 }: {
   cards: SetCard[];
+  /** This set's canonical URL. Passed in rather than built from `setId`: a card's back arrow has to
+   *  return to /sets/<game>/<slug>, and /sets/<id> matches the GAME route instead. */
+  setHref: string;
   /** The set's ETBs, booster boxes and bundles. Same shape, same add behaviour, own section — they
    *  are part of the set, but they are not cards and must not be counted as though they were. */
   sealed: SetCard[];
   collections: Collection[];
-  setId: number;
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
@@ -141,7 +143,7 @@ export default function SetGrid({
         />
       ) : (
         <>
-          <Tiles items={visible} quantityOf={quantityOf} setId={setId} onAdd={canAdd ? add : undefined} />
+          <Tiles items={visible} quantityOf={quantityOf} setHref={setHref} onAdd={canAdd ? add : undefined} />
 
           {visibleSealed.length > 0 && (
             <div className="flex flex-col gap-3">
@@ -153,7 +155,7 @@ export default function SetGrid({
                 caption={`${visibleSealed.length} product${visibleSealed.length === 1 ? "" : "s"}`}
                 className="border-b border-hairline pb-1.5"
               />
-              <Tiles items={visibleSealed} quantityOf={quantityOf} setId={setId} onAdd={canAdd ? add : undefined} />
+              <Tiles items={visibleSealed} quantityOf={quantityOf} setHref={setHref} onAdd={canAdd ? add : undefined} />
             </div>
           )}
         </>
@@ -165,11 +167,11 @@ export default function SetGrid({
 /** One grid of tiles. Cards and sealed products render identically — only the heading above them
  *  differs — so the layout lives in one place. */
 function Tiles({
-  items, quantityOf, setId, onAdd,
+  items, quantityOf, setHref, onAdd,
 }: {
   items: SetCard[];
   quantityOf: (c: SetCard) => number;
-  setId: number;
+  setHref: string;
   onAdd?: (c: SetCard) => void;
 }) {
   const display = useDisplay();
@@ -186,7 +188,7 @@ function Tiles({
             imageUrl={c.imageUrl}
             onClick={onAdd ? () => onAdd(c) : undefined}
           />
-          <Link href={`/cards/${c.cardId}?from=${encodeURIComponent(`/sets/${setId}`)}`} className="text-caption text-accent">
+          <Link href={`/cards/${c.cardId}?from=${encodeURIComponent(setHref)}`} className="text-caption text-accent">
             Details
           </Link>
         </div>

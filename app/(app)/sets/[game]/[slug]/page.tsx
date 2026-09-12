@@ -106,7 +106,12 @@ export default async function SetDetailPage({ params }: Params) {
         )}
       </div>
 
-      <SetGrid cards={detail.cards} sealed={detail.sealed} collections={collections} setId={detail.set.id} />
+      <SetGrid
+        cards={detail.cards}
+        sealed={detail.sealed}
+        collections={collections}
+        setHref={`/sets/${set.gameSlug}/${set.slug ?? set.id}`}
+      />
     </div>
   );
 }

@@ -95,7 +95,10 @@ export default async function CardDetailPage({ params, searchParams }: PageProps
   const fromCollection = await resolveCollectionRef(userId, collectionRefFromPath(fromPath));
   const back = resolveBack(
     rawFrom,
-    { href: `/sets/${card.setId}`, label: card.setName },
+    // /sets/<game>/<slug>. The id is still a valid segment (that route redirects it), so a set
+    // the slug backfill has not reached stays reachable instead of linking to /sets/<id>, which
+    // matches /sets/[game] and renders a game that does not exist.
+    { href: `/sets/${card.gameSlug}/${card.setSlug ?? card.setId}`, label: card.setName },
     { collectionName: fromCollection?.name }
   );
   const hrefFor = (r: Range, printingId: number) =>
